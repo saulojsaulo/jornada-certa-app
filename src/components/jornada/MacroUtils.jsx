@@ -57,8 +57,12 @@ export function diffInMinutes(start, end) {
 // Obter status atual do veículo baseado nas macros do dia
 export function getVehicleStatus(macros) {
   if (!macros || macros.length === 0) return 'Sem Jornada';
-  
-  const sorted = [...macros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+
+  // Filtrar macros não excluídos
+  const activeMacros = macros.filter(m => !m.excluido);
+  if (activeMacros.length === 0) return 'Sem Jornada';
+
+  const sorted = [...activeMacros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   const lastMacro = sorted[sorted.length - 1];
   
   // Verificar macros abertas
@@ -87,7 +91,11 @@ export function getVehicleStatus(macros) {
 export function calcularJornadaBruta(macros) {
   if (!macros || macros.length === 0) return 0;
   
-  const sorted = [...macros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+  // Filtrar macros não excluídos
+  const activeMacros = macros.filter(m => !m.excluido);
+  if (activeMacros.length === 0) return 0;
+  
+  const sorted = [...activeMacros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   const macro1 = sorted.find(m => m.numero_macro === 1);
   const macro2 = sorted.find(m => m.numero_macro === 2);
   
@@ -185,8 +193,12 @@ export function calcularInterjornada(macrosHoje, macrosOntem) {
 // Verificar alerta de refeição (> 6h sem refeição)
 export function verificarAlertaRefeicao(macros) {
   if (!macros || macros.length === 0) return false;
-  
-  const sorted = [...macros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+
+  // Filtrar macros não excluídos
+  const activeMacros = macros.filter(m => !m.excluido);
+  if (activeMacros.length === 0) return false;
+
+  const sorted = [...activeMacros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   const macro1 = sorted.find(m => m.numero_macro === 1);
   const macro2 = sorted.find(m => m.numero_macro === 2);
   const macro3 = sorted.find(m => m.numero_macro === 3);
