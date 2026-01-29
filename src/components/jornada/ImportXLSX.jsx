@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -207,14 +208,21 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
   };
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button className="bg-emerald-600 hover:bg-emerald-700 shadow-lg">
+          <Upload className="w-4 h-4 mr-2" />
           Importar Dados
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+            Importar Planilha XLSX
+          </DialogTitle>
+        </DialogHeader>
+        <div className="mt-4">
         <AnimatePresence mode="wait">
           {!isImporting && !status && (
             <motion.div
@@ -317,7 +325,8 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
             </motion.div>
           )}
         </AnimatePresence>
-      </CardContent>
-    </Card>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

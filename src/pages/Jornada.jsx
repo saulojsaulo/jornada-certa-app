@@ -118,7 +118,10 @@ export default function Jornada() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Botão Importar */}
+              <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={refetchImportLogs} />
+
               {/* Última Importação */}
               {lastImport && (
                 <div className="hidden lg:flex items-center gap-2 bg-emerald-50 rounded-xl px-3 py-2 text-sm">
