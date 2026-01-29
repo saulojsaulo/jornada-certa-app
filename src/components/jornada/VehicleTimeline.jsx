@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   MACRO_NAMES, 
@@ -22,8 +22,27 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
   const [editingMacro, setEditingMacro] = useState(null);
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
 
-  // Filtrar apenas macros do dia selecionado
-  const macrosDoDia = macros?.filter(m => m.data_referencia === dataReferencia) || [];
+  // Filtrar macros do dia e deduplicar
+  const macrosDoDia = useMemo(() => {
+    const filtered = macros?.filter(m => m.data_referencia === dataReferencia) || [];
+    
+    // Dedupicação: criar chave única sem milissegundos
+    const seen = new Set();
+    const unique = [];
+    
+    filtered.forEach(m => {
+      const dateToSecond = new Date(m.data_criacao);
+      dateToSecond.setMilliseconds(0);
+      const key = `${m.numero_macro}-${dateToSecond.toISOString()}`;
+      
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(m);
+      }
+    });
+    
+    return unique;
+  }, [macros, dataReferencia]);
 
   if (!macrosDoDia || macrosDoDia.length === 0) {
     return (
