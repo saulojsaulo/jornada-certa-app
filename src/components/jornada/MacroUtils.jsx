@@ -109,7 +109,11 @@ export function calcularJornadaBruta(macros) {
 export function calcularPausas(macros) {
   if (!macros || macros.length === 0) return { refeicao: 0, repouso: 0, complemento: 0, total: 0 };
   
-  const sorted = [...macros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+  // Filtrar macros não excluídos
+  const activeMacros = macros.filter(m => !m.excluido);
+  if (activeMacros.length === 0) return { refeicao: 0, repouso: 0, complemento: 0, total: 0 };
+  
+  const sorted = [...activeMacros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   
   let refeicao = 0;
   let repouso = 0;
@@ -179,8 +183,14 @@ export function calcularInterjornada(macrosHoje, macrosOntem) {
     return null;
   }
   
-  const sortedHoje = [...macrosHoje].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
-  const sortedOntem = [...macrosOntem].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+  // Filtrar macros não excluídos
+  const activeHoje = macrosHoje.filter(m => !m.excluido);
+  const activeOntem = macrosOntem.filter(m => !m.excluido);
+  
+  if (activeHoje.length === 0 || activeOntem.length === 0) return null;
+  
+  const sortedHoje = [...activeHoje].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+  const sortedOntem = [...activeOntem].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   
   const macro1Hoje = sortedHoje.find(m => m.numero_macro === 1);
   const macro2Ontem = sortedOntem.find(m => m.numero_macro === 2);

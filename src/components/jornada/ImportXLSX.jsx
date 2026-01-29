@@ -60,12 +60,17 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
         vehicleMap.set(v.nome_veiculo.toLowerCase().trim(), v.id);
       });
 
-      // Buscar macros existentes para verificar duplicatas (usar Map para performance)
+      // Buscar macros existentes para verificar duplicatas e editados manualmente
       setStatus('Verificando duplicatas...');
       const existingMacros = await base44.entities.MacroEvento.list('-data_criacao', 50000);
       const macroKeys = new Map();
+      const editedKeys = new Set();
       existingMacros.forEach(m => {
-        macroKeys.set(`${m.veiculo_id}-${m.numero_macro}-${m.data_criacao}`, true);
+        const key = `${m.veiculo_id}-${m.numero_macro}-${m.data_criacao}`;
+        macroKeys.set(key, true);
+        if (m.editado_manualmente) {
+          editedKeys.add(key);
+        }
       });
 
       let imported = 0;
@@ -133,7 +138,8 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
           const dataCriacaoStr = row.dataCriacao.toISOString();
           const key = `${veiculoId}-${row.numeroMacro}-${dataCriacaoStr}`;
 
-          if (macroKeys.has(key)) {
+          // Ignorar se foi editado manualmente ou já existe
+          if (editedKeys.has(key) || macroKeys.has(key)) {
             duplicates++;
             continue;
           }

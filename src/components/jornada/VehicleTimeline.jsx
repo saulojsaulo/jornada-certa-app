@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   MACRO_NAMES, 
@@ -9,9 +9,13 @@ import {
   calcularHorasExtras,
   STATUS_CONFIG
 } from './MacroUtils';
-import { Clock, Coffee, Moon, Zap, Play, Square } from 'lucide-react';
+import { Clock, Coffee, Moon, Zap, Play, Square, Trash2, RotateCcw } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { Button } from "@/components/ui/button";
 
 export default function VehicleTimeline({ macros }) {
+  const [updatingIds, setUpdatingIds] = useState(new Set());
+
   if (!macros || macros.length === 0) {
     return (
       <div className="p-6 text-center text-slate-400">
@@ -19,6 +23,24 @@ export default function VehicleTimeline({ macros }) {
       </div>
     );
   }
+
+  const handleToggleExcluir = async (macro) => {
+    setUpdatingIds(prev => new Set(prev).add(macro.id));
+    try {
+      await base44.entities.MacroEvento.update(macro.id, {
+        excluido: !macro.excluido,
+        editado_manualmente: true
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar macro:', error);
+    } finally {
+      setUpdatingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(macro.id);
+        return newSet;
+      });
+    }
+  };
 
   const sorted = [...macros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   
@@ -161,32 +183,55 @@ export default function VehicleTimeline({ macros }) {
         <div className="text-xs text-slate-500 mb-3">Linha do Tempo</div>
         <div className="relative">
           <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200" />
-          {sorted.map((macro, idx) => (
-            <motion.div
-              key={macro.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.05 }}
-              className="relative flex items-center gap-4 py-2"
-            >
-              <div className={`relative z-10 w-8 h-8 rounded-full ${getMacroColor(macro.numero_macro)} flex items-center justify-center shadow-sm`}>
-                {getMacroIcon(macro.numero_macro)}
-              </div>
-              <div className="flex-1 bg-white rounded-lg p-3 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm text-slate-700">
-                    {MACRO_NAMES[macro.numero_macro]}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    {new Date(macro.data_criacao).toLocaleTimeString('pt-BR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </span>
+          {sorted.map((macro, idx) => {
+            const isUpdating = updatingIds.has(macro.id);
+            const isExcluido = macro.excluido;
+            
+            return (
+              <motion.div
+                key={macro.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                className="relative flex items-center gap-4 py-2 group"
+              >
+                <div className={`relative z-10 w-8 h-8 rounded-full ${getMacroColor(macro.numero_macro)} flex items-center justify-center shadow-sm ${isExcluido ? 'opacity-30' : ''}`}>
+                  {getMacroIcon(macro.numero_macro)}
                 </div>
-              </div>
-            </motion.div>
-          ))}
+                <div className={`flex-1 bg-white rounded-lg p-3 shadow-sm ${isExcluido ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`font-medium text-sm text-slate-700 ${isExcluido ? 'line-through' : ''}`}>
+                      {MACRO_NAMES[macro.numero_macro]}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs text-slate-500 ${isExcluido ? 'line-through' : ''}`}>
+                        {new Date(macro.data_criacao).toLocaleTimeString('pt-BR', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleToggleExcluir(macro)}
+                        disabled={isUpdating}
+                      >
+                        {isExcluido ? (
+                          <RotateCcw className="h-3 w-3 text-emerald-600" />
+                        ) : (
+                          <Trash2 className="h-3 w-3 text-red-500" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  {isExcluido && (
+                    <div className="text-xs text-red-500 mt-1">Excluído manualmente</div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </motion.div>
