@@ -63,9 +63,46 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
       // Buscar macros existentes para verificar duplicatas e editados manualmente
       setStatus('Verificando duplicatas...');
       const existingMacros = await base44.entities.MacroEvento.list('-data_criacao', 50000);
+      
+      // Primeiro, remover duplicatas existentes no banco
+      const grupos = {};
+      existingMacros.forEach(m => {
+        const key = `${m.veiculo_id}-${m.numero_macro}-${m.data_criacao}`;
+        if (!grupos[key]) {
+          grupos[key] = [];
+        }
+        grupos[key].push(m);
+      });
+      
+      // Identificar e remover duplicatas (mantendo o editado manualmente ou o mais antigo)
+      let duplicatasRemovidas = 0;
+      for (const [key, items] of Object.entries(grupos)) {
+        if (items.length > 1) {
+          // Ordenar: priorizar editados manualmente, depois mais antigos
+          items.sort((a, b) => {
+            if (a.editado_manualmente && !b.editado_manualmente) return -1;
+            if (!a.editado_manualmente && b.editado_manualmente) return 1;
+            return new Date(a.created_date) - new Date(b.created_date);
+          });
+          
+          // Remover todos exceto o primeiro
+          for (let i = 1; i < items.length; i++) {
+            await base44.entities.MacroEvento.delete(items[i].id);
+            duplicatasRemovidas++;
+          }
+        }
+      }
+      
+      if (duplicatasRemovidas > 0) {
+        setStatus(`${duplicatasRemovidas} duplicatas removidas. Recarregando...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      // Recarregar macros após limpeza
+      const cleanMacros = await base44.entities.MacroEvento.list('-data_criacao', 50000);
       const macroKeys = new Map();
       const editedKeys = new Set();
-      existingMacros.forEach(m => {
+      cleanMacros.forEach(m => {
         const key = `${m.veiculo_id}-${m.numero_macro}-${m.data_criacao}`;
         macroKeys.set(key, true);
         if (m.editado_manualmente) {
