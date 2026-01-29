@@ -117,7 +117,7 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
       validRows.sort((a, b) => a.dataCriacao - b.dataCriacao);
 
       // Processar em lotes maiores
-      const batchSize = 50;
+      const batchSize = 500;
       const totalBatches = Math.ceil(validRows.length / batchSize);
       
       for (let i = 0; i < validRows.length; i += batchSize) {
