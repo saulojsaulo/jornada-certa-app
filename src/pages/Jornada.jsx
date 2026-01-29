@@ -119,18 +119,18 @@ export default function Jornada() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {/* Botão Importar */}
-              <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={refetchImportLogs} />
-
-              {/* Última Importação */}
-              {lastImport && (
-                <div className="hidden lg:flex items-center gap-2 bg-emerald-50 rounded-xl px-3 py-2 text-sm">
-                  <Clock className="w-4 h-4 text-emerald-600" />
-                  <span className="text-emerald-700">
-                    Última importação: {format(new Date(lastImport.imported_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} por <strong>{lastImport.imported_by}</strong>
-                  </span>
-                </div>
-              )}
+              {/* Importar e Última Importação */}
+              <div className="flex items-center gap-3 bg-white rounded-xl shadow-sm border border-slate-200 p-1.5">
+                <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={refetchImportLogs} />
+                {lastImport && (
+                  <div className="flex items-center gap-2 px-3 py-1 text-xs text-slate-600 border-l border-slate-200">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    <span>
+                      Última Importação em: {format(new Date(lastImport.imported_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
+                )}
+              </div>
 
               {/* Relógio */}
               <div className="hidden md:flex items-center gap-2 bg-slate-100 rounded-xl px-4 py-2">
