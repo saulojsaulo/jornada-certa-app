@@ -30,6 +30,26 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
     loadUser();
   }, []);
 
+  // Função para calcular data_referencia corretamente
+  // Se é macro de fim (2, 4, 6, 10) e ocorre entre 00:00 e 06:00, pertence ao dia anterior
+  const calcularDataReferencia = (dataCriacao, numeroMacro) => {
+    const dt = new Date(dataCriacao);
+    const hora = dt.getHours();
+    
+    // Macros de fim: 2 (Fim Jornada), 4 (Fim Refeição), 6 (Fim Repouso), 10 (Fim Complemento)
+    const isMacroFim = [2, 4, 6, 10].includes(numeroMacro);
+    
+    // Se é macro de fim e ocorre entre 00:00 e 06:00, pertence ao dia anterior
+    if (isMacroFim && hora >= 0 && hora < 6) {
+      const diaAnterior = new Date(dt);
+      diaAnterior.setDate(diaAnterior.getDate() - 1);
+      return diaAnterior.toISOString().split('T')[0];
+    }
+    
+    // Caso contrário, usa a data da criação
+    return dt.toISOString().split('T')[0];
+  };
+
   const processFile = async (file) => {
     setIsImporting(true);
     setProgress(0);
@@ -175,8 +195,10 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
 
         for (const row of batch) {
           const veiculoId = vehicleMap.get(row.nomeVeiculo.toLowerCase());
-          const dataReferencia = row.dataCriacao.toISOString().split('T')[0];
           const dataCriacaoStr = row.dataCriacao.toISOString();
+          
+          // Calcular data_referencia corretamente
+          const dataReferencia = calcularDataReferencia(row.dataCriacao, row.numeroMacro);
           
           // Criar chave única (sem milissegundos)
           const dateToSecond = new Date(row.dataCriacao);
