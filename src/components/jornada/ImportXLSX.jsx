@@ -67,7 +67,9 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
       // Primeiro, remover duplicatas existentes no banco
       const grupos = {};
       existingMacros.forEach(m => {
-        const key = `${m.veiculo_id}-${m.numero_macro}-${m.data_criacao}`;
+        const dateToSecond = new Date(m.data_criacao);
+        dateToSecond.setMilliseconds(0);
+        const key = `${m.veiculo_id}-${m.numero_macro}-${dateToSecond.toISOString()}`;
         if (!grupos[key]) {
           grupos[key] = [];
         }
@@ -103,7 +105,9 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
       const macroKeys = new Map();
       const editedKeys = new Set();
       cleanMacros.forEach(m => {
-        const key = `${m.veiculo_id}-${m.numero_macro}-${m.data_criacao}`;
+        const dateToSecond = new Date(m.data_criacao);
+        dateToSecond.setMilliseconds(0);
+        const key = `${m.veiculo_id}-${m.numero_macro}-${dateToSecond.toISOString()}`;
         macroKeys.set(key, true);
         if (m.editado_manualmente) {
           editedKeys.add(key);
@@ -173,7 +177,11 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
           const veiculoId = vehicleMap.get(row.nomeVeiculo.toLowerCase());
           const dataReferencia = row.dataCriacao.toISOString().split('T')[0];
           const dataCriacaoStr = row.dataCriacao.toISOString();
-          const key = `${veiculoId}-${row.numeroMacro}-${dataCriacaoStr}`;
+          
+          // Criar chave única (sem milissegundos)
+          const dateToSecond = new Date(row.dataCriacao);
+          dateToSecond.setMilliseconds(0);
+          const key = `${veiculoId}-${row.numeroMacro}-${dateToSecond.toISOString()}`;
 
           // Ignorar se foi editado manualmente ou já existe
           if (editedKeys.has(key) || macroKeys.has(key)) {

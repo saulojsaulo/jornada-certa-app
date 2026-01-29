@@ -31,10 +31,30 @@ export default function Jornada() {
   });
 
   // Buscar macros
-  const { data: macros = [], isLoading: loadingMacros, refetch: refetchMacros } = useQuery({
+  const { data: fetchedMacros = [], isLoading: loadingMacros, refetch: refetchMacros } = useQuery({
     queryKey: ['macros'],
-    queryFn: () => base44.entities.MacroEvento.list('-data_criacao', 10000),
+    queryFn: () => base44.entities.MacroEvento.list('-data_criacao', 50000),
   });
+
+  // Dedupicação de macros no frontend
+  const macros = useMemo(() => {
+    const seen = new Set();
+    const uniqueMacros = [];
+    
+    fetchedMacros.forEach(m => {
+      // Criar chave única: veiculo_id + numero_macro + data_criacao (sem milissegundos)
+      const dateToSecond = new Date(m.data_criacao);
+      dateToSecond.setMilliseconds(0);
+      const key = `${m.veiculo_id}-${m.numero_macro}-${dateToSecond.toISOString()}`;
+      
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueMacros.push(m);
+      }
+    });
+    
+    return uniqueMacros;
+  }, [fetchedMacros]);
 
   // Buscar último log de importação
   const { data: importLogs = [], refetch: refetchImportLogs } = useQuery({
@@ -65,8 +85,8 @@ export default function Jornada() {
   const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
 
   const { macrosHoje, macrosOntem } = useMemo(() => {
-    const hoje = macros.filter(m => m.data_referencia === dateString);
-    const ontem = macros.filter(m => m.data_referencia === yesterdayString);
+    const hoje = macros.filter(m => m.data_referencia === dateString && !m.excluido);
+    const ontem = macros.filter(m => m.data_referencia === yesterdayString && !m.excluido);
     return { macrosHoje: hoje, macrosOntem: ontem };
   }, [macros, dateString, yesterdayString]);
 
