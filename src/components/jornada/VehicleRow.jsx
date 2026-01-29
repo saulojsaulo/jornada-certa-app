@@ -40,42 +40,36 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
   return (
     <motion.div
       layout
-      className={`rounded-xl overflow-hidden shadow-sm border border-slate-100 ${statusConfig.rowColor}`}
+      className={`rounded-xl overflow-hidden shadow-md border-2 ${expanded ? 'border-slate-400' : 'border-slate-200'} ${statusConfig.rowColor}`}
     >
       <div
-        className="p-4 cursor-pointer hover:bg-white/50 transition-colors"
+        className="p-5 cursor-pointer hover:bg-white/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="grid grid-cols-16 gap-2 items-center">
-          {/* Expandir */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+          {/* Gestor */}
           <div className="col-span-1">
-            <motion.div
-              animate={{ rotate: expanded ? 90 : 0 }}
-              className="w-6 h-6 flex items-center justify-center text-slate-400"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </motion.div>
+            <div className="md:hidden text-xs text-slate-500 mb-1">Gestor</div>
+            <span className="text-sm font-medium text-slate-700">{getManagerName(veiculo.nome_veiculo)}</span>
           </div>
 
           {/* Frota */}
           <div className="col-span-1">
-            <span className="font-bold text-slate-800">{extractFleetNumber(veiculo.nome_veiculo)}</span>
+            <div className="md:hidden text-xs text-slate-500 mb-1">Frota</div>
+            <span className="font-bold text-slate-800 text-lg">{extractFleetNumber(veiculo.nome_veiculo)}</span>
           </div>
 
           {/* Motorista */}
           <div className="col-span-2">
+            <div className="md:hidden text-xs text-slate-500 mb-1">Motorista</div>
             <span className="text-sm text-slate-700 truncate block" title={getDriverName(veiculo.nome_veiculo)}>
               {getDriverName(veiculo.nome_veiculo)}
             </span>
           </div>
 
-          {/* Gestor */}
-          <div className="col-span-1">
-            <span className="text-sm text-slate-600">{getManagerName(veiculo.nome_veiculo)}</span>
-          </div>
-
           {/* Status */}
           <div className="col-span-2">
+            <div className="md:hidden text-xs text-slate-500 mb-1">Status</div>
             <Badge className={`${statusConfig.color} font-medium text-xs`}>
               {status}
             </Badge>
@@ -83,7 +77,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
 
           {/* Jornada em Tempo Real */}
           <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-0.5 hidden md:block">Jornada</div>
+            <div className="text-xs text-slate-500 mb-1 md:hidden">Jornada</div>
             <div className={`font-mono font-bold text-sm ${jornadaLiquida > 480 ? 'text-amber-600' : 'text-slate-700'}`}>
               {minutesToHHMM(jornadaLiquida)}
             </div>
@@ -91,7 +85,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
 
           {/* Tempo Disponível */}
           <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-0.5 hidden md:block">Disponível</div>
+            <div className="text-xs text-slate-500 mb-1 md:hidden">Disponível</div>
             <div className={`font-mono font-bold text-sm ${tempoDisponivel < 60 ? 'text-red-600' : 'text-emerald-600'}`}>
               {minutesToHHMM(tempoDisponivel)}
             </div>
@@ -99,7 +93,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
 
           {/* Horas Extras */}
           <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-0.5 hidden md:block">H. Extra</div>
+            <div className="text-xs text-slate-500 mb-1 md:hidden">H. Extra</div>
             <div className={`font-mono font-bold text-sm ${horasExtras > 0 ? 'text-red-600' : 'text-slate-400'}`}>
               {minutesToHHMM(horasExtras)}
             </div>
@@ -107,14 +101,14 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
 
           {/* Total do Dia */}
           <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-0.5 hidden md:block">Total</div>
+            <div className="text-xs text-slate-500 mb-1 md:hidden">Total</div>
             <div className="font-mono font-bold text-sm text-slate-700">
               {minutesToHHMM(jornadaLiquida)}
             </div>
           </div>
 
           {/* Alertas */}
-          <div className="col-span-4 flex items-center justify-end gap-2">
+          <div className="col-span-2 flex items-center justify-end gap-2">
             {/* Alerta Refeição */}
             {alertaRefeicao && (
               <motion.div
