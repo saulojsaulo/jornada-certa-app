@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Truck, RefreshCw, Calendar } from 'lucide-react';
+import { Truck, RefreshCw, Calendar, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -35,6 +35,14 @@ export default function Jornada() {
     queryKey: ['macros'],
     queryFn: () => base44.entities.MacroEvento.list('-data_criacao', 10000),
   });
+
+  // Buscar último log de importação
+  const { data: importLogs = [], refetch: refetchImportLogs } = useQuery({
+    queryKey: ['importLogs'],
+    queryFn: () => base44.entities.ImportLog.list('-imported_at', 1),
+  });
+
+  const lastImport = importLogs[0] || null;
 
   // Subscription para atualizações em tempo real
   useEffect(() => {
@@ -84,6 +92,7 @@ export default function Jornada() {
   const handleImportComplete = () => {
     refetchVeiculos();
     refetchMacros();
+    refetchImportLogs();
   };
 
   const handleRefresh = () => {
@@ -110,6 +119,16 @@ export default function Jornada() {
             </div>
 
             <div className="flex items-center gap-4">
+              {/* Última Importação */}
+              {lastImport && (
+                <div className="hidden lg:flex items-center gap-2 bg-emerald-50 rounded-xl px-3 py-2 text-sm">
+                  <Clock className="w-4 h-4 text-emerald-600" />
+                  <span className="text-emerald-700">
+                    Última importação: {format(new Date(lastImport.imported_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} por <strong>{lastImport.imported_by}</strong>
+                  </span>
+                </div>
+              )}
+
               {/* Relógio */}
               <div className="hidden md:flex items-center gap-2 bg-slate-100 rounded-xl px-4 py-2">
                 <span className="text-2xl font-mono font-bold text-slate-700">
@@ -161,7 +180,7 @@ export default function Jornada() {
             />
           </div>
           <div className="lg:col-span-1">
-            <ImportXLSX onImportComplete={handleImportComplete} />
+            <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={refetchImportLogs} />
           </div>
         </div>
 
