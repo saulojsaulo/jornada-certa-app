@@ -9,12 +9,18 @@ import {
   calcularHorasExtras,
   STATUS_CONFIG
 } from './MacroUtils';
-import { Clock, Coffee, Moon, Zap, Play, Square, Trash2, RotateCcw } from 'lucide-react';
+import { Clock, Coffee, Moon, Zap, Play, Square, Trash2, RotateCcw, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function VehicleTimeline({ macros }) {
   const [updatingIds, setUpdatingIds] = useState(new Set());
+  const [editingMacro, setEditingMacro] = useState(null);
+  const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
 
   if (!macros || macros.length === 0) {
     return (
@@ -37,6 +43,43 @@ export default function VehicleTimeline({ macros }) {
       setUpdatingIds(prev => {
         const newSet = new Set(prev);
         newSet.delete(macro.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleOpenEdit = (macro) => {
+    const dt = new Date(macro.data_criacao);
+    setEditForm({
+      numero_macro: macro.numero_macro,
+      data: dt.toISOString().split('T')[0],
+      hora: dt.toTimeString().slice(0, 5)
+    });
+    setEditingMacro(macro);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMacro) return;
+    
+    setUpdatingIds(prev => new Set(prev).add(editingMacro.id));
+    try {
+      const dataCriacao = new Date(`${editForm.data}T${editForm.hora}:00`).toISOString();
+      const dataReferencia = editForm.data;
+      
+      await base44.entities.MacroEvento.update(editingMacro.id, {
+        numero_macro: editForm.numero_macro,
+        data_criacao: dataCriacao,
+        data_referencia: dataReferencia,
+        editado_manualmente: true
+      });
+      
+      setEditingMacro(null);
+    } catch (error) {
+      console.error('Erro ao editar macro:', error);
+    } finally {
+      setUpdatingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(editingMacro.id);
         return newSet;
       });
     }
@@ -210,23 +253,37 @@ export default function VehicleTimeline({ macros }) {
                           minute: '2-digit' 
                         })}
                       </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleToggleExcluir(macro)}
-                        disabled={isUpdating}
-                      >
-                        {isExcluido ? (
-                          <RotateCcw className="h-3 w-3 text-emerald-600" />
-                        ) : (
-                          <Trash2 className="h-3 w-3 text-red-500" />
-                        )}
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleOpenEdit(macro)}
+                          disabled={isUpdating}
+                        >
+                          <Pencil className="h-3 w-3 text-blue-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleToggleExcluir(macro)}
+                          disabled={isUpdating}
+                        >
+                          {isExcluido ? (
+                            <RotateCcw className="h-3 w-3 text-emerald-600" />
+                          ) : (
+                            <Trash2 className="h-3 w-3 text-red-500" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                   {isExcluido && (
                     <div className="text-xs text-red-500 mt-1">Excluído manualmente</div>
+                  )}
+                  {macro.editado_manualmente && !isExcluido && (
+                    <div className="text-xs text-blue-500 mt-1">Editado manualmente</div>
                   )}
                 </div>
               </motion.div>
@@ -234,6 +291,62 @@ export default function VehicleTimeline({ macros }) {
           })}
         </div>
       </div>
+
+      {/* Dialog de Edição */}
+      <Dialog open={!!editingMacro} onOpenChange={() => setEditingMacro(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Lançamento</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Tipo de Evento</Label>
+              <Select 
+                value={String(editForm.numero_macro)} 
+                onValueChange={(v) => setEditForm({...editForm, numero_macro: parseInt(v)})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(MACRO_NAMES).map(([num, nome]) => (
+                    <SelectItem key={num} value={num}>{nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input 
+                  type="date" 
+                  value={editForm.data}
+                  onChange={(e) => setEditForm({...editForm, data: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Hora</Label>
+                <Input 
+                  type="time" 
+                  value={editForm.hora}
+                  onChange={(e) => setEditForm({...editForm, hora: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingMacro(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
