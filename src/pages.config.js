@@ -48,10 +48,12 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import Jornada from './pages/Jornada';
+import LimpezaDuplicatas from './pages/LimpezaDuplicatas';
 
 
 export const PAGES = {
     "Jornada": Jornada,
+    "LimpezaDuplicatas": LimpezaDuplicatas,
 }
 
 export const pagesConfig = {
