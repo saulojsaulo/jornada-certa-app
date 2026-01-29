@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +6,28 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-export default function ImportXLSX({ onImportComplete }) {
+export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState(null);
   const [stats, setStats] = useState({ total: 0, imported: 0, duplicates: 0, errors: 0 });
   const fileInputRef = useRef(null);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const user = await base44.auth.me();
+        setCurrentUser(user);
+      } catch (e) {
+        console.log('User not logged in');
+      }
+    };
+    loadUser();
+  }, []);
 
   const processFile = async (file) => {
     setIsImporting(true);
@@ -115,9 +130,20 @@ export default function ImportXLSX({ onImportComplete }) {
 
       setStatus('complete');
       setStats({ total: sortedRows.length, imported, duplicates, errors });
-      
+
+      // Registrar log de importação
+      const userName = currentUser?.full_name || currentUser?.email || 'Usuário';
+      await base44.entities.ImportLog.create({
+        imported_at: new Date().toISOString(),
+        imported_by: userName,
+        records_count: imported
+      });
+
       if (onImportComplete) {
         onImportComplete();
+      }
+      if (onImportLogUpdate) {
+        onImportLogUpdate();
       }
     } catch (error) {
       console.error('Erro na importação:', error);
