@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import VehicleRow from './VehicleRow';
 import VehicleFilters from './VehicleFilters';
+import GridHeader from './GridHeader';
+import { getManagerName } from './DriverData';
 import {
   getVehicleStatus,
   calcularJornadaLiquida,
@@ -18,6 +20,12 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
   const [alertFilter, setAlertFilter] = useState('all');
   const [sortBy, setSortBy] = useState('nome');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [columnFilters, setColumnFilters] = useState({
+    gestor: null,
+    frota: null,
+    motorista: null,
+    status: null,
+  });
 
   const processedVehicles = useMemo(() => {
     return veiculos.map(v => {
@@ -70,6 +78,14 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       result = result.filter(v => v.alertasInterjornada.alerta8h);
     }
 
+    // Filtros por coluna
+    if (columnFilters.gestor) {
+      result = result.filter(v => getManagerName(v.nome_veiculo) === columnFilters.gestor);
+    }
+    if (columnFilters.status) {
+      result = result.filter(v => v.status === columnFilters.status);
+    }
+
     // Ordenação
     result.sort((a, b) => {
       let comparison = 0;
@@ -93,7 +109,86 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
     });
 
     return result;
-  }, [processedVehicles, search, statusFilter, alertFilter, sortBy, sortOrder]);
+  }, [processedVehicles, search, statusFilter, alertFilter, sortBy, sortOrder, columnFilters]);
+
+  // Obter valores únicos para filtros
+  const gestores = [...new Set(processedVehicles.map(v => getManagerName(v.nome_veiculo)).filter(g => g !== '—'))].sort();
+  const statuses = [...new Set(processedVehicles.map(v => v.status))].sort();
+
+  const columns = [
+    {
+      key: 'gestor',
+      label: 'Gestor',
+      span: 'col-span-1',
+      filterable: true,
+      draggable: true,
+      filterOptions: gestores.map(g => ({ value: g, label: g }))
+    },
+    {
+      key: 'frota',
+      label: 'Frota',
+      span: 'col-span-1',
+      draggable: true,
+      filterable: false
+    },
+    {
+      key: 'motorista',
+      label: 'Motorista',
+      span: 'col-span-2',
+      draggable: true,
+      filterable: false
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      span: 'col-span-2',
+      filterable: true,
+      draggable: true,
+      filterOptions: statuses.map(s => ({ value: s, label: s }))
+    },
+    {
+      key: 'jornada',
+      label: 'Jornada',
+      span: 'col-span-1',
+      align: 'text-center',
+      filterable: false
+    },
+    {
+      key: 'disponivel',
+      label: 'Disponível',
+      span: 'col-span-1',
+      align: 'text-center',
+      filterable: false
+    },
+    {
+      key: 'hextra',
+      label: 'H. Extra',
+      span: 'col-span-1',
+      align: 'text-center',
+      filterable: false
+    },
+    {
+      key: 'total',
+      label: 'Total',
+      span: 'col-span-1',
+      align: 'text-center',
+      filterable: false
+    },
+    {
+      key: 'alertas',
+      label: 'Alertas',
+      span: 'col-span-2',
+      align: 'text-right',
+      filterable: false
+    }
+  ];
+
+  const handleColumnFilter = (columnKey, value) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [columnKey]: value
+    }));
+  };
 
   return (
     <div className="space-y-4">
@@ -110,18 +205,12 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
         setAlertFilter={setAlertFilter}
       />
 
-      {/* Cabeçalho da grade */}
-      <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider bg-slate-50 rounded-lg border border-slate-200 mb-2">
-        <div className="col-span-1">Gestor</div>
-        <div className="col-span-1">Frota</div>
-        <div className="col-span-2">Motorista</div>
-        <div className="col-span-2">Status</div>
-        <div className="col-span-1 text-center">Jornada</div>
-        <div className="col-span-1 text-center">Disponível</div>
-        <div className="col-span-1 text-center">H. Extra</div>
-        <div className="col-span-1 text-center">Total</div>
-        <div className="col-span-2 text-right">Alertas</div>
-      </div>
+      {/* Cabeçalho com filtros */}
+      <GridHeader
+        columns={columns}
+        onFilterChange={handleColumnFilter}
+        filters={columnFilters}
+      />
 
       {/* Lista de veículos */}
       <div className="space-y-2">
