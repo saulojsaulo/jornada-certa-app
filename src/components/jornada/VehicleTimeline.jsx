@@ -17,15 +17,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function VehicleTimeline({ macros }) {
+export default function VehicleTimeline({ macros, dataReferencia }) {
   const [updatingIds, setUpdatingIds] = useState(new Set());
   const [editingMacro, setEditingMacro] = useState(null);
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
 
-  if (!macros || macros.length === 0) {
+  // Filtrar apenas macros do dia selecionado
+  const macrosDoDia = macros?.filter(m => m.data_referencia === dataReferencia) || [];
+
+  if (!macrosDoDia || macrosDoDia.length === 0) {
     return (
       <div className="p-6 text-center text-slate-400">
-        Nenhum evento registrado hoje
+        Nenhum evento registrado neste dia
       </div>
     );
   }
@@ -85,12 +88,12 @@ export default function VehicleTimeline({ macros }) {
     }
   };
 
-  const sorted = [...macros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+  const sorted = [...macrosDoDia].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   
-  const jornadaBruta = calcularJornadaBruta(macros);
-  const jornadaLiquida = calcularJornadaLiquida(macros);
-  const pausas = calcularPausas(macros);
-  const horasExtras = calcularHorasExtras(macros);
+  const jornadaBruta = calcularJornadaBruta(macrosDoDia);
+  const jornadaLiquida = calcularJornadaLiquida(macrosDoDia);
+  const pausas = calcularPausas(macrosDoDia);
+  const horasExtras = calcularHorasExtras(macrosDoDia);
   
   const limite12h = 720;
   const limite8h = 480;

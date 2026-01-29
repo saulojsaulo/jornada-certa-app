@@ -156,7 +156,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
       {/* Timeline expandida */}
       <AnimatePresence>
         {expanded && (
-          <VehicleTimeline macros={macrosHoje} />
+          <VehicleTimeline macros={macrosHoje} dataReferencia={macrosHoje[0]?.data_referencia} />
         )}
       </AnimatePresence>
     </motion.div>
