@@ -111,15 +111,17 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       />
 
       {/* Cabeçalho da grade */}
-      <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2 text-xs font-medium text-slate-500 uppercase tracking-wider">
+      <div className="hidden md:grid grid-cols-16 gap-2 px-4 py-2 text-xs font-medium text-slate-500 uppercase tracking-wider">
         <div className="col-span-1"></div>
-        <div className="col-span-2">Veículo</div>
+        <div className="col-span-1">Frota</div>
+        <div className="col-span-2">Motorista</div>
+        <div className="col-span-1">Gestor</div>
         <div className="col-span-2">Status</div>
         <div className="col-span-1 text-center">Jornada</div>
         <div className="col-span-1 text-center">Disponível</div>
         <div className="col-span-1 text-center">H. Extra</div>
         <div className="col-span-1 text-center">Total</div>
-        <div className="col-span-3 text-right">Alertas</div>
+        <div className="col-span-4 text-right">Alertas</div>
       </div>
 
       {/* Lista de veículos */}

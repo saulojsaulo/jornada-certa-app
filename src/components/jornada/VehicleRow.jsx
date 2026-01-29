@@ -13,6 +13,7 @@ import {
   verificarAlertaRefeicao,
   verificarAlertasInterjornada
 } from './MacroUtils';
+import { extractFleetNumber, getDriverName, getManagerName } from './DriverData';
 import VehicleTimeline from './VehicleTimeline';
 
 export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
@@ -45,7 +46,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
         className="p-4 cursor-pointer hover:bg-white/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="grid grid-cols-12 gap-3 items-center">
+        <div className="grid grid-cols-16 gap-2 items-center">
           {/* Expandir */}
           <div className="col-span-1">
             <motion.div
@@ -56,52 +57,64 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
             </motion.div>
           </div>
 
-          {/* Nome do Veículo */}
+          {/* Frota */}
+          <div className="col-span-1">
+            <span className="font-bold text-slate-800">{extractFleetNumber(veiculo.nome_veiculo)}</span>
+          </div>
+
+          {/* Motorista */}
           <div className="col-span-2">
-            <span className="font-semibold text-slate-800">{veiculo.nome_veiculo}</span>
+            <span className="text-sm text-slate-700 truncate block" title={getDriverName(veiculo.nome_veiculo)}>
+              {getDriverName(veiculo.nome_veiculo)}
+            </span>
+          </div>
+
+          {/* Gestor */}
+          <div className="col-span-1">
+            <span className="text-sm text-slate-600">{getManagerName(veiculo.nome_veiculo)}</span>
           </div>
 
           {/* Status */}
           <div className="col-span-2">
-            <Badge className={`${statusConfig.color} font-medium`}>
+            <Badge className={`${statusConfig.color} font-medium text-xs`}>
               {status}
             </Badge>
           </div>
 
           {/* Jornada em Tempo Real */}
           <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-0.5">Jornada</div>
-            <div className={`font-mono font-bold ${jornadaLiquida > 480 ? 'text-amber-600' : 'text-slate-700'}`}>
+            <div className="text-xs text-slate-500 mb-0.5 hidden md:block">Jornada</div>
+            <div className={`font-mono font-bold text-sm ${jornadaLiquida > 480 ? 'text-amber-600' : 'text-slate-700'}`}>
               {minutesToHHMM(jornadaLiquida)}
             </div>
           </div>
 
           {/* Tempo Disponível */}
           <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-0.5">Disponível</div>
-            <div className={`font-mono font-bold ${tempoDisponivel < 60 ? 'text-red-600' : 'text-emerald-600'}`}>
+            <div className="text-xs text-slate-500 mb-0.5 hidden md:block">Disponível</div>
+            <div className={`font-mono font-bold text-sm ${tempoDisponivel < 60 ? 'text-red-600' : 'text-emerald-600'}`}>
               {minutesToHHMM(tempoDisponivel)}
             </div>
           </div>
 
           {/* Horas Extras */}
           <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-0.5">H. Extra</div>
-            <div className={`font-mono font-bold ${horasExtras > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+            <div className="text-xs text-slate-500 mb-0.5 hidden md:block">H. Extra</div>
+            <div className={`font-mono font-bold text-sm ${horasExtras > 0 ? 'text-red-600' : 'text-slate-400'}`}>
               {minutesToHHMM(horasExtras)}
             </div>
           </div>
 
           {/* Total do Dia */}
           <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-0.5">Total Dia</div>
-            <div className="font-mono font-bold text-slate-700">
+            <div className="text-xs text-slate-500 mb-0.5 hidden md:block">Total</div>
+            <div className="font-mono font-bold text-sm text-slate-700">
               {minutesToHHMM(jornadaLiquida)}
             </div>
           </div>
 
           {/* Alertas */}
-          <div className="col-span-3 flex items-center justify-end gap-2">
+          <div className="col-span-4 flex items-center justify-end gap-2">
             {/* Alerta Refeição */}
             {alertaRefeicao && (
               <motion.div
