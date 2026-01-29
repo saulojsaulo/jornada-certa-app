@@ -173,19 +173,12 @@ export default function Jornada() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Stats e Import */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3">
-            <StatsCards 
-              veiculos={veiculos}
-              macrosPorVeiculo={macrosPorVeiculo}
-              macrosOntemPorVeiculo={macrosOntemPorVeiculo}
-            />
-          </div>
-          <div className="lg:col-span-1">
-            <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={refetchImportLogs} />
-          </div>
-        </div>
+        {/* Stats */}
+        <StatsCards 
+          veiculos={veiculos}
+          macrosPorVeiculo={macrosPorVeiculo}
+          macrosOntemPorVeiculo={macrosOntemPorVeiculo}
+        />
 
         {/* Grid de Veículos */}
         <motion.div
