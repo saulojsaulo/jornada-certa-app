@@ -37,86 +37,114 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
     setStats({ total: 0, imported: 0, duplicates: 0, errors: 0 });
 
     try {
+      // Ler arquivo
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
+      const workbook = XLSX.read(data, { cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      // Pular cabeçalho
-      const dataRows = rows.slice(1).filter(row => row.length >= 3);
+      // Pular cabeçalho e filtrar linhas vazias
+      const dataRows = rows.slice(1).filter(row => row && row.length >= 3 && row[0]);
+      
+      if (dataRows.length === 0) {
+        throw new Error('Nenhum dado válido encontrado no arquivo');
+      }
+
       setStats(prev => ({ ...prev, total: dataRows.length }));
-      setStatus('Processando registros...');
+      setStatus(`Carregando dados existentes...`);
 
       // Buscar veículos existentes
       const existingVehicles = await base44.entities.Veiculo.list();
-      const vehicleMap = {};
+      const vehicleMap = new Map();
       existingVehicles.forEach(v => {
-        vehicleMap[v.nome_veiculo.toLowerCase().trim()] = v.id;
+        vehicleMap.set(v.nome_veiculo.toLowerCase().trim(), v.id);
       });
 
-      // Buscar macros existentes para verificar duplicatas
-      const existingMacros = await base44.entities.MacroEvento.list();
-      const macroKeys = new Set(
-        existingMacros.map(m => `${m.veiculo_id}-${m.numero_macro}-${m.data_criacao}`)
-      );
+      // Buscar macros existentes para verificar duplicatas (usar Map para performance)
+      setStatus('Verificando duplicatas...');
+      const existingMacros = await base44.entities.MacroEvento.list('-data_criacao', 50000);
+      const macroKeys = new Map();
+      existingMacros.forEach(m => {
+        macroKeys.set(`${m.veiculo_id}-${m.numero_macro}-${m.data_criacao}`, true);
+      });
 
       let imported = 0;
       let duplicates = 0;
       let errors = 0;
 
-      // Ordenar por data de criação
-      const sortedRows = dataRows.sort((a, b) => {
-        const dateA = parseDate(a[2]);
-        const dateB = parseDate(b[2]);
-        return dateA - dateB;
-      });
+      // Pré-processar e validar todas as linhas
+      setStatus('Validando registros...');
+      const validRows = [];
+      const newVehicles = new Map();
 
-      // Processar em lotes
-      const batchSize = 10;
-      for (let i = 0; i < sortedRows.length; i += batchSize) {
-        const batch = sortedRows.slice(i, i + batchSize);
+      for (const row of dataRows) {
+        try {
+          const nomeVeiculo = String(row[0]).trim();
+          const numeroMacro = parseInt(row[1]);
+          const dataCriacao = parseDate(row[2]);
+
+          if (!nomeVeiculo || isNaN(numeroMacro) || !dataCriacao) {
+            errors++;
+            continue;
+          }
+
+          validRows.push({ nomeVeiculo, numeroMacro, dataCriacao });
+          
+          // Identificar veículos novos
+          const vehicleKey = nomeVeiculo.toLowerCase();
+          if (!vehicleMap.has(vehicleKey) && !newVehicles.has(vehicleKey)) {
+            newVehicles.set(vehicleKey, nomeVeiculo);
+          }
+        } catch (err) {
+          errors++;
+        }
+      }
+
+      // Criar todos os veículos novos de uma vez
+      if (newVehicles.size > 0) {
+        setStatus(`Criando ${newVehicles.size} veículos novos...`);
+        const vehiclesToCreate = Array.from(newVehicles.values()).map(nome => ({
+          nome_veiculo: nome
+        }));
+        
+        const createdVehicles = await base44.entities.Veiculo.bulkCreate(vehiclesToCreate);
+        createdVehicles.forEach(v => {
+          vehicleMap.set(v.nome_veiculo.toLowerCase().trim(), v.id);
+        });
+      }
+
+      // Ordenar por data
+      validRows.sort((a, b) => a.dataCriacao - b.dataCriacao);
+
+      // Processar em lotes maiores
+      const batchSize = 50;
+      const totalBatches = Math.ceil(validRows.length / batchSize);
+      
+      for (let i = 0; i < validRows.length; i += batchSize) {
+        const currentBatch = Math.floor(i / batchSize) + 1;
+        setStatus(`Processando lote ${currentBatch}/${totalBatches}...`);
+        
+        const batch = validRows.slice(i, i + batchSize);
         const toCreate = [];
 
         for (const row of batch) {
-          try {
-            const nomeVeiculo = String(row[0]).trim();
-            const numeroMacro = parseInt(row[1]);
-            const dataCriacao = parseDate(row[2]);
+          const veiculoId = vehicleMap.get(row.nomeVeiculo.toLowerCase());
+          const dataReferencia = row.dataCriacao.toISOString().split('T')[0];
+          const dataCriacaoStr = row.dataCriacao.toISOString();
+          const key = `${veiculoId}-${row.numeroMacro}-${dataCriacaoStr}`;
 
-            if (!nomeVeiculo || isNaN(numeroMacro) || !dataCriacao) {
-              errors++;
-              continue;
-            }
-
-            // Criar veículo se não existir
-            let veiculoId = vehicleMap[nomeVeiculo.toLowerCase()];
-            if (!veiculoId) {
-              const newVehicle = await base44.entities.Veiculo.create({
-                nome_veiculo: nomeVeiculo
-              });
-              veiculoId = newVehicle.id;
-              vehicleMap[nomeVeiculo.toLowerCase()] = veiculoId;
-            }
-
-            const dataReferencia = dataCriacao.toISOString().split('T')[0];
-            const dataCriacaoStr = dataCriacao.toISOString();
-            const key = `${veiculoId}-${numeroMacro}-${dataCriacaoStr}`;
-
-            if (macroKeys.has(key)) {
-              duplicates++;
-              continue;
-            }
-
-            macroKeys.add(key);
-            toCreate.push({
-              veiculo_id: veiculoId,
-              numero_macro: numeroMacro,
-              data_criacao: dataCriacaoStr,
-              data_referencia: dataReferencia
-            });
-          } catch (err) {
-            errors++;
+          if (macroKeys.has(key)) {
+            duplicates++;
+            continue;
           }
+
+          macroKeys.set(key, true);
+          toCreate.push({
+            veiculo_id: veiculoId,
+            numero_macro: row.numeroMacro,
+            data_criacao: dataCriacaoStr,
+            data_referencia: dataReferencia
+          });
         }
 
         // Criar em lote
@@ -125,12 +153,19 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
           imported += toCreate.length;
         }
 
-        setProgress(Math.round(((i + batch.length) / sortedRows.length) * 100));
-        setStats({ total: sortedRows.length, imported, duplicates, errors });
+        // Atualizar progresso
+        const progressPercent = Math.round(((i + batch.length) / validRows.length) * 100);
+        setProgress(progressPercent);
+        setStats({ total: dataRows.length, imported, duplicates, errors });
+
+        // Pequena pausa para não sobrecarregar
+        if (i + batchSize < validRows.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       }
 
-      setStatus('complete');
-      setStats({ total: sortedRows.length, imported, duplicates, errors });
+      setStatus('Finalizando...');
+      setStats({ total: dataRows.length, imported, duplicates, errors });
 
       // Registrar log de importação
       const userName = currentUser?.full_name || currentUser?.email || 'Usuário';
@@ -139,6 +174,8 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
         imported_by: userName,
         records_count: imported
       });
+
+      setStatus('complete');
 
       if (onImportComplete) {
         onImportComplete();
