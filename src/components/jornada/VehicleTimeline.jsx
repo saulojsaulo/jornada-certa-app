@@ -22,15 +22,15 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
   const [editingMacro, setEditingMacro] = useState(null);
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
 
-  // Filtrar macros da jornada lógica e deduplicar
+  // Usar macros já filtradas (não filtrar novamente)
   const macrosDoDia = useMemo(() => {
-    const filtered = macros?.filter(m => m.data_jornada === dataReferencia && m.jornada_id) || [];
+    if (!macros || macros.length === 0) return [];
     
-    // Dedupicação: criar chave única sem milissegundos
+    // Dedupicação apenas
     const seen = new Set();
     const unique = [];
     
-    filtered.forEach(m => {
+    macros.forEach(m => {
       const dateToSecond = new Date(m.data_criacao);
       dateToSecond.setMilliseconds(0);
       const key = `${m.numero_macro}-${dateToSecond.toISOString()}`;
@@ -42,7 +42,7 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
     });
     
     return unique;
-  }, [macros, dataReferencia]);
+  }, [macros]);
 
   if (!macrosDoDia || macrosDoDia.length === 0) {
     return (
