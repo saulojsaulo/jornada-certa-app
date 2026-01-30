@@ -22,9 +22,9 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
   const [editingMacro, setEditingMacro] = useState(null);
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
 
-  // Filtrar macros do dia e deduplicar
+  // Filtrar macros da jornada lógica e deduplicar
   const macrosDoDia = useMemo(() => {
-    const filtered = macros?.filter(m => m.data_referencia === dataReferencia) || [];
+    const filtered = macros?.filter(m => m.data_jornada === dataReferencia && m.jornada_id) || [];
     
     // Dedupicação: criar chave única sem milissegundos
     const seen = new Set();
@@ -91,7 +91,6 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
       await base44.entities.MacroEvento.update(editingMacro.id, {
         numero_macro: editForm.numero_macro,
         data_criacao: dataCriacao,
-        data_referencia: dataReferencia,
         editado_manualmente: true
       });
       

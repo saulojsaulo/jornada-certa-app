@@ -30,26 +30,6 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
     loadUser();
   }, []);
 
-  // Função para calcular data_referencia corretamente
-  // Se é macro de fim (2, 4, 6, 10) e ocorre entre 00:00 e 06:00, pertence ao dia anterior
-  const calcularDataReferencia = (dataCriacao, numeroMacro) => {
-    const dt = new Date(dataCriacao);
-    const hora = dt.getHours();
-    
-    // Macros de fim: 2 (Fim Jornada), 4 (Fim Refeição), 6 (Fim Repouso), 10 (Fim Complemento)
-    const isMacroFim = [2, 4, 6, 10].includes(numeroMacro);
-    
-    // Se é macro de fim e ocorre entre 00:00 e 06:00, pertence ao dia anterior
-    if (isMacroFim && hora >= 0 && hora < 6) {
-      const diaAnterior = new Date(dt);
-      diaAnterior.setDate(diaAnterior.getDate() - 1);
-      return diaAnterior.toISOString().split('T')[0];
-    }
-    
-    // Caso contrário, usa a data da criação
-    return dt.toISOString().split('T')[0];
-  };
-
   const processFile = async (file) => {
     setIsImporting(true);
     setProgress(0);
@@ -100,14 +80,12 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
       let duplicatasRemovidas = 0;
       for (const [key, items] of Object.entries(grupos)) {
         if (items.length > 1) {
-          // Ordenar: priorizar editados manualmente, depois mais antigos
           items.sort((a, b) => {
             if (a.editado_manualmente && !b.editado_manualmente) return -1;
             if (!a.editado_manualmente && b.editado_manualmente) return 1;
             return new Date(a.created_date) - new Date(b.created_date);
           });
           
-          // Remover todos exceto o primeiro
           for (let i = 1; i < items.length; i++) {
             await base44.entities.MacroEvento.delete(items[i].id);
             duplicatasRemovidas++;
@@ -156,7 +134,6 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
 
           validRows.push({ nomeVeiculo, numeroMacro, dataCriacao });
           
-          // Identificar veículos novos
           const vehicleKey = nomeVeiculo.toLowerCase();
           if (!vehicleMap.has(vehicleKey) && !newVehicles.has(vehicleKey)) {
             newVehicles.set(vehicleKey, nomeVeiculo);
@@ -179,31 +156,72 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
         });
       }
 
-      // Ordenar por data
-      validRows.sort((a, b) => a.dataCriacao - b.dataCriacao);
+      // Ordenar por veículo e data para processar jornadas logicamente
+      validRows.sort((a, b) => {
+        const vComp = a.nomeVeiculo.localeCompare(b.nomeVeiculo);
+        if (vComp !== 0) return vComp;
+        return a.dataCriacao - b.dataCriacao;
+      });
 
-      // Processar em lotes maiores
-      const batchSize = 500;
-      const totalBatches = Math.ceil(validRows.length / batchSize);
+      // Calcular jornada_id para cada macro
+      setStatus('Calculando jornadas lógicas...');
+      const rowsWithJornada = [];
+      const jornadaPorVeiculo = new Map(); // veiculoId -> { jornadaId, dataJornada, aberta }
       
-      for (let i = 0; i < validRows.length; i += batchSize) {
+      for (const row of validRows) {
+        const veiculoId = vehicleMap.get(row.nomeVeiculo.toLowerCase());
+        let jornadaAtual = jornadaPorVeiculo.get(veiculoId);
+        
+        // Macro 1 sempre inicia nova jornada
+        if (row.numeroMacro === 1) {
+          const dataJornada = row.dataCriacao.toISOString().split('T')[0];
+          const jornadaId = `${veiculoId}-${dataJornada}-${row.dataCriacao.getTime()}`;
+          jornadaAtual = { jornadaId, dataJornada, aberta: true };
+          jornadaPorVeiculo.set(veiculoId, jornadaAtual);
+        }
+        
+        // Macro 2 encerra a jornada
+        if (row.numeroMacro === 2 && jornadaAtual) {
+          jornadaAtual.aberta = false;
+        }
+        
+        // Atribuir jornada_id e data_jornada
+        if (jornadaAtual && jornadaAtual.aberta) {
+          rowsWithJornada.push({
+            ...row,
+            veiculoId,
+            jornadaId: jornadaAtual.jornadaId,
+            dataJornada: jornadaAtual.dataJornada
+          });
+        } else {
+          // Macros órfãs (sem Macro 1 aberta) não têm jornada
+          rowsWithJornada.push({
+            ...row,
+            veiculoId,
+            jornadaId: null,
+            dataJornada: null
+          });
+        }
+      }
+
+      // Processar em lotes
+      const batchSize = 500;
+      const totalBatches = Math.ceil(rowsWithJornada.length / batchSize);
+      
+      for (let i = 0; i < rowsWithJornada.length; i += batchSize) {
         const currentBatch = Math.floor(i / batchSize) + 1;
         setStatus(`Processando lote ${currentBatch}/${totalBatches}...`);
         
-        const batch = validRows.slice(i, i + batchSize);
+        const batch = rowsWithJornada.slice(i, i + batchSize);
         const toCreate = [];
 
         for (const row of batch) {
-          const veiculoId = vehicleMap.get(row.nomeVeiculo.toLowerCase());
           const dataCriacaoStr = row.dataCriacao.toISOString();
-          
-          // Calcular data_referencia corretamente
-          const dataReferencia = calcularDataReferencia(row.dataCriacao, row.numeroMacro);
           
           // Criar chave única (sem milissegundos)
           const dateToSecond = new Date(row.dataCriacao);
           dateToSecond.setMilliseconds(0);
-          const key = `${veiculoId}-${row.numeroMacro}-${dateToSecond.toISOString()}`;
+          const key = `${row.veiculoId}-${row.numeroMacro}-${dateToSecond.toISOString()}`;
 
           // Ignorar se foi editado manualmente ou já existe
           if (editedKeys.has(key) || macroKeys.has(key)) {
@@ -213,10 +231,11 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
 
           macroKeys.set(key, true);
           toCreate.push({
-            veiculo_id: veiculoId,
+            veiculo_id: row.veiculoId,
             numero_macro: row.numeroMacro,
             data_criacao: dataCriacaoStr,
-            data_referencia: dataReferencia
+            jornada_id: row.jornadaId,
+            data_jornada: row.dataJornada
           });
         }
 
@@ -227,12 +246,11 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
         }
 
         // Atualizar progresso
-        const progressPercent = Math.round(((i + batch.length) / validRows.length) * 100);
+        const progressPercent = Math.round(((i + batch.length) / rowsWithJornada.length) * 100);
         setProgress(progressPercent);
         setStats({ total: dataRows.length, imported, duplicates, errors });
 
-        // Pequena pausa para não sobrecarregar
-        if (i + batchSize < validRows.length) {
+        if (i + batchSize < rowsWithJornada.length) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
@@ -267,17 +285,14 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
   const parseDate = (value) => {
     if (!value) return null;
     
-    // Se for número (Excel serial date)
     if (typeof value === 'number') {
       const date = XLSX.SSF.parse_date_code(value);
       return new Date(date.y, date.m - 1, date.d, date.H || 0, date.M || 0, date.S || 0);
     }
     
-    // Se for string, tentar parsear
     const parsed = new Date(value);
     if (!isNaN(parsed.getTime())) return parsed;
     
-    // Tentar formato DD/MM/YYYY HH:mm:ss
     const match = String(value).match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):?(\d{2})?/);
     if (match) {
       return new Date(

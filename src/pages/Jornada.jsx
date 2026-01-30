@@ -80,13 +80,13 @@ export default function Jornada() {
     };
   }, [refetchVeiculos, refetchMacros]);
 
-  // Filtrar macros por data
+  // Filtrar macros por jornada lógica
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
 
   const { macrosHoje, macrosOntem } = useMemo(() => {
-    const hoje = macros.filter(m => m.data_referencia === dateString && !m.excluido);
-    const ontem = macros.filter(m => m.data_referencia === yesterdayString && !m.excluido);
+    const hoje = macros.filter(m => m.data_jornada === dateString && !m.excluido);
+    const ontem = macros.filter(m => m.data_jornada === yesterdayString && !m.excluido);
     return { macrosHoje: hoje, macrosOntem: ontem };
   }, [macros, dateString, yesterdayString]);
 
