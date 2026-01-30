@@ -21,6 +21,8 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
   const [updatingIds, setUpdatingIds] = useState(new Set());
   const [editingMacro, setEditingMacro] = useState(null);
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
+  const [isCreating, setIsCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({ numero_macro: 1, data: '', hora: '' });
 
   // Usar macros já filtradas (não filtrar novamente)
   const macrosDoDia = useMemo(() => {
@@ -86,7 +88,6 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
     setUpdatingIds(prev => new Set(prev).add(editingMacro.id));
     try {
       const dataCriacao = new Date(`${editForm.data}T${editForm.hora}:00`).toISOString();
-      const dataReferencia = editForm.data;
       
       await base44.entities.MacroEvento.update(editingMacro.id, {
         numero_macro: editForm.numero_macro,
@@ -103,6 +104,41 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
         newSet.delete(editingMacro.id);
         return newSet;
       });
+    }
+  };
+
+  const handleOpenCreate = () => {
+    const now = new Date();
+    setCreateForm({
+      numero_macro: 1,
+      data: now.toISOString().split('T')[0],
+      hora: now.toTimeString().slice(0, 5)
+    });
+    setIsCreating(true);
+  };
+
+  const handleSaveCreate = async () => {
+    if (!macros || macros.length === 0) return;
+    
+    const veiculoId = macros[0].veiculo_id;
+    
+    try {
+      const dataCriacao = new Date(`${createForm.data}T${createForm.hora}:00`).toISOString();
+      const dataJornada = createForm.data;
+      const jornadaId = `${veiculoId}-${dataJornada}-${new Date(dataCriacao).getTime()}`;
+      
+      await base44.entities.MacroEvento.create({
+        veiculo_id: veiculoId,
+        numero_macro: createForm.numero_macro,
+        data_criacao: dataCriacao,
+        jornada_id: jornadaId,
+        data_jornada: dataJornada,
+        editado_manualmente: true
+      });
+      
+      setIsCreating(false);
+    } catch (error) {
+      console.error('Erro ao criar macro:', error);
     }
   };
 
@@ -244,7 +280,18 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
 
       {/* Timeline de eventos */}
       <div className="space-y-2">
-        <div className="text-xs text-slate-500 mb-3">Linha do Tempo</div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs text-slate-500">Linha do Tempo</div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenCreate}
+            className="h-7 text-xs"
+          >
+            <Play className="w-3 h-3 mr-1" />
+            Nova Macro
+          </Button>
+        </div>
         <div className="relative">
           <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200" />
           {sorted.map((macro, idx) => {
@@ -312,6 +359,62 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
           })}
         </div>
       </div>
+
+      {/* Dialog de Criação */}
+      <Dialog open={isCreating} onOpenChange={() => setIsCreating(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova Macro Manual</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Tipo de Evento</Label>
+              <Select 
+                value={String(createForm.numero_macro)} 
+                onValueChange={(v) => setCreateForm({...createForm, numero_macro: parseInt(v)})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(MACRO_NAMES).map(([num, nome]) => (
+                    <SelectItem key={num} value={num}>{nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input 
+                  type="date" 
+                  value={createForm.data}
+                  onChange={(e) => setCreateForm({...createForm, data: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Hora</Label>
+                <Input 
+                  type="time" 
+                  value={createForm.hora}
+                  onChange={(e) => setCreateForm({...createForm, hora: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreating(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveCreate}>
+              Criar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Edição */}
       <Dialog open={!!editingMacro} onOpenChange={() => setEditingMacro(null)}>
