@@ -336,7 +336,7 @@ export default function RankingTab() {
                       <tr key={idx} className="border-b hover:bg-slate-50">
                         <td className="p-2 font-semibold">{idx + 1}</td>
                         <td className="p-2">{item.motorista}</td>
-                        <td className="p-2 text-slate-500">{item.veiculo.replace(/[^0-9]/g, '')}</td>
+                        <td className="p-2 text-slate-500">{item.veiculo.replace(/[^0-9]/g, '').slice(0, 4)}</td>
                         <td className="p-2 text-right">{minutesToHHMM(item.totalHoras)}</td>
                         <td className="p-2 text-right font-semibold text-red-600">
                           {minutesToHHMM(item.totalHorasExtras)}
