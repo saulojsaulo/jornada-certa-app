@@ -21,10 +21,76 @@ export default function RankingTab() {
     queryFn: () => base44.entities.Veiculo.list(),
   });
 
-  const { data: macros = [] } = useQuery({
+  const { data: fetchedMacros = [] } = useQuery({
     queryKey: ['macros'],
     queryFn: () => base44.entities.MacroEvento.list('-data_criacao', 50000),
   });
+
+  // Dedupicação e cálculo de jornadas lógicas
+  const macros = useMemo(() => {
+    const seen = new Set();
+    const uniqueMacros = [];
+    
+    fetchedMacros.forEach(m => {
+      const dateToSecond = new Date(m.data_criacao);
+      dateToSecond.setMilliseconds(0);
+      const key = `${m.veiculo_id}-${m.numero_macro}-${dateToSecond.toISOString()}`;
+      
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueMacros.push(m);
+      }
+    });
+    
+    // Calcular jornada_id e data_jornada para macros antigas
+    const macrosPorVeiculo = {};
+    uniqueMacros.forEach(m => {
+      if (!macrosPorVeiculo[m.veiculo_id]) {
+        macrosPorVeiculo[m.veiculo_id] = [];
+      }
+      macrosPorVeiculo[m.veiculo_id].push(m);
+    });
+    
+    Object.values(macrosPorVeiculo).forEach(macrosVeiculo => {
+      macrosVeiculo.sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+      
+      let jornadaAtual = null;
+      
+      macrosVeiculo.forEach(m => {
+        if (!m.jornada_id) {
+          if (m.numero_macro === 1) {
+            const dataJornada = new Date(m.data_criacao).toISOString().split('T')[0];
+            jornadaAtual = {
+              jornadaId: `${m.veiculo_id}-${dataJornada}-${new Date(m.data_criacao).getTime()}`,
+              dataJornada: dataJornada,
+              aberta: true
+            };
+            m.jornada_id = jornadaAtual.jornadaId;
+            m.data_jornada = jornadaAtual.dataJornada;
+          } else if (jornadaAtual && jornadaAtual.aberta) {
+            m.jornada_id = jornadaAtual.jornadaId;
+            m.data_jornada = jornadaAtual.dataJornada;
+            
+            if (m.numero_macro === 2) {
+              jornadaAtual.aberta = false;
+            }
+          }
+        } else {
+          if (m.numero_macro === 1) {
+            jornadaAtual = {
+              jornadaId: m.jornada_id,
+              dataJornada: m.data_jornada,
+              aberta: true
+            };
+          } else if (m.numero_macro === 2 && jornadaAtual) {
+            jornadaAtual.aberta = false;
+          }
+        }
+      });
+    });
+    
+    return uniqueMacros;
+  }, [fetchedMacros]);
 
   // Processar dados para ranking
   const rankingData = useMemo(() => {
