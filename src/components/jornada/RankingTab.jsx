@@ -11,10 +11,76 @@ import { calcularJornadaLiquida, calcularHorasExtras, minutesToHHMM } from './Ma
 import { getDriverName, getManagerName, extractFleetNumber } from './DriverData';
 
 export default function RankingTab() {
-  const [dataInicio, setDataInicio] = useState('');
-  const [dataFim, setDataFim] = useState('');
+  // Calcular mês atual por padrão
+  const now = new Date();
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  
+  const [periodoPreset, setPeriodoPreset] = useState('mes_atual');
+  const [dataInicio, setDataInicio] = useState(firstDayOfMonth);
+  const [dataFim, setDataFim] = useState(lastDayOfMonth);
+  const [mesEscolhido, setMesEscolhido] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
   const [gestorFiltro, setGestorFiltro] = useState('all');
   const [veiculoFiltro, setVeiculoFiltro] = useState('all');
+  
+  // Atualizar datas quando o preset mudar
+  const handlePresetChange = (preset) => {
+    setPeriodoPreset(preset);
+    const today = new Date();
+    
+    switch(preset) {
+      case 'dia_anterior':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        setDataInicio(yesterdayStr);
+        setDataFim(yesterdayStr);
+        break;
+        
+      case 'ultimos_7':
+        const last7 = new Date(today);
+        last7.setDate(last7.getDate() - 7);
+        setDataInicio(last7.toISOString().split('T')[0]);
+        setDataFim(today.toISOString().split('T')[0]);
+        break;
+        
+      case 'ultimos_15':
+        const last15 = new Date(today);
+        last15.setDate(last15.getDate() - 15);
+        setDataInicio(last15.toISOString().split('T')[0]);
+        setDataFim(today.toISOString().split('T')[0]);
+        break;
+        
+      case 'mes_atual':
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+        setDataInicio(firstDay);
+        setDataFim(lastDay);
+        break;
+        
+      case 'escolher_mes':
+        // Mantém mesEscolhido atual
+        const [year, month] = mesEscolhido.split('-');
+        const firstDayMes = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString().split('T')[0];
+        const lastDayMes = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+        setDataInicio(firstDayMes);
+        setDataFim(lastDayMes);
+        break;
+        
+      case 'personalizado':
+        // Não altera as datas, usuário vai escolher manualmente
+        break;
+    }
+  };
+  
+  const handleMesChange = (mesAno) => {
+    setMesEscolhido(mesAno);
+    const [year, month] = mesAno.split('-');
+    const firstDay = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString().split('T')[0];
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+    setDataInicio(firstDay);
+    setDataFim(lastDay);
+  };
 
   const { data: veiculos = [] } = useQuery({
     queryKey: ['veiculos'],
@@ -204,65 +270,102 @@ export default function RankingTab() {
           <CardTitle className="text-lg">Filtros de Análise</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Data Início</Label>
-              <Input 
-                type="date" 
-                value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
-              />
+          <div className="space-y-4">
+            {/* Filtro de Período */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Período</Label>
+                <Select value={periodoPreset} onValueChange={handlePresetChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dia_anterior">Dia Anterior</SelectItem>
+                    <SelectItem value="ultimos_7">Últimos 7 dias</SelectItem>
+                    <SelectItem value="ultimos_15">Últimos 15 dias</SelectItem>
+                    <SelectItem value="mes_atual">Mês Atual</SelectItem>
+                    <SelectItem value="escolher_mes">Escolher por Mês</SelectItem>
+                    <SelectItem value="personalizado">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {periodoPreset === 'escolher_mes' && (
+                <div className="space-y-2">
+                  <Label>Mês/Ano</Label>
+                  <Input 
+                    type="month" 
+                    value={mesEscolhido}
+                    onChange={(e) => handleMesChange(e.target.value)}
+                  />
+                </div>
+              )}
+              
+              {periodoPreset === 'personalizado' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Data Início</Label>
+                    <Input 
+                      type="date" 
+                      value={dataInicio}
+                      onChange={(e) => setDataInicio(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Data Fim</Label>
+                    <Input 
+                      type="date" 
+                      value={dataFim}
+                      onChange={(e) => setDataFim(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
             </div>
             
-            <div className="space-y-2">
-              <Label>Data Fim</Label>
-              <Input 
-                type="date" 
-                value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
-              />
-            </div>
+            {/* Outros Filtros */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Gestor</Label>
+                <Select value={gestorFiltro} onValueChange={setGestorFiltro}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {gestoresUnicos.map(g => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label>Gestor</Label>
-              <Select value={gestorFiltro} onValueChange={setGestorFiltro}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {gestoresUnicos.map(g => (
-                    <SelectItem key={g} value={g}>{g}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label>Veículo</Label>
+                <Select value={veiculoFiltro} onValueChange={setVeiculoFiltro}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {veiculos.map(v => (
+                      <SelectItem key={v.id} value={v.id}>{v.nome_veiculo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <Label>Veículo</Label>
-              <Select value={veiculoFiltro} onValueChange={setVeiculoFiltro}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {veiculos.map(v => (
-                    <SelectItem key={v.id} value={v.id}>{v.nome_veiculo}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            
+            {/* Indicador do período selecionado */}
+            <div className="text-sm text-slate-500 bg-slate-50 rounded p-2">
+              Período: <span className="font-medium text-slate-700">{dataInicio}</span> até <span className="font-medium text-slate-700">{dataFim}</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {!dataInicio || !dataFim ? (
-        <Card>
-          <CardContent className="py-12 text-center text-slate-500">
-            Selecione um período para visualizar o ranking
-          </CardContent>
-        </Card>
-      ) : (
+      {(
         <>
           {/* Ranking de Horas Extras */}
           <Card>
