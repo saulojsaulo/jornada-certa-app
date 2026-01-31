@@ -257,30 +257,23 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
           {/* Segmentos de status */}
           {(() => {
             const segments = [];
-            const sortedMacros = [...sorted].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
-
-            // Filtrar macros do dia atual baseado em dataReferencia
             const dataRef = dataReferencia || new Date().toISOString().split('T')[0];
-            const macrosDoDia = sortedMacros.filter(m => {
-              const macroDate = new Date(m.data_criacao);
-              const refDate = new Date(dataRef);
-              return macroDate.getFullYear() === refDate.getFullYear() &&
-                     macroDate.getMonth() === refDate.getMonth() &&
-                     macroDate.getDate() === refDate.getDate();
-            });
+            const now = new Date();
+            const isToday = dataRef === now.toISOString().split('T')[0];
 
             // Verificar se há jornada do dia anterior que continua neste dia
-            const jornadaAnterior = sortedMacros.find(m => 
+            const jornadaAnterior = sorted.find(m => 
               m.numero_macro === 1 && 
+              m.data_jornada && 
               m.data_jornada !== dataRef &&
-              !sortedMacros.find(m2 => m2.numero_macro === 2 && m2.jornada_id === m.jornada_id && new Date(m2.data_criacao) < new Date(dataRef + 'T00:00:00'))
+              !sorted.find(m2 => m2.numero_macro === 2 && m2.jornada_id === m.jornada_id && new Date(m2.data_criacao) < new Date(dataRef + 'T00:00:00'))
             );
 
             if (jornadaAnterior) {
-              const macro2 = sortedMacros.find(m => m.numero_macro === 2 && m.jornada_id === jornadaAnterior.jornada_id);
+              const macro2 = sorted.find(m => m.numero_macro === 2 && m.jornada_id === jornadaAnterior.jornada_id);
               if (macro2) {
                 const endDate = new Date(macro2.data_criacao);
-                const refDate = new Date(dataRef);
+                const refDate = new Date(dataRef + 'T00:00:00');
                 if (endDate > refDate) {
                   const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
                   const endPercent = (endMinutes / 1440) * 100;
@@ -292,25 +285,41 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
                     label: 'Jornada anterior'
                   });
                 }
+              } else if (isToday) {
+                // Jornada anterior ainda em andamento
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                const currentPercent = (currentMinutes / 1440) * 100;
+                
+                segments.push({
+                  left: 0,
+                  width: currentPercent,
+                  color: 'bg-green-500/40 border-2 border-dashed border-green-600',
+                  label: 'Jornada anterior (em andamento)'
+                });
               }
             }
 
             // Processar macros do dia atual
-            for (let i = 0; i < macrosDoDia.length; i++) {
-              const macro = macrosDoDia[i];
+            for (let i = 0; i < sorted.length; i++) {
+              const macro = sorted[i];
               const macroDate = new Date(macro.data_criacao);
               const startMinutes = macroDate.getHours() * 60 + macroDate.getMinutes();
 
-              let endMinutes = 1440; // fim do dia
-              let nextMacro = macrosDoDia[i + 1];
+              let endMinutes = 1440; // fim do dia por padrão
+              const nextMacro = sorted[i + 1];
 
               if (nextMacro) {
                 const nextDate = new Date(nextMacro.data_criacao);
                 endMinutes = nextDate.getHours() * 60 + nextDate.getMinutes();
+              } else if (isToday && macro.numero_macro !== 2) {
+                // Se não há próxima macro e é hoje e não é fim de jornada, vai até agora
+                endMinutes = now.getHours() * 60 + now.getMinutes();
               }
 
               const leftPercent = (startMinutes / 1440) * 100;
               const widthPercent = ((endMinutes - startMinutes) / 1440) * 100;
+
+              if (widthPercent <= 0) continue; // Não renderizar segmentos vazios
 
               let color = 'bg-slate-300';
               let label = '';
