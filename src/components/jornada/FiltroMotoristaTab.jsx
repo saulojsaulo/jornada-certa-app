@@ -105,14 +105,16 @@ export default function FiltroMotoristaTab() {
       if (idx < jornadas.length - 1) {
         const proxima = jornadas[idx + 1];
         const alertasInter = verificarAlertasInterjornada(j.macros, proxima.macros);
-        alertasInter.forEach(a => {
-          alertas.push({
-            tipo: 'Interjornada',
-            data: j.data_jornada,
-            descricao: a.mensagem,
-            criticidade: a.critico ? 'alta' : 'média'
+        if (Array.isArray(alertasInter)) {
+          alertasInter.forEach(a => {
+            alertas.push({
+              tipo: 'Interjornada',
+              data: j.data_jornada,
+              descricao: a.mensagem,
+              criticidade: a.critico ? 'alta' : 'média'
+            });
           });
-        });
+        }
       }
     });
 
