@@ -277,7 +277,7 @@ export default function RankingTab() {
                 <BarChart data={rankingData.slice(0, 10)}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="motorista" angle={-45} textAnchor="end" height={100} />
-                  <YAxis />
+                  <YAxis tickFormatter={(value) => (value / 60).toFixed(1)} />
                   <Tooltip 
                     formatter={(value) => minutesToHHMM(value)}
                     labelStyle={{ color: '#000' }}
@@ -303,7 +303,7 @@ export default function RankingTab() {
                 <BarChart data={gestoresData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="gestor" />
-                  <YAxis />
+                  <YAxis tickFormatter={(value) => (value / 60).toFixed(1)} />
                   <Tooltip formatter={(value) => minutesToHHMM(value)} />
                   <Bar dataKey="totalHorasExtras" fill="#f59e0b" name="Horas Extras" />
                 </BarChart>
@@ -323,7 +323,7 @@ export default function RankingTab() {
                     <tr className="border-b">
                       <th className="text-left p-2">Pos.</th>
                       <th className="text-left p-2">Motorista</th>
-                      <th className="text-left p-2">Veículo</th>
+                      <th className="text-left p-2">Frota</th>
                       <th className="text-right p-2">Total Horas</th>
                       <th className="text-right p-2">Horas Extras</th>
                       <th className="text-right p-2">Média Diária</th>
@@ -336,7 +336,7 @@ export default function RankingTab() {
                       <tr key={idx} className="border-b hover:bg-slate-50">
                         <td className="p-2 font-semibold">{idx + 1}</td>
                         <td className="p-2">{item.motorista}</td>
-                        <td className="p-2 text-slate-500">{item.veiculo}</td>
+                        <td className="p-2 text-slate-500">{item.veiculo.replace(/[^0-9]/g, '')}</td>
                         <td className="p-2 text-right">{minutesToHHMM(item.totalHoras)}</td>
                         <td className="p-2 text-right font-semibold text-red-600">
                           {minutesToHHMM(item.totalHorasExtras)}
