@@ -247,9 +247,13 @@ export function getManagerName(nomeVeiculo) {
   const fleetNumber = parseInt(extractFleetNumber(nomeVeiculo), 10);
   if (isNaN(fleetNumber)) return '—';
 
-  // Saulo: 204-225, 1011-1020, 251-255
-  if ((fleetNumber >= 204 && fleetNumber <= 225) ||
-      (fleetNumber >= 1011 && fleetNumber <= 1020) ||
+  // Saulo 4º Eixo: 1011-1020
+  if (fleetNumber >= 1011 && fleetNumber <= 1020) {
+    return 'Saulo 4º Eixo';
+  }
+
+  // Saulo: 203-225, 251-255
+  if ((fleetNumber >= 203 && fleetNumber <= 225) ||
       (fleetNumber >= 251 && fleetNumber <= 255)) {
     return 'Saulo';
   }
