@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { Truck, RefreshCw, Calendar, Clock } from 'lucide-react';
+import { Truck, RefreshCw, Clock, TrendingUp, UserSearch } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-import ImportXLSX from '../components/jornada/ImportXLSX';
-import StatsCards from '../components/jornada/StatsCards';
-import VehicleGrid from '../components/jornada/VehicleGrid';
+import ControleTab from '../components/jornada/ControleTab';
+import RankingTab from '../components/jornada/RankingTab';
+import FiltroMotoristaTab from '../components/jornada/FiltroMotoristaTab';
 
 export default function Jornada() {
   const queryClient = useQueryClient();
@@ -188,18 +186,14 @@ export default function Jornada() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {/* Importar e Última Importação */}
-              <div className="flex items-center gap-3 bg-white rounded-xl shadow-sm border border-slate-200 p-1.5">
-                <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={refetchImportLogs} />
-                {lastImport && (
-                  <div className="flex items-center gap-2 px-3 py-1 text-xs text-slate-600 border-l border-slate-200">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    <span>
-                      Última Importação em: {format(new Date(lastImport.imported_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                    </span>
-                  </div>
-                )}
-              </div>
+              {lastImport && (
+                <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-600 bg-white rounded-xl shadow-sm border border-slate-200">
+                  <Clock className="w-3 h-3 text-slate-400" />
+                  <span>
+                    Última Importação: {format(new Date(lastImport.imported_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                  </span>
+                </div>
+              )}
 
               {/* Relógio */}
               <div className="hidden md:flex items-center gap-2 bg-slate-100 rounded-xl px-4 py-2">
@@ -208,32 +202,13 @@ export default function Jornada() {
                 </span>
               </div>
 
-              {/* Seletor de Data */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <Calendar className="w-4 h-4" />
-                    {format(selectedDate, 'dd/MM/yyyy', { locale: ptBR })}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    locale={ptBR}
-                  />
-                </PopoverContent>
-              </Popover>
-
               {/* Atualizar */}
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleRefresh}
-                disabled={isLoading}
               >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -241,26 +216,35 @@ export default function Jornada() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Stats */}
-        <StatsCards 
-          veiculos={veiculos}
-          macrosPorVeiculo={macrosPorVeiculo}
-          macrosOntemPorVeiculo={macrosOntemPorVeiculo}
-        />
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3 mx-auto">
+            <TabsTrigger value="controle" className="gap-2">
+              <Truck className="w-4 h-4" />
+              Controle
+            </TabsTrigger>
+            <TabsTrigger value="ranking" className="gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Ranking
+            </TabsTrigger>
+            <TabsTrigger value="filtro" className="gap-2">
+              <UserSearch className="w-4 h-4" />
+              Filtro de Motorista
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Grid de Veículos */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <VehicleGrid
-            veiculos={veiculos}
-            macrosPorVeiculo={macrosPorVeiculo}
-            macrosOntemPorVeiculo={macrosOntemPorVeiculo}
-          />
-        </motion.div>
+          <TabsContent value="controle">
+            <ControleTab onImportLogUpdate={refetchImportLogs} />
+          </TabsContent>
+
+          <TabsContent value="ranking">
+            <RankingTab />
+          </TabsContent>
+
+          <TabsContent value="filtro">
+            <FiltroMotoristaTab />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
