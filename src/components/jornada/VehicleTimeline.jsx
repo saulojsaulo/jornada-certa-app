@@ -9,7 +9,7 @@ import {
   calcularHorasExtras,
   STATUS_CONFIG
 } from './MacroUtils';
-import { Clock, Coffee, Moon, Zap, Play, Square, Trash2, RotateCcw, Pencil } from 'lucide-react';
+import { Clock, Coffee, Moon, Zap, Play, Square, Trash2, RotateCcw, Pencil, AlertTriangle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -23,6 +23,8 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
   const [isCreating, setIsCreating] = useState(false);
   const [createForm, setCreateForm] = useState({ numero_macro: 1, data: '', hora: '' });
+  const [showPreviousJourney, setShowPreviousJourney] = useState(false);
+  const [tooltip, setTooltip] = useState(null);
 
   // Usar macros já filtradas (não filtrar novamente)
   const macrosDoDia = useMemo(() => {
@@ -245,15 +247,119 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <div className="text-xs text-slate-500">Linha do Tempo (24h)</div>
-          {sorted.length > 0 && sorted[0].jornada_id && dataReferencia && sorted[0].data_jornada !== dataReferencia && (
-            <div className="flex items-center gap-1 text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">
-              <Moon className="w-3 h-3" />
-              Jornada do dia anterior
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {sorted.length > 0 && sorted[0].jornada_id && dataReferencia && sorted[0].data_jornada !== dataReferencia && (
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={showPreviousJourney}
+                  onChange={(e) => setShowPreviousJourney(e.target.checked)}
+                  className="rounded"
+                />
+                <span className="text-slate-600">Exibir jornada do dia anterior</span>
+              </label>
+            )}
+          </div>
         </div>
 
-        <div className="relative h-10 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+        <div 
+          className="relative h-10 bg-slate-100 rounded-lg overflow-visible border border-slate-200"
+          onMouseMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percent = (x / rect.width) * 100;
+            const minutes = Math.floor((percent / 100) * 1440);
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            
+            // Encontrar o segmento ativo neste ponto
+            const dataRef = dataReferencia || new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const isToday = dataRef === now.toISOString().split('T')[0];
+            
+            let segmentInfo = { status: 'Sem atividade', isPrevious: false, journeyDate: null };
+            
+            // Verificar jornada anterior
+            const jornadaAnterior = sorted.find(m => 
+              m.numero_macro === 1 && 
+              m.data_jornada && 
+              m.data_jornada !== dataRef &&
+              !sorted.find(m2 => m2.numero_macro === 2 && m2.jornada_id === m.jornada_id && new Date(m2.data_criacao) < new Date(dataRef + 'T00:00:00'))
+            );
+            
+            if (jornadaAnterior && showPreviousJourney) {
+              const macro2 = sorted.find(m => m.numero_macro === 2 && m.jornada_id === jornadaAnterior.jornada_id);
+              if (macro2) {
+                const endDate = new Date(macro2.data_criacao);
+                const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
+                if (minutes <= endMinutes) {
+                  segmentInfo = {
+                    status: 'Em Jornada (Macro 1)',
+                    isPrevious: true,
+                    journeyDate: jornadaAnterior.data_jornada
+                  };
+                }
+              } else if (isToday) {
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                if (minutes <= currentMinutes) {
+                  segmentInfo = {
+                    status: 'Em Jornada (Macro 1)',
+                    isPrevious: true,
+                    journeyDate: jornadaAnterior.data_jornada
+                  };
+                }
+              }
+            }
+            
+            // Verificar macros do dia atual
+            for (let i = 0; i < sorted.length; i++) {
+              const macro = sorted[i];
+              const macroDate = new Date(macro.data_criacao);
+              const startMinutes = macroDate.getHours() * 60 + macroDate.getMinutes();
+              
+              let endMinutes = 1440;
+              const nextMacro = sorted[i + 1];
+              
+              if (nextMacro) {
+                const nextDate = new Date(nextMacro.data_criacao);
+                endMinutes = nextDate.getHours() * 60 + nextDate.getMinutes();
+              } else if (isToday && macro.numero_macro !== 2) {
+                endMinutes = now.getHours() * 60 + now.getMinutes();
+              }
+              
+              if (minutes >= startMinutes && minutes < endMinutes) {
+                const isPrevDay = macro.data_jornada && macro.data_jornada !== dataRef;
+                
+                if (macro.numero_macro === 1) {
+                  segmentInfo = { status: 'Em Jornada (Macro 1)', isPrevious: isPrevDay, journeyDate: macro.data_jornada };
+                } else if (macro.numero_macro === 2) {
+                  segmentInfo = { status: 'Interjornada', isPrevious: false, journeyDate: null };
+                } else if (macro.numero_macro === 3) {
+                  segmentInfo = { status: 'Em Refeição (Macro 3–4)', isPrevious: isPrevDay, journeyDate: macro.data_jornada };
+                } else if (macro.numero_macro === 4) {
+                  segmentInfo = { status: 'Em Jornada (Macro 4)', isPrevious: isPrevDay, journeyDate: macro.data_jornada };
+                } else if (macro.numero_macro === 5) {
+                  segmentInfo = { status: 'Em Repouso (Macro 5–6)', isPrevious: isPrevDay, journeyDate: macro.data_jornada };
+                } else if (macro.numero_macro === 6) {
+                  segmentInfo = { status: 'Em Jornada (Macro 6)', isPrevious: isPrevDay, journeyDate: macro.data_jornada };
+                } else if (macro.numero_macro === 9) {
+                  segmentInfo = { status: 'Em Complemento (Macro 9–10)', isPrevious: isPrevDay, journeyDate: macro.data_jornada };
+                } else if (macro.numero_macro === 10) {
+                  segmentInfo = { status: 'Em Jornada (Macro 10)', isPrevious: isPrevDay, journeyDate: macro.data_jornada };
+                }
+                break;
+              }
+            }
+            
+            setTooltip({
+              x: e.clientX,
+              y: e.clientY,
+              hour: `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`,
+              ...segmentInfo
+            });
+          }}
+          onMouseLeave={() => setTooltip(null)}
+        >
           {/* Segmentos de status */}
           {(() => {
             const segments = [];
@@ -269,7 +375,7 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
               !sorted.find(m2 => m2.numero_macro === 2 && m2.jornada_id === m.jornada_id && new Date(m2.data_criacao) < new Date(dataRef + 'T00:00:00'))
             );
 
-            if (jornadaAnterior) {
+            if (jornadaAnterior && showPreviousJourney) {
               const macro2 = sorted.find(m => m.numero_macro === 2 && m.jornada_id === jornadaAnterior.jornada_id);
               if (macro2) {
                 const endDate = new Date(macro2.data_criacao);
@@ -366,34 +472,66 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
                 transition={{ delay: idx * 0.1 }}
                 className={`absolute h-full ${seg.color}`}
                 style={{ left: `${seg.left}%`, width: `${seg.width}%` }}
-                title={seg.label}
               />
             ));
           })()}
 
-          {/* Marcadores de tempo */}
+          {/* Marcadores de tempo - régua de horas */}
           <div className="absolute inset-0 pointer-events-none">
-            {/* 00:00 */}
-            <div className="absolute h-full w-0.5 bg-slate-400" style={{ left: '0%' }}>
-              <div className="absolute -top-5 -left-4 text-xs text-slate-600 font-medium">00:00</div>
-            </div>
-
-            {/* 08:00 (limite normal) */}
-            <div className="absolute h-full w-0.5 bg-yellow-500" style={{ left: `${(8/24)*100}%` }}>
-              <div className="absolute -bottom-5 -left-4 text-xs text-yellow-600 font-medium">08:00</div>
-            </div>
-
-            {/* 12:00 (limite máximo) */}
-            <div className="absolute h-full w-0.5 bg-red-500" style={{ left: `${(12/24)*100}%` }}>
-              <div className="absolute -top-5 -left-4 text-xs text-red-600 font-medium">12:00</div>
-            </div>
-
-            {/* 23:59 */}
-            <div className="absolute h-full w-0.5 bg-slate-400" style={{ left: '100%' }}>
-              <div className="absolute -bottom-5 -right-4 text-xs text-slate-600 font-medium">23:59</div>
-            </div>
+            {/* Linhas de hora em hora */}
+            {[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22].map(hour => {
+              const leftPercent = (hour / 24) * 100;
+              const isSpecial = hour === 8 || hour === 12;
+              return (
+                <div 
+                  key={hour}
+                  className={`absolute h-full ${isSpecial ? 'w-0.5' : 'w-px'} ${
+                    hour === 8 ? 'bg-yellow-500' : 
+                    hour === 12 ? 'bg-red-500' : 
+                    'bg-slate-300'
+                  }`}
+                  style={{ left: `${leftPercent}%` }}
+                >
+                  <div 
+                    className={`absolute ${hour % 4 === 0 ? '-top-5' : '-bottom-5'} -left-3 text-xs font-medium ${
+                      hour === 8 ? 'text-yellow-600' : 
+                      hour === 12 ? 'text-red-600' : 
+                      'text-slate-500'
+                    }`}
+                  >
+                    {String(hour).padStart(2, '0')}:00
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
+        
+        {/* Tooltip */}
+        {tooltip && (
+          <div 
+            className="fixed z-50 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg pointer-events-none"
+            style={{ 
+              left: `${tooltip.x + 10}px`, 
+              top: `${tooltip.y - 40}px`,
+              transform: 'translateY(-100%)'
+            }}
+          >
+            <div className="font-semibold">{tooltip.hour}</div>
+            <div className="text-slate-300">{tooltip.status}</div>
+            {tooltip.isPrevious && (
+              <div className="text-amber-300 mt-1 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Jornada do dia {tooltip.journeyDate}
+              </div>
+            )}
+            {tooltip.journeyDate && !tooltip.isPrevious && (
+              <div className="text-slate-400 text-[10px] mt-0.5">
+                Jornada de {tooltip.journeyDate}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-center gap-4 mt-8 text-xs">
           <div className="flex items-center gap-1">
