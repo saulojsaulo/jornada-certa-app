@@ -241,40 +241,172 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
         </div>
       </div>
 
-      {/* Barra de Progresso da Jornada */}
+      {/* Linha do Tempo 24h */}
       <div className="mb-6">
-        <div className="text-xs text-slate-500 mb-2">Progresso da Jornada</div>
-        <div className="relative h-8 bg-slate-200 rounded-full overflow-hidden">
-          {/* Jornada líquida */}
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${jornadaPercent}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className={`absolute h-full ${jornadaLiquida > limite12h ? 'bg-red-500' : jornadaLiquida > limite8h ? 'bg-amber-500' : 'bg-emerald-500'}`}
-          />
-          
-          {/* Marcador 8h */}
-          <div 
-            className="absolute h-full w-0.5 bg-yellow-500"
-            style={{ left: `${limite8hPercent}%` }}
-          />
-          
-          {/* Marcador 12h */}
-          <div 
-            className="absolute h-full w-0.5 bg-red-500"
-            style={{ left: `${limitePercent}%` }}
-          />
-          
-          {/* Labels */}
-          <div className="absolute inset-0 flex items-center justify-between px-3 text-xs font-medium">
-            <span className="text-white drop-shadow">{minutesToHHMM(jornadaLiquida)}</span>
-            <span className="text-slate-500">12:00</span>
+        <div className="flex justify-between items-center mb-2">
+          <div className="text-xs text-slate-500">Linha do Tempo (24h)</div>
+          {sorted.length > 0 && sorted[0].jornada_id && dataReferencia && sorted[0].data_jornada !== dataReferencia && (
+            <div className="flex items-center gap-1 text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">
+              <Moon className="w-3 h-3" />
+              Jornada do dia anterior
+            </div>
+          )}
+        </div>
+
+        <div className="relative h-10 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+          {/* Segmentos de status */}
+          {(() => {
+            const segments = [];
+            const sortedMacros = [...sorted].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+
+            // Filtrar macros do dia atual baseado em dataReferencia
+            const dataRef = dataReferencia || new Date().toISOString().split('T')[0];
+            const macrosDoDia = sortedMacros.filter(m => {
+              const macroDate = new Date(m.data_criacao);
+              const refDate = new Date(dataRef);
+              return macroDate.getFullYear() === refDate.getFullYear() &&
+                     macroDate.getMonth() === refDate.getMonth() &&
+                     macroDate.getDate() === refDate.getDate();
+            });
+
+            // Verificar se há jornada do dia anterior que continua neste dia
+            const jornadaAnterior = sortedMacros.find(m => 
+              m.numero_macro === 1 && 
+              m.data_jornada !== dataRef &&
+              !sortedMacros.find(m2 => m2.numero_macro === 2 && m2.jornada_id === m.jornada_id && new Date(m2.data_criacao) < new Date(dataRef + 'T00:00:00'))
+            );
+
+            if (jornadaAnterior) {
+              const macro2 = sortedMacros.find(m => m.numero_macro === 2 && m.jornada_id === jornadaAnterior.jornada_id);
+              if (macro2) {
+                const endDate = new Date(macro2.data_criacao);
+                const refDate = new Date(dataRef);
+                if (endDate > refDate) {
+                  const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
+                  const endPercent = (endMinutes / 1440) * 100;
+
+                  segments.push({
+                    left: 0,
+                    width: endPercent,
+                    color: 'bg-green-500/40 border-2 border-dashed border-green-600',
+                    label: 'Jornada anterior'
+                  });
+                }
+              }
+            }
+
+            // Processar macros do dia atual
+            for (let i = 0; i < macrosDoDia.length; i++) {
+              const macro = macrosDoDia[i];
+              const macroDate = new Date(macro.data_criacao);
+              const startMinutes = macroDate.getHours() * 60 + macroDate.getMinutes();
+
+              let endMinutes = 1440; // fim do dia
+              let nextMacro = macrosDoDia[i + 1];
+
+              if (nextMacro) {
+                const nextDate = new Date(nextMacro.data_criacao);
+                endMinutes = nextDate.getHours() * 60 + nextDate.getMinutes();
+              }
+
+              const leftPercent = (startMinutes / 1440) * 100;
+              const widthPercent = ((endMinutes - startMinutes) / 1440) * 100;
+
+              let color = 'bg-slate-300';
+              let label = '';
+
+              if (macro.numero_macro === 1) {
+                color = 'bg-green-500';
+                label = 'Em Jornada';
+              } else if (macro.numero_macro === 2) {
+                color = 'bg-white';
+                label = 'Interjornada';
+              } else if (macro.numero_macro === 3) {
+                color = 'bg-amber-300';
+                label = 'Refeição';
+              } else if (macro.numero_macro === 4) {
+                color = 'bg-green-500';
+                label = 'Em Jornada';
+              } else if (macro.numero_macro === 5) {
+                color = 'bg-pink-300';
+                label = 'Repouso';
+              } else if (macro.numero_macro === 6) {
+                color = 'bg-green-500';
+                label = 'Em Jornada';
+              } else if (macro.numero_macro === 9) {
+                color = 'bg-blue-300';
+                label = 'Complemento';
+              } else if (macro.numero_macro === 10) {
+                color = 'bg-green-500';
+                label = 'Em Jornada';
+              }
+
+              segments.push({
+                left: leftPercent,
+                width: widthPercent,
+                color,
+                label
+              });
+            }
+
+            return segments.map((seg, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: idx * 0.1 }}
+                className={`absolute h-full ${seg.color}`}
+                style={{ left: `${seg.left}%`, width: `${seg.width}%` }}
+                title={seg.label}
+              />
+            ));
+          })()}
+
+          {/* Marcadores de tempo */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* 00:00 */}
+            <div className="absolute h-full w-0.5 bg-slate-400" style={{ left: '0%' }}>
+              <div className="absolute -top-5 -left-4 text-xs text-slate-600 font-medium">00:00</div>
+            </div>
+
+            {/* 08:00 (limite normal) */}
+            <div className="absolute h-full w-0.5 bg-yellow-500" style={{ left: `${(8/24)*100}%` }}>
+              <div className="absolute -bottom-5 -left-4 text-xs text-yellow-600 font-medium">08:00</div>
+            </div>
+
+            {/* 12:00 (limite máximo) */}
+            <div className="absolute h-full w-0.5 bg-red-500" style={{ left: `${(12/24)*100}%` }}>
+              <div className="absolute -top-5 -left-4 text-xs text-red-600 font-medium">12:00</div>
+            </div>
+
+            {/* 23:59 */}
+            <div className="absolute h-full w-0.5 bg-slate-400" style={{ left: '100%' }}>
+              <div className="absolute -bottom-5 -right-4 text-xs text-slate-600 font-medium">23:59</div>
+            </div>
           </div>
         </div>
-        <div className="flex justify-between mt-1 text-xs text-slate-400">
-          <span>0h</span>
-          <span className="text-yellow-600">8h (limite normal)</span>
-          <span className="text-red-500">12h (máximo)</span>
+
+        <div className="flex justify-center gap-4 mt-8 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-green-500 rounded"></div>
+            <span className="text-slate-600">Em Jornada</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-amber-300 rounded"></div>
+            <span className="text-slate-600">Refeição</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-pink-300 rounded"></div>
+            <span className="text-slate-600">Repouso</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-blue-300 rounded"></div>
+            <span className="text-slate-600">Complemento</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-white border border-slate-300 rounded"></div>
+            <span className="text-slate-600">Interjornada</span>
+          </div>
         </div>
       </div>
 
