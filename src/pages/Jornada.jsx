@@ -13,95 +13,14 @@ import FiltroMotoristaTab from '../components/jornada/FiltroMotoristaTab';
 
 export default function Jornada() {
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [activeTab, setActiveTab] = useState('controle');
 
   // Atualizar relógio a cada segundo
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // Buscar veículos
-  const { data: veiculos = [], isLoading: loadingVeiculos, refetch: refetchVeiculos } = useQuery({
-    queryKey: ['veiculos'],
-    queryFn: () => base44.entities.Veiculo.list(),
-  });
-
-  // Buscar macros
-  const { data: fetchedMacros = [], isLoading: loadingMacros, refetch: refetchMacros } = useQuery({
-    queryKey: ['macros'],
-    queryFn: () => base44.entities.MacroEvento.list('-data_criacao', 50000),
-  });
-
-  // Dedupicação e cálculo de jornadas lógicas
-  const macros = useMemo(() => {
-    const seen = new Set();
-    const uniqueMacros = [];
-    
-    fetchedMacros.forEach(m => {
-      const dateToSecond = new Date(m.data_criacao);
-      dateToSecond.setMilliseconds(0);
-      const key = `${m.veiculo_id}-${m.numero_macro}-${dateToSecond.toISOString()}`;
-      
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniqueMacros.push(m);
-      }
-    });
-    
-    // Calcular jornada_id e data_jornada para macros antigas
-    const macrosPorVeiculo = {};
-    uniqueMacros.forEach(m => {
-      if (!macrosPorVeiculo[m.veiculo_id]) {
-        macrosPorVeiculo[m.veiculo_id] = [];
-      }
-      macrosPorVeiculo[m.veiculo_id].push(m);
-    });
-    
-    // Para cada veículo, calcular jornadas logicamente
-    Object.values(macrosPorVeiculo).forEach(macrosVeiculo => {
-      macrosVeiculo.sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
-      
-      let jornadaAtual = null;
-      
-      macrosVeiculo.forEach(m => {
-        // Se não tem jornada_id, calcular
-        if (!m.jornada_id) {
-          if (m.numero_macro === 1) {
-            const dataJornada = new Date(m.data_criacao).toISOString().split('T')[0];
-            jornadaAtual = {
-              jornadaId: `${m.veiculo_id}-${dataJornada}-${new Date(m.data_criacao).getTime()}`,
-              dataJornada: dataJornada,
-              aberta: true
-            };
-            m.jornada_id = jornadaAtual.jornadaId;
-            m.data_jornada = jornadaAtual.dataJornada;
-          } else if (jornadaAtual && jornadaAtual.aberta) {
-            m.jornada_id = jornadaAtual.jornadaId;
-            m.data_jornada = jornadaAtual.dataJornada;
-            
-            if (m.numero_macro === 2) {
-              jornadaAtual.aberta = false;
-            }
-          }
-        } else {
-          // Atualizar estado da jornada atual baseado nos dados
-          if (m.numero_macro === 1) {
-            jornadaAtual = {
-              jornadaId: m.jornada_id,
-              dataJornada: m.data_jornada,
-              aberta: true
-            };
-          } else if (m.numero_macro === 2 && jornadaAtual) {
-            jornadaAtual.aberta = false;
-          }
-        }
-      });
-    });
-    
-    return uniqueMacros;
-  }, [fetchedMacros]);
 
   // Buscar último log de importação
   const { data: importLogs = [], refetch: refetchImportLogs } = useQuery({
@@ -111,63 +30,10 @@ export default function Jornada() {
 
   const lastImport = importLogs[0] || null;
 
-  // Subscription para atualizações em tempo real
-  useEffect(() => {
-    const unsubVeiculos = base44.entities.Veiculo.subscribe(() => {
-      refetchVeiculos();
-    });
-
-    const unsubMacros = base44.entities.MacroEvento.subscribe(() => {
-      refetchMacros();
-    });
-
-    return () => {
-      unsubVeiculos();
-      unsubMacros();
-    };
-  }, [refetchVeiculos, refetchMacros]);
-
-  // Filtrar macros por jornada lógica
-  const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
-
-  const { macrosHoje, macrosOntem } = useMemo(() => {
-    const hoje = macros.filter(m => m.data_jornada === dateString && !m.excluido);
-    const ontem = macros.filter(m => m.data_jornada === yesterdayString && !m.excluido);
-    return { macrosHoje: hoje, macrosOntem: ontem };
-  }, [macros, dateString, yesterdayString]);
-
-  // Agrupar macros por veículo
-  const macrosPorVeiculo = useMemo(() => {
-    const map = {};
-    macrosHoje.forEach(m => {
-      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
-      map[m.veiculo_id].push(m);
-    });
-    return map;
-  }, [macrosHoje]);
-
-  const macrosOntemPorVeiculo = useMemo(() => {
-    const map = {};
-    macrosOntem.forEach(m => {
-      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
-      map[m.veiculo_id].push(m);
-    });
-    return map;
-  }, [macrosOntem]);
-
-  const handleImportComplete = () => {
-    refetchVeiculos();
-    refetchMacros();
-    refetchImportLogs();
-  };
-
   const handleRefresh = () => {
-    refetchVeiculos();
-    refetchMacros();
+    queryClient.invalidateQueries({ queryKey: ['veiculos'] });
+    queryClient.invalidateQueries({ queryKey: ['macros'] });
   };
-
-  const isLoading = loadingVeiculos || loadingMacros;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
