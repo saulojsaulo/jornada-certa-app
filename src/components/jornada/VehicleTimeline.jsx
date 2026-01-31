@@ -478,32 +478,106 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
 
           {/* Marcadores de tempo - régua de horas */}
           <div className="absolute inset-0 pointer-events-none">
-            {/* Linhas de hora em hora */}
-            {[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22].map(hour => {
+            {/* Linhas de hora em hora do relógio */}
+            {[0, 2, 4, 6, 10, 14, 16, 18, 20, 22].map(hour => {
               const leftPercent = (hour / 24) * 100;
-              const isSpecial = hour === 8 || hour === 12;
               return (
                 <div 
                   key={hour}
-                  className={`absolute h-full ${isSpecial ? 'w-0.5' : 'w-px'} ${
-                    hour === 8 ? 'bg-yellow-500' : 
-                    hour === 12 ? 'bg-red-500' : 
-                    'bg-slate-300'
-                  }`}
+                  className="absolute h-full w-px bg-slate-300"
                   style={{ left: `${leftPercent}%` }}
                 >
                   <div 
-                    className={`absolute ${hour % 4 === 0 ? '-top-5' : '-bottom-5'} -left-3 text-xs font-medium ${
-                      hour === 8 ? 'text-yellow-600' : 
-                      hour === 12 ? 'text-red-600' : 
-                      'text-slate-500'
-                    }`}
+                    className={`absolute ${hour % 4 === 0 ? '-top-5' : '-bottom-5'} -left-3 text-xs font-medium text-slate-500`}
                   >
                     {String(hour).padStart(2, '0')}:00
                   </div>
                 </div>
               );
             })}
+            
+            {/* Marcadores de 8h e 12h de jornada líquida */}
+            {(() => {
+              const macro1 = sorted.find(m => m.numero_macro === 1);
+              if (!macro1) return null;
+              
+              const startDate = new Date(macro1.data_criacao);
+              const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+              
+              // Calcular posição de 8h de jornada líquida
+              let accumulated8h = 0;
+              let position8h = null;
+              
+              // Calcular posição de 12h de jornada líquida  
+              let accumulated12h = 0;
+              let position12h = null;
+              
+              for (let i = 0; i < sorted.length; i++) {
+                const macro = sorted[i];
+                const macroDate = new Date(macro.data_criacao);
+                const macroMinutes = macroDate.getHours() * 60 + macroDate.getMinutes();
+                
+                const nextMacro = sorted[i + 1];
+                let nextMinutes = 1440;
+                if (nextMacro) {
+                  const nextDate = new Date(nextMacro.data_criacao);
+                  nextMinutes = nextDate.getHours() * 60 + nextDate.getMinutes();
+                }
+                
+                // Contar apenas se está em jornada (não é pausa)
+                const isWorking = [1, 4, 6, 10].includes(macro.numero_macro);
+                
+                if (isWorking) {
+                  const segmentDuration = nextMinutes - macroMinutes;
+                  
+                  // Verificar 8h
+                  if (!position8h) {
+                    if (accumulated8h + segmentDuration >= 480) {
+                      const remaining = 480 - accumulated8h;
+                      position8h = macroMinutes + remaining;
+                    } else {
+                      accumulated8h += segmentDuration;
+                    }
+                  }
+                  
+                  // Verificar 12h
+                  if (!position12h) {
+                    if (accumulated12h + segmentDuration >= 720) {
+                      const remaining = 720 - accumulated12h;
+                      position12h = macroMinutes + remaining;
+                    } else {
+                      accumulated12h += segmentDuration;
+                    }
+                  }
+                }
+              }
+              
+              return (
+                <>
+                  {position8h && (
+                    <div 
+                      className="absolute h-full w-0.5 bg-yellow-500"
+                      style={{ left: `${(position8h / 1440) * 100}%` }}
+                    >
+                      <div className="absolute -top-5 -left-6 text-xs font-medium text-yellow-600 whitespace-nowrap">
+                        8h líquidas
+                      </div>
+                    </div>
+                  )}
+                  
+                  {position12h && (
+                    <div 
+                      className="absolute h-full w-0.5 bg-red-500"
+                      style={{ left: `${(position12h / 1440) * 100}%` }}
+                    >
+                      <div className="absolute -bottom-5 -left-6 text-xs font-medium text-red-600 whitespace-nowrap">
+                        12h líquidas
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
         
