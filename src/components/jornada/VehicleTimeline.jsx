@@ -30,17 +30,24 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
   const macrosDoDia = useMemo(() => {
     if (!macros || macros.length === 0) return [];
     
-    // Dedupicação apenas
-    const seen = new Set();
+    // Ordenar por data de criação
+    const sorted = [...macros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+    
+    // Dedupicação inteligente: remover macros duplicadas dentro de 2 minutos
     const unique = [];
     
-    macros.forEach(m => {
-      const dateToSecond = new Date(m.data_criacao);
-      dateToSecond.setMilliseconds(0);
-      const key = `${m.numero_macro}-${dateToSecond.toISOString()}`;
+    sorted.forEach(m => {
+      // Verificar se já existe uma macro similar nos últimos 2 minutos
+      const isDuplicate = unique.some(existing => {
+        if (existing.numero_macro !== m.numero_macro) return false;
+        
+        const timeDiff = Math.abs(new Date(m.data_criacao) - new Date(existing.data_criacao));
+        const minutesDiff = timeDiff / (1000 * 60);
+        
+        return minutesDiff <= 2;
+      });
       
-      if (!seen.has(key)) {
-        seen.add(key);
+      if (!isDuplicate) {
         unique.push(m);
       }
     });
