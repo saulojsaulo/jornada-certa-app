@@ -123,6 +123,16 @@ export default function ControleTab({ onImportLogUpdate }) {
     return map;
   }, [macrosOntem]);
 
+  // Agrupar TODAS as macros por veículo (para buscar Macro 2 anterior)
+  const todasMacrosPorVeiculo = useMemo(() => {
+    const map = {};
+    macros.forEach(m => {
+      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
+      map[m.veiculo_id].push(m);
+    });
+    return map;
+  }, [macros]);
+
   const handleImportComplete = () => {
     refetchVeiculos();
     refetchMacros();
@@ -170,6 +180,7 @@ export default function ControleTab({ onImportLogUpdate }) {
           veiculos={veiculos}
           macrosPorVeiculo={macrosPorVeiculo}
           macrosOntemPorVeiculo={macrosOntemPorVeiculo}
+          todasMacrosPorVeiculo={todasMacrosPorVeiculo}
         />
       </motion.div>
     </div>
