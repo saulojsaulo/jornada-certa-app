@@ -91,7 +91,19 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       let comparison = 0;
       switch (sortBy) {
         case 'nome':
+        case 'frota':
+          const numA = parseInt(a.nome_veiculo.match(/\d+/)?.[0] || '0');
+          const numB = parseInt(b.nome_veiculo.match(/\d+/)?.[0] || '0');
+          comparison = numA - numB;
+          break;
+        case 'gestor':
+          comparison = getManagerName(a.nome_veiculo).localeCompare(getManagerName(b.nome_veiculo));
+          break;
+        case 'motorista':
           comparison = a.nome_veiculo.localeCompare(b.nome_veiculo);
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
           break;
         case 'jornada':
           comparison = a.jornadaLiquida - b.jornadaLiquida;
@@ -99,8 +111,17 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
         case 'disponivel':
           comparison = a.tempoDisponivel - b.tempoDisponivel;
           break;
+        case 'hextra':
         case 'extras':
           comparison = a.horasExtras - b.horasExtras;
+          break;
+        case 'total':
+          comparison = a.jornadaLiquida - b.jornadaLiquida;
+          break;
+        case 'alertas':
+          const alertsA = (a.alertaRefeicao ? 1 : 0) + (a.alertasInterjornada.alerta11h ? 1 : 0) + (a.alertasInterjornada.alerta8h ? 1 : 0);
+          const alertsB = (b.alertaRefeicao ? 1 : 0) + (b.alertasInterjornada.alerta11h ? 1 : 0) + (b.alertasInterjornada.alerta8h ? 1 : 0);
+          comparison = alertsA - alertsB;
           break;
         default:
           comparison = 0;
@@ -122,6 +143,7 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       span: 'col-span-1',
       filterable: true,
       draggable: true,
+      sortable: true,
       filterOptions: gestores.map(g => ({ value: g, label: g }))
     },
     {
@@ -129,14 +151,16 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       label: 'Frota',
       span: 'col-span-1',
       draggable: true,
-      filterable: false
+      filterable: false,
+      sortable: true
     },
     {
       key: 'motorista',
       label: 'Motorista',
       span: 'col-span-2',
       draggable: true,
-      filterable: false
+      filterable: false,
+      sortable: true
     },
     {
       key: 'status',
@@ -144,6 +168,7 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       span: 'col-span-2',
       filterable: true,
       draggable: true,
+      sortable: true,
       filterOptions: statuses.map(s => ({ value: s, label: s }))
     },
     {
@@ -151,35 +176,40 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       label: 'Jornada',
       span: 'col-span-1',
       align: 'text-center',
-      filterable: false
+      filterable: false,
+      sortable: true
     },
     {
       key: 'disponivel',
       label: 'Disponível',
       span: 'col-span-1',
       align: 'text-center',
-      filterable: false
+      filterable: false,
+      sortable: true
     },
     {
       key: 'hextra',
       label: 'H. Extra',
       span: 'col-span-1',
       align: 'text-center',
-      filterable: false
+      filterable: false,
+      sortable: true
     },
     {
       key: 'total',
       label: 'Total',
       span: 'col-span-1',
       align: 'text-center',
-      filterable: false
+      filterable: false,
+      sortable: true
     },
     {
       key: 'alertas',
       label: 'Alertas',
       span: 'col-span-2',
       align: 'text-right',
-      filterable: false
+      filterable: false,
+      sortable: true
     }
   ];
 
@@ -188,6 +218,15 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       ...prev,
       [columnKey]: value
     }));
+  };
+
+  const handleSort = (columnKey) => {
+    if (sortBy === columnKey) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(columnKey);
+      setSortOrder('asc');
+    }
   };
 
   return (
@@ -210,6 +249,9 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
         columns={columns}
         onFilterChange={handleColumnFilter}
         filters={columnFilters}
+        onSort={handleSort}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
       />
 
       {/* Lista de veículos */}
