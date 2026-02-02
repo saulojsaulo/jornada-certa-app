@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Filter, GripVertical } from 'lucide-react';
+import { Filter, GripVertical, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export default function GridHeader({ columns, onFilterChange, filters }) {
+export default function GridHeader({ columns, onFilterChange, filters, onSort, sortBy, sortOrder }) {
   return (
     <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider bg-slate-50 rounded-lg border border-slate-200 mb-2">
       {columns.map((column) => (
@@ -18,7 +18,21 @@ export default function GridHeader({ columns, onFilterChange, filters }) {
           {column.draggable && (
             <GripVertical className="w-3 h-3 text-slate-400 cursor-move" />
           )}
-          <span>{column.label}</span>
+          <button
+            onClick={() => column.sortable && onSort && onSort(column.key)}
+            className={`flex items-center gap-1 ${column.sortable ? 'cursor-pointer hover:text-slate-800 transition-colors' : ''}`}
+          >
+            <span>{column.label}</span>
+            {column.sortable && onSort && (
+              <span className="text-slate-400">
+                {sortBy === column.key ? (
+                  sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                ) : (
+                  <ChevronsUpDown className="w-3 h-3 opacity-30" />
+                )}
+              </span>
+            )}
+          </button>
           {column.filterable && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
