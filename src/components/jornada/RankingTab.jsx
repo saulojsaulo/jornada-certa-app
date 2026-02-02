@@ -393,26 +393,28 @@ export default function RankingTab() {
             </CardContent>
           </Card>
 
-          {/* Comparativo por Gestor */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-blue-500" />
-                Horas Extras por Gestor
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={gestoresData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="gestor" />
-                  <YAxis tickFormatter={(value) => (value / 60).toFixed(1)} />
-                  <Tooltip formatter={(value) => minutesToHHMM(value)} />
-                  <Bar dataKey="totalHorasExtras" fill="#f59e0b" name="Horas Extras" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          {/* Comparativo por Gestor - ocultar se filtro de gestor ou veículo específico */}
+          {gestorFiltro === 'all' && veiculoFiltro === 'all' && gestoresData.length > 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-blue-500" />
+                  Horas Extras por Gestor
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={gestoresData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="gestor" />
+                    <YAxis tickFormatter={(value) => (value / 60).toFixed(1)} />
+                    <Tooltip formatter={(value) => minutesToHHMM(value)} />
+                    <Bar dataKey="totalHorasExtras" fill="#f59e0b" name="Horas Extras" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Tabela Detalhada */}
           <Card>
