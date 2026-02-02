@@ -153,6 +153,23 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
 
   const sorted = [...macrosDoDia].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   
+  // Buscar Macro 2 do dia anterior
+  const macro2DiaAnterior = useMemo(() => {
+    if (!macros || macros.length === 0 || !dataReferencia) return null;
+    
+    // Pegar todas as Macro 2 anteriores à data de referência
+    const macros2Anteriores = macros
+      .filter(m => 
+        m.numero_macro === 2 && 
+        m.data_jornada && 
+        m.data_jornada < dataReferencia &&
+        !m.excluido
+      )
+      .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
+    
+    return macros2Anteriores[0] || null;
+  }, [macros, dataReferencia]);
+  
   const jornadaBruta = calcularJornadaBruta(macrosDoDia);
   const jornadaLiquida = calcularJornadaLiquida(macrosDoDia);
   const pausas = calcularPausas(macrosDoDia);
@@ -198,7 +215,22 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
       className="p-6 bg-slate-50/50 border-t border-slate-100"
     >
       {/* Resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+        {macro2DiaAnterior && (
+          <div className="bg-white rounded-xl p-4 shadow-sm">
+            <div className="text-xs text-slate-500 mb-1">Fim Jornada Dia Anterior</div>
+            <div className="text-sm font-bold text-slate-700">
+              {new Date(macro2DiaAnterior.data_criacao).toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              })}
+            </div>
+          </div>
+        )}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="text-xs text-slate-500 mb-1">Jornada Bruta</div>
           <div className="text-xl font-bold text-slate-700">{minutesToHHMM(jornadaBruta)}</div>
