@@ -14,7 +14,7 @@ import {
   verificarAlertasInterjornada
 } from './MacroUtils';
 
-export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPorVeiculo }) {
+export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [alertFilter, setAlertFilter] = useState('all');
@@ -236,6 +236,7 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
                 veiculo={v}
                 macrosHoje={v.macrosHoje}
                 macrosOntem={v.macrosOntem}
+                todasMacros={todasMacrosPorVeiculo ? todasMacrosPorVeiculo[v.id] : null}
               />
             </motion.div>
           ))
