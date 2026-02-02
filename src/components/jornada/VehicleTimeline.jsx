@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function VehicleTimeline({ macros, dataReferencia }) {
+export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataReferencia }) {
   const [updatingIds, setUpdatingIds] = useState(new Set());
   const [editingMacro, setEditingMacro] = useState(null);
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
@@ -155,10 +155,11 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
   
   // Buscar Macro 2 do dia anterior
   const macro2DiaAnterior = useMemo(() => {
-    if (!macros || macros.length === 0 || !dataReferencia) return null;
+    const macrosParaBuscar = todasMacrosVeiculo || macros;
+    if (!macrosParaBuscar || macrosParaBuscar.length === 0 || !dataReferencia) return null;
     
     // Pegar todas as Macro 2 anteriores à data de referência
-    const macros2Anteriores = macros
+    const macros2Anteriores = macrosParaBuscar
       .filter(m => 
         m.numero_macro === 2 && 
         m.data_jornada && 
@@ -168,7 +169,7 @@ export default function VehicleTimeline({ macros, dataReferencia }) {
       .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
     
     return macros2Anteriores[0] || null;
-  }, [macros, dataReferencia]);
+  }, [todasMacrosVeiculo, macros, dataReferencia]);
   
   const jornadaBruta = calcularJornadaBruta(macrosDoDia);
   const jornadaLiquida = calcularJornadaLiquida(macrosDoDia);

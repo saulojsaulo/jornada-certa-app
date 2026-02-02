@@ -16,7 +16,7 @@ import {
 import { extractFleetNumber, getDriverName, getManagerName } from './DriverData';
 import VehicleTimeline from './VehicleTimeline';
 
-export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
+export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros }) {
   const [expanded, setExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -156,7 +156,11 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem }) {
       {/* Timeline expandida */}
       <AnimatePresence>
         {expanded && (
-            <VehicleTimeline macros={macrosHoje} dataReferencia={macrosHoje[0]?.data_jornada} />
+            <VehicleTimeline 
+              macros={macrosHoje} 
+              todasMacrosVeiculo={todasMacros}
+              dataReferencia={macrosHoje[0]?.data_jornada} 
+            />
           )}
       </AnimatePresence>
     </motion.div>
