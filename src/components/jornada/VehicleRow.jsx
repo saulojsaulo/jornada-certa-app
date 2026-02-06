@@ -60,15 +60,15 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           </div>
 
           {/* Motorista */}
-          <div className="col-span-2">
+          <div className="col-span-3">
             <div className="md:hidden text-xs text-slate-500 mb-1">Motorista</div>
-            <span className="text-sm text-slate-700 truncate block" title={getDriverName(veiculo.nome_veiculo)}>
+            <span className="text-sm text-slate-700 block">
               {getDriverName(veiculo.nome_veiculo)}
             </span>
           </div>
 
           {/* Status */}
-          <div className="col-span-2">
+          <div className="col-span-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Status</div>
             <Badge className={`${statusConfig.color} font-medium text-xs`}>
               {status}

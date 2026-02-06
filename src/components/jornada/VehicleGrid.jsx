@@ -157,7 +157,7 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
     {
       key: 'motorista',
       label: 'Motorista',
-      span: 'col-span-2',
+      span: 'col-span-3',
       draggable: true,
       filterable: false,
       sortable: true
@@ -165,7 +165,7 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
     {
       key: 'status',
       label: 'Status',
-      span: 'col-span-2',
+      span: 'col-span-1',
       filterable: true,
       draggable: true,
       sortable: true,
