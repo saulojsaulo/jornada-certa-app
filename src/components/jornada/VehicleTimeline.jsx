@@ -281,6 +281,51 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
             <div className="font-semibold text-sm text-blue-800">{minutesToHHMM(pausas.complemento)}</div>
           </div>
         </div>
+        {(() => {
+          // Buscar Macro 2 do dia anterior e Macro 1 do dia atual
+          const macrosParaBuscar = todasMacrosVeiculo || macros;
+          if (!macrosParaBuscar || macrosParaBuscar.length === 0 || !dataReferencia) return null;
+          
+          const macrosDiaAtual = macrosParaBuscar.filter(m => m.data_jornada === dataReferencia && !m.excluido);
+          const macro1Hoje = macrosDiaAtual.find(m => m.numero_macro === 1);
+          
+          if (!macro1Hoje) return null;
+          
+          const macros2Anteriores = macrosParaBuscar
+            .filter(m => 
+              m.numero_macro === 2 && 
+              m.data_jornada && 
+              m.data_jornada < dataReferencia &&
+              !m.excluido
+            )
+            .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
+          
+          const macro2DiaAnterior = macros2Anteriores[0];
+          
+          if (!macro2DiaAnterior) return null;
+          
+          // Calcular interjornada em minutos
+          const interjornadaMinutos = (new Date(macro1Hoje.data_criacao) - new Date(macro2DiaAnterior.data_criacao)) / (1000 * 60);
+          
+          // Verificar se há alerta de interjornada < 11h e se não há macro 9
+          const macro9 = macrosDiaAtual.find(m => m.numero_macro === 9);
+          const temAlerta11h = interjornadaMinutos < 660 && !macro9;
+          
+          if (!temAlerta11h) return null;
+          
+          // Calcular complemento pendente (11h - interjornada)
+          const complementoPendente = 660 - interjornadaMinutos;
+          
+          return (
+            <div className="flex items-center gap-2 bg-yellow-50 rounded-lg p-2 border border-yellow-200">
+              <Zap className="w-3.5 h-3.5 text-yellow-600" />
+              <div>
+                <div className="text-xs text-yellow-600">Complemento Pendente</div>
+                <div className="font-semibold text-sm text-yellow-800">{minutesToHHMM(complementoPendente)}</div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Linha do Tempo 24h */}
