@@ -307,9 +307,8 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
           // Calcular interjornada em minutos
           const interjornadaMinutos = (new Date(macro1Hoje.data_criacao) - new Date(macro2DiaAnterior.data_criacao)) / (1000 * 60);
           
-          // Verificar se há alerta de interjornada < 11h e se não há macro 9
-          const macro9 = macrosDiaAtual.find(m => m.numero_macro === 9);
-          const temAlerta11h = interjornadaMinutos < 660 && !macro9;
+          // Mostrar complemento pendente se interjornada < 11h (independente de ter macro 9)
+          const temAlerta11h = interjornadaMinutos < 660;
           
           if (!temAlerta11h) return null;
           
