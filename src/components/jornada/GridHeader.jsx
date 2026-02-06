@@ -13,7 +13,7 @@ export default function GridHeader({ columns, onFilterChange, filters, onSort, s
       {columns.map((column) => (
         <div
           key={column.key}
-          className={`${column.span} flex items-center gap-1 ${column.align || ''}`}
+          className={`${column.span} flex items-center gap-1 ${column.align || ''} whitespace-nowrap`}
         >
           {column.draggable && (
             <GripVertical className="w-3 h-3 text-slate-400 cursor-move" />
