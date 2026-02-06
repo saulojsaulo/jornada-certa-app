@@ -35,7 +35,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
   const interjornada = calcularInterjornada(macrosHoje, macrosOntem);
   
   const alertaRefeicao = verificarAlertaRefeicao(macrosHoje);
-  const alertasInterjornada = verificarAlertasInterjornada(interjornada);
+  const alertasInterjornada = verificarAlertasInterjornada(interjornada, macrosHoje);
 
   return (
     <motion.div
@@ -116,7 +116,6 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
                 animate={{ scale: 1 }}
                 className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-medium"
               >
-                <Utensils className="w-3 h-3" />
                 🍽️
               </motion.div>
             )}
@@ -128,7 +127,6 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
                 animate={{ scale: 1 }}
                 className="flex items-center gap-1 bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full text-xs font-medium"
               >
-                <Moon className="w-3 h-3" />
                 🌙
               </motion.div>
             )}
@@ -140,7 +138,6 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
                 animate={{ scale: 1 }}
                 className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium"
               >
-                <AlertTriangle className="w-3 h-3" />
                 💣
               </motion.div>
             )}

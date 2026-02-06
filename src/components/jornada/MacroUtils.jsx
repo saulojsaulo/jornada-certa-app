@@ -211,18 +211,35 @@ export function verificarAlertaRefeicao(macros) {
   const sorted = [...activeMacros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   const macro1 = sorted.find(m => m.numero_macro === 1);
   const macro2 = sorted.find(m => m.numero_macro === 2);
-  const macro3 = sorted.find(m => m.numero_macro === 3);
   
   if (!macro1 || macro2) return false; // Sem jornada ou já encerrada
-  if (macro3) return false; // Já teve refeição
+  
+  // Contar macros de refeição
+  const count3 = sorted.filter(m => m.numero_macro === 3).length;
+  const count4 = sorted.filter(m => m.numero_macro === 4).length;
+  
+  // Se já completou pelo menos 1 refeição, não alertar mais
+  if (count4 > 0) return false;
+  
+  // Se está em refeição (macro 3 aberta), não alertar
+  if (count3 > count4) return false;
   
   const tempoDesdeInicio = diffInMinutes(macro1.data_criacao, new Date());
   return tempoDesdeInicio > 360; // 360 = 6 horas
 }
 
 // Verificar alertas de interjornada
-export function verificarAlertasInterjornada(interjornadaMinutos) {
+export function verificarAlertasInterjornada(interjornadaMinutos, macrosHoje) {
   if (interjornadaMinutos === null) return { alerta11h: false, alerta8h: false };
+  
+  // Se há macros hoje, verificar se já enviou macro de complemento (9)
+  if (macrosHoje && macrosHoje.length > 0) {
+    const activeMacros = macrosHoje.filter(m => !m.excluido);
+    const macro9 = activeMacros.find(m => m.numero_macro === 9);
+    
+    // Se enviou macro 9, não mostrar mais alerta de interjornada
+    if (macro9) return { alerta11h: false, alerta8h: false };
+  }
   
   return {
     alerta11h: interjornadaMinutos < 660, // < 11 horas
