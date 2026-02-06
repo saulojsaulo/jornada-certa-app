@@ -259,7 +259,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
       </div>
 
       {/* Detalhamento de pausas */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="flex items-center gap-2 bg-amber-50 rounded-lg p-2">
           <Coffee className="w-3.5 h-3.5 text-amber-600" />
           <div>
