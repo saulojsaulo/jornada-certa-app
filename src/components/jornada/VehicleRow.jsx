@@ -43,10 +43,10 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
       className={`rounded-xl overflow-hidden shadow-md border-2 ${expanded ? 'border-slate-400' : 'border-slate-200'} ${statusConfig.rowColor}`}
     >
       <div
-        className="p-5 cursor-pointer hover:bg-white/50 transition-colors"
+        className="p-2.5 cursor-pointer hover:bg-white/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
           {/* Gestor */}
           <div className="col-span-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Gestor</div>
@@ -56,7 +56,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           {/* Frota */}
           <div className="col-span-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Frota</div>
-            <span className="font-bold text-slate-800 text-lg">{extractFleetNumber(veiculo.nome_veiculo)}</span>
+            <span className="font-bold text-slate-800 text-base">{extractFleetNumber(veiculo.nome_veiculo)}</span>
           </div>
 
           {/* Motorista */}
