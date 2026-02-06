@@ -213,12 +213,12 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className="p-6 bg-slate-50/50 border-t border-slate-100"
+      className="p-4 bg-slate-50/50 border-t border-slate-100"
     >
       {/* Resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
         {macro2DiaAnterior && (
-          <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="bg-white rounded-lg p-3 shadow-sm">
             <div className="text-xs text-slate-500 mb-1">Fim Jornada Dia Anterior</div>
             <div className="text-sm font-bold text-slate-700">
               {new Date(macro2DiaAnterior.data_criacao).toLocaleString('pt-BR', {
@@ -232,59 +232,59 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
             </div>
           </div>
         )}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-slate-500 mb-1">Jornada Bruta</div>
-          <div className="text-xl font-bold text-slate-700">{minutesToHHMM(jornadaBruta)}</div>
+        <div className="bg-white rounded-lg p-3 shadow-sm">
+          <div className="text-xs text-slate-500 mb-0.5">Jornada Bruta</div>
+          <div className="text-lg font-bold text-slate-700">{minutesToHHMM(jornadaBruta)}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-slate-500 mb-1">Total Pausas</div>
-          <div className="text-xl font-bold text-slate-700">{minutesToHHMM(pausas.total)}</div>
+        <div className="bg-white rounded-lg p-3 shadow-sm">
+          <div className="text-xs text-slate-500 mb-0.5">Total Pausas</div>
+          <div className="text-lg font-bold text-slate-700">{minutesToHHMM(pausas.total)}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-slate-500 mb-1">Jornada Líquida</div>
-          <div className="text-xl font-bold text-emerald-600">{minutesToHHMM(jornadaLiquida)}</div>
+        <div className="bg-white rounded-lg p-3 shadow-sm">
+          <div className="text-xs text-slate-500 mb-0.5">Jornada Líquida</div>
+          <div className="text-lg font-bold text-emerald-600">{minutesToHHMM(jornadaLiquida)}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-slate-500 mb-1">Horas Extras</div>
-          <div className={`text-xl font-bold ${horasExtras > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+        <div className="bg-white rounded-lg p-3 shadow-sm">
+          <div className="text-xs text-slate-500 mb-0.5">Horas Extras</div>
+          <div className={`text-lg font-bold ${horasExtras > 0 ? 'text-red-500' : 'text-slate-400'}`}>
             {minutesToHHMM(horasExtras)}
           </div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-slate-500 mb-1">Limite 12h</div>
-          <div className={`text-xl font-bold ${jornadaLiquida > limite12h ? 'text-red-500' : 'text-slate-700'}`}>
+        <div className="bg-white rounded-lg p-3 shadow-sm">
+          <div className="text-xs text-slate-500 mb-0.5">Limite 12h</div>
+          <div className={`text-lg font-bold ${jornadaLiquida > limite12h ? 'text-red-500' : 'text-slate-700'}`}>
             {jornadaLiquida > limite12h ? 'EXCEDIDO' : minutesToHHMM(limite12h - jornadaLiquida)}
           </div>
         </div>
       </div>
 
       {/* Detalhamento de pausas */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="flex items-center gap-2 bg-amber-50 rounded-lg p-3">
-          <Coffee className="w-4 h-4 text-amber-600" />
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="flex items-center gap-2 bg-amber-50 rounded-lg p-2">
+          <Coffee className="w-3.5 h-3.5 text-amber-600" />
           <div>
             <div className="text-xs text-amber-600">Refeição</div>
-            <div className="font-semibold text-amber-800">{minutesToHHMM(pausas.refeicao)}</div>
+            <div className="font-semibold text-sm text-amber-800">{minutesToHHMM(pausas.refeicao)}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-purple-50 rounded-lg p-3">
-          <Moon className="w-4 h-4 text-purple-600" />
+        <div className="flex items-center gap-2 bg-purple-50 rounded-lg p-2">
+          <Moon className="w-3.5 h-3.5 text-purple-600" />
           <div>
             <div className="text-xs text-purple-600">Repouso</div>
-            <div className="font-semibold text-purple-800">{minutesToHHMM(pausas.repouso)}</div>
+            <div className="font-semibold text-sm text-purple-800">{minutesToHHMM(pausas.repouso)}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-blue-50 rounded-lg p-3">
-          <Zap className="w-4 h-4 text-blue-600" />
+        <div className="flex items-center gap-2 bg-blue-50 rounded-lg p-2">
+          <Zap className="w-3.5 h-3.5 text-blue-600" />
           <div>
             <div className="text-xs text-blue-600">Complemento</div>
-            <div className="font-semibold text-blue-800">{minutesToHHMM(pausas.complemento)}</div>
+            <div className="font-semibold text-sm text-blue-800">{minutesToHHMM(pausas.complemento)}</div>
           </div>
         </div>
       </div>
 
       {/* Linha do Tempo 24h */}
-      <div className="mb-6">
+      <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <div className="text-xs text-slate-500">Linha do Tempo (24h)</div>
           <div className="flex items-center gap-3">
@@ -647,7 +647,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
           </div>
         )}
 
-        <div className="flex justify-center gap-4 mt-8 text-xs">
+        <div className="flex justify-center gap-4 mt-4 text-xs">
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 bg-green-500 rounded"></div>
             <span className="text-slate-600">Em Jornada</span>
@@ -672,8 +672,8 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
       </div>
 
       {/* Timeline de eventos */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between mb-3">
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between mb-2">
           <div className="text-xs text-slate-500">Linha do Tempo</div>
           <Button
             variant="outline"
@@ -697,12 +697,12 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.05 }}
-                className="relative flex items-center gap-4 py-2 group"
+                className="relative flex items-center gap-3 py-1.5 group"
               >
-                <div className={`relative z-10 w-8 h-8 rounded-full ${getMacroColor(macro.numero_macro)} flex items-center justify-center shadow-sm ${isExcluido ? 'opacity-30' : ''}`}>
+                <div className={`relative z-10 w-7 h-7 rounded-full ${getMacroColor(macro.numero_macro)} flex items-center justify-center shadow-sm ${isExcluido ? 'opacity-30' : ''}`}>
                   {getMacroIcon(macro.numero_macro)}
                 </div>
-                <div className={`flex-1 bg-white rounded-lg p-3 shadow-sm ${isExcluido ? 'opacity-50' : ''}`}>
+                <div className={`flex-1 bg-white rounded-lg p-2 shadow-sm ${isExcluido ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className={`font-medium text-sm text-slate-700 ${isExcluido ? 'line-through' : ''}`}>
                       {MACRO_NAMES[macro.numero_macro]}
