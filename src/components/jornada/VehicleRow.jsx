@@ -43,10 +43,10 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
       className={`rounded-xl overflow-hidden shadow-md border-2 ${expanded ? 'border-slate-400' : 'border-slate-200'} ${statusConfig.rowColor}`}
     >
       <div
-        className="p-2.5 cursor-pointer hover:bg-white/50 transition-colors"
+        className="p-1.5 cursor-pointer hover:bg-white/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-1.5 items-center">
           {/* Gestor */}
           <div className="col-span-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Gestor</div>
