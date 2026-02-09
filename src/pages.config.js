@@ -49,11 +49,13 @@
  */
 import Jornada from './pages/Jornada';
 import LimpezaDuplicatas from './pages/LimpezaDuplicatas';
+import Dashboard from './pages/Dashboard';
 
 
 export const PAGES = {
     "Jornada": Jornada,
     "LimpezaDuplicatas": LimpezaDuplicatas,
+    "Dashboard": Dashboard,
 }
 
 export const pagesConfig = {
