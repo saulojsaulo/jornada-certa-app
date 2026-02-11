@@ -234,25 +234,25 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
         )}
         <div className="bg-white rounded-lg p-3 shadow-sm">
           <div className="text-xs text-slate-500 mb-0.5">Jornada Bruta</div>
-          <div className="text-lg font-bold text-slate-700">{minutesToHHMM(jornadaBruta)}</div>
+          <div className="text-lg font-bold text-slate-700 font-sans">{minutesToHHMM(jornadaBruta)}</div>
         </div>
         <div className="bg-white rounded-lg p-3 shadow-sm">
           <div className="text-xs text-slate-500 mb-0.5">Total Pausas</div>
-          <div className="text-lg font-bold text-slate-700">{minutesToHHMM(pausas.total)}</div>
+          <div className="text-lg font-bold text-slate-700 font-sans">{minutesToHHMM(pausas.total)}</div>
         </div>
         <div className="bg-white rounded-lg p-3 shadow-sm">
           <div className="text-xs text-slate-500 mb-0.5">Jornada Líquida</div>
-          <div className="text-lg font-bold text-emerald-600">{minutesToHHMM(jornadaLiquida)}</div>
+          <div className="text-lg font-bold text-emerald-600 font-sans">{minutesToHHMM(jornadaLiquida)}</div>
         </div>
         <div className="bg-white rounded-lg p-3 shadow-sm">
           <div className="text-xs text-slate-500 mb-0.5">Horas Extras</div>
-          <div className={`text-lg font-bold ${horasExtras > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+          <div className={`text-lg font-bold font-sans ${horasExtras > 0 ? 'text-red-500' : 'text-slate-400'}`}>
             {minutesToHHMM(horasExtras)}
           </div>
         </div>
         <div className="bg-white rounded-lg p-3 shadow-sm">
           <div className="text-xs text-slate-500 mb-0.5">Limite 12h</div>
-          <div className={`text-lg font-bold ${jornadaLiquida > limite12h ? 'text-red-500' : 'text-slate-700'}`}>
+          <div className={`text-lg font-bold font-sans ${jornadaLiquida > limite12h ? 'text-red-500' : 'text-slate-700'}`}>
             {jornadaLiquida > limite12h ? 'EXCEDIDO' : minutesToHHMM(limite12h - jornadaLiquida)}
           </div>
         </div>
@@ -264,21 +264,21 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
           <Coffee className="w-3.5 h-3.5 text-amber-600" />
           <div>
             <div className="text-xs text-amber-600">Refeição</div>
-            <div className="font-semibold text-sm text-amber-800">{minutesToHHMM(pausas.refeicao)}</div>
+            <div className="font-semibold text-sm text-amber-800 font-sans">{minutesToHHMM(pausas.refeicao)}</div>
           </div>
         </div>
         <div className="flex items-center gap-2 bg-purple-50 rounded-lg p-2">
           <Moon className="w-3.5 h-3.5 text-purple-600" />
           <div>
             <div className="text-xs text-purple-600">Repouso</div>
-            <div className="font-semibold text-sm text-purple-800">{minutesToHHMM(pausas.repouso)}</div>
+            <div className="font-semibold text-sm text-purple-800 font-sans">{minutesToHHMM(pausas.repouso)}</div>
           </div>
         </div>
         <div className="flex items-center gap-2 bg-blue-50 rounded-lg p-2">
           <Zap className="w-3.5 h-3.5 text-blue-600" />
           <div>
             <div className="text-xs text-blue-600">Complemento</div>
-            <div className="font-semibold text-sm text-blue-800">{minutesToHHMM(pausas.complemento)}</div>
+            <div className="font-semibold text-sm text-blue-800 font-sans">{minutesToHHMM(pausas.complemento)}</div>
           </div>
         </div>
         {(() => {
@@ -320,7 +320,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
               <Zap className="w-3.5 h-3.5 text-yellow-600" />
               <div>
                 <div className="text-xs text-yellow-600">Complemento Pendente</div>
-                <div className="font-semibold text-sm text-yellow-800">{minutesToHHMM(complementoPendente)}</div>
+                <div className="font-semibold text-sm text-yellow-800 font-sans">{minutesToHHMM(complementoPendente)}</div>
               </div>
             </div>
           );
@@ -572,7 +572,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
                   style={{ left: `${leftPercent}%` }}
                 >
                   <div 
-                    className={`absolute ${hour % 4 === 0 ? '-top-5' : '-bottom-5'} -left-3 text-xs font-medium text-slate-500`}
+                    className={`absolute ${hour % 4 === 0 ? '-top-5' : '-bottom-5'} -left-3 text-xs font-medium text-slate-500 font-sans`}
                   >
                     {String(hour).padStart(2, '0')}:00
                   </div>
@@ -752,7 +752,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
                       {MACRO_NAMES[macro.numero_macro]}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs text-slate-500 ${isExcluido ? 'line-through' : ''}`}>
+                      <span className={`text-xs text-slate-500 font-sans ${isExcluido ? 'line-through' : ''}`}>
                         {new Date(macro.data_criacao).toLocaleTimeString('pt-BR', { 
                           hour: '2-digit', 
                           minute: '2-digit' 
