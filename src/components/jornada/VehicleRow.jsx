@@ -78,7 +78,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           {/* Jornada em Tempo Real */}
           <div className="col-span-1 text-center">
             <div className="text-xs text-slate-500 mb-1 md:hidden">Jornada</div>
-            <div className={`font-mono font-bold text-sm ${jornadaLiquida > 480 ? 'text-amber-600' : 'text-slate-700'}`}>
+            <div className={`font-sans font-bold text-sm ${jornadaLiquida > 480 ? 'text-amber-600' : 'text-slate-700'}`}>
               {minutesToHHMM(jornadaLiquida)}
             </div>
           </div>
@@ -86,7 +86,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           {/* Tempo Disponível */}
           <div className="col-span-1 text-center">
             <div className="text-xs text-slate-500 mb-1 md:hidden">Disponível</div>
-            <div className={`font-mono font-bold text-sm ${tempoDisponivel < 60 ? 'text-red-600' : 'text-emerald-600'}`}>
+            <div className={`font-sans font-bold text-sm ${tempoDisponivel < 60 ? 'text-red-600' : 'text-emerald-600'}`}>
               {minutesToHHMM(tempoDisponivel)}
             </div>
           </div>
@@ -94,7 +94,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           {/* Horas Extras */}
           <div className="col-span-1 text-center">
             <div className="text-xs text-slate-500 mb-1 md:hidden">H. Extra</div>
-            <div className={`font-mono font-bold text-sm ${horasExtras > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+            <div className={`font-sans font-bold text-sm ${horasExtras > 0 ? 'text-red-600' : 'text-slate-400'}`}>
               {minutesToHHMM(horasExtras)}
             </div>
           </div>
@@ -102,7 +102,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           {/* Total do Dia */}
           <div className="col-span-1 text-center">
             <div className="text-xs text-slate-500 mb-1 md:hidden">Total</div>
-            <div className="font-mono font-bold text-sm text-slate-700">
+            <div className="font-sans font-bold text-sm text-slate-700">
               {minutesToHHMM(jornadaLiquida)}
             </div>
           </div>
