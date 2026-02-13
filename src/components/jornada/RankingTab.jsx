@@ -87,6 +87,16 @@ export default function RankingTab() {
     queryFn: () => base44.entities.Veiculo.list(),
   });
 
+  const { data: motoristas = [] } = useQuery({
+    queryKey: ['motoristas'],
+    queryFn: () => base44.entities.Motorista.list(),
+  });
+
+  const { data: gestores = [] } = useQuery({
+    queryKey: ['gestores'],
+    queryFn: () => base44.entities.Gestor.list(),
+  });
+
   const { data: fetchedMacros = [] } = useQuery({
     queryKey: ['macros'],
     queryFn: () => base44.entities.MacroEvento.list('-data_criacao', 50000),
@@ -166,8 +176,13 @@ export default function RankingTab() {
 
     veiculos.forEach(veiculo => {
       const fleetNumber = extractFleetNumber(veiculo.nome_veiculo);
-      const motorista = getDriverName(veiculo.nome_veiculo);
-      const gestor = getManagerName(veiculo.nome_veiculo);
+      
+      // Buscar motorista e gestor do cadastro ou usar fallback
+      const motoristaObj = motoristas.find(m => m.id === veiculo.motorista_id);
+      const gestorObj = gestores.find(g => g.id === veiculo.gestor_id);
+      
+      const motorista = motoristaObj?.nome || getDriverName(veiculo.nome_veiculo);
+      const gestor = gestorObj?.nome || getManagerName(veiculo.nome_veiculo);
 
       // Aplicar filtros
       if (veiculoFiltro !== 'all' && veiculo.id !== veiculoFiltro) return;
@@ -256,11 +271,12 @@ export default function RankingTab() {
   const gestoresUnicos = useMemo(() => {
     const set = new Set();
     veiculos.forEach(v => {
-      const gestor = getManagerName(v.nome_veiculo);
+      const gestorObj = gestores.find(g => g.id === v.gestor_id);
+      const gestor = gestorObj?.nome || getManagerName(v.nome_veiculo);
       if (gestor) set.add(gestor);
     });
     return Array.from(set).sort();
-  }, [veiculos]);
+  }, [veiculos, gestores]);
 
   return (
     <div className="space-y-6">
