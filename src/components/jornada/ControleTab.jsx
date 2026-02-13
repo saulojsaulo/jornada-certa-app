@@ -22,6 +22,18 @@ export default function ControleTab({ onImportLogUpdate }) {
     queryFn: () => base44.entities.Veiculo.list(),
   });
 
+  // Buscar motoristas
+  const { data: motoristas = [] } = useQuery({
+    queryKey: ['motoristas'],
+    queryFn: () => base44.entities.Motorista.list(),
+  });
+
+  // Buscar gestores
+  const { data: gestores = [] } = useQuery({
+    queryKey: ['gestores'],
+    queryFn: () => base44.entities.Gestor.list(),
+  });
+
   // Buscar macros
   const { data: fetchedMacros = [], isLoading: loadingMacros, refetch: refetchMacros } = useQuery({
     queryKey: ['macros'],
@@ -178,6 +190,8 @@ export default function ControleTab({ onImportLogUpdate }) {
       >
         <VehicleGrid
           veiculos={veiculos}
+          motoristas={motoristas}
+          gestores={gestores}
           macrosPorVeiculo={macrosPorVeiculo}
           macrosOntemPorVeiculo={macrosOntemPorVeiculo}
           todasMacrosPorVeiculo={todasMacrosPorVeiculo}

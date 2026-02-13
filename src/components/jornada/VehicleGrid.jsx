@@ -14,7 +14,7 @@ import {
   verificarAlertasInterjornada
 } from './MacroUtils';
 
-export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo }) {
+export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [alertFilter, setAlertFilter] = useState('all');
@@ -40,8 +40,14 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       const alertaRefeicao = verificarAlertaRefeicao(macrosHoje);
       const alertasInterjornada = verificarAlertasInterjornada(interjornada);
 
+      // Buscar motorista e gestor relacionados
+      const motorista = motoristas.find(m => m.id === v.motorista_id);
+      const gestor = gestores.find(g => g.id === v.gestor_id);
+
       return {
         ...v,
+        motorista,
+        gestor,
         macrosHoje,
         macrosOntem,
         status,
@@ -53,7 +59,7 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
         alertasInterjornada
       };
     });
-  }, [veiculos, macrosPorVeiculo, macrosOntemPorVeiculo]);
+  }, [veiculos, motoristas, gestores, macrosPorVeiculo, macrosOntemPorVeiculo]);
 
   const filteredAndSorted = useMemo(() => {
     let result = [...processedVehicles];
@@ -80,7 +86,10 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
 
     // Filtros por coluna
     if (columnFilters.gestor) {
-      result = result.filter(v => getManagerName(v.nome_veiculo) === columnFilters.gestor);
+      result = result.filter(v => {
+        const gestorNome = v.gestor?.nome || getManagerName(v.nome_veiculo);
+        return gestorNome === columnFilters.gestor;
+      });
     }
     if (columnFilters.status) {
       result = result.filter(v => v.status === columnFilters.status);
@@ -97,7 +106,9 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
           comparison = numA - numB;
           break;
         case 'gestor':
-          comparison = getManagerName(a.nome_veiculo).localeCompare(getManagerName(b.nome_veiculo));
+          const gestorA = a.gestor?.nome || getManagerName(a.nome_veiculo);
+          const gestorB = b.gestor?.nome || getManagerName(b.nome_veiculo);
+          comparison = gestorA.localeCompare(gestorB);
           break;
         case 'motorista':
           comparison = a.nome_veiculo.localeCompare(b.nome_veiculo);
@@ -133,7 +144,9 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
   }, [processedVehicles, search, statusFilter, alertFilter, sortBy, sortOrder, columnFilters]);
 
   // Obter valores únicos para filtros
-  const gestores = [...new Set(processedVehicles.map(v => getManagerName(v.nome_veiculo)).filter(g => g !== '—'))].sort();
+  const gestoresUnicos = [...new Set(processedVehicles.map(v => {
+    return v.gestor?.nome || getManagerName(v.nome_veiculo);
+  }).filter(g => g !== '—'))].sort();
   const statuses = [...new Set(processedVehicles.map(v => v.status))].sort();
 
   const columns = [
@@ -144,7 +157,7 @@ export default function VehicleGrid({ veiculos, macrosPorVeiculo, macrosOntemPor
       filterable: true,
       draggable: true,
       sortable: true,
-      filterOptions: gestores.map(g => ({ value: g, label: g }))
+      filterOptions: gestoresUnicos.map(g => ({ value: g, label: g }))
     },
     {
       key: 'frota',

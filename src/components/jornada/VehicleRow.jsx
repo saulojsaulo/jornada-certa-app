@@ -14,6 +14,22 @@ import {
   verificarAlertasInterjornada
 } from './MacroUtils';
 import { extractFleetNumber, getDriverName, getManagerName } from './DriverData';
+
+// Função auxiliar para obter o nome do motorista (prioriza cadastro, depois fallback)
+function getMotoristaDisplay(veiculo) {
+  if (veiculo.motorista?.nome) {
+    return veiculo.motorista.nome;
+  }
+  return getDriverName(veiculo.nome_veiculo);
+}
+
+// Função auxiliar para obter o nome do gestor (prioriza cadastro, depois fallback)
+function getGestorDisplay(veiculo) {
+  if (veiculo.gestor?.nome) {
+    return veiculo.gestor.nome;
+  }
+  return getManagerName(veiculo.nome_veiculo);
+}
 import VehicleTimeline from './VehicleTimeline';
 
 export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros }) {
@@ -50,7 +66,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           {/* Gestor */}
           <div className="col-span-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Gestor</div>
-            <span className="text-sm font-medium text-slate-700">{getManagerName(veiculo.nome_veiculo)}</span>
+            <span className="text-sm font-medium text-slate-700">{getGestorDisplay(veiculo)}</span>
           </div>
 
           {/* Frota */}
@@ -63,7 +79,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           <div className="col-span-3">
             <div className="md:hidden text-xs text-slate-500 mb-1">Motorista</div>
             <span className="text-sm text-slate-700 block">
-              {getDriverName(veiculo.nome_veiculo)}
+              {getMotoristaDisplay(veiculo)}
             </span>
           </div>
 
