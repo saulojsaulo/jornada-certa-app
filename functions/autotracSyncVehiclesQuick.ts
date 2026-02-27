@@ -63,31 +63,53 @@ Deno.serve(async (req) => {
     let created = 0;
     let updated = 0;
 
-    // Sincronizar veículos
+    // Separar em criar e atualizar
+    const toCreate = [];
+    const toUpdate = [];
+
     for (const vehicle of autotracVehicles) {
       const vehicleCode = String(vehicle.Code || vehicle.VehicleCode);
       const placa = vehicle.LicensePlate || '';
       const nome = vehicle.Name || `Veículo ${vehicleCode}`;
 
-      // Verificar se já existe com esse autotrac_id
       if (vehiclesByAutotracId[vehicleCode]) {
-        // Atualizar
-        await base44.entities.Veiculo.update(vehiclesByAutotracId[vehicleCode], {
+        toUpdate.push({
+          id: vehiclesByAutotracId[vehicleCode],
           autotrac_id: vehicleCode,
           placa: placa,
           nome_veiculo: nome
         });
-        updated++;
       } else {
-        // Criar novo
-        await base44.entities.Veiculo.create({
+        toCreate.push({
           nome_veiculo: nome,
           placa: placa,
           autotrac_id: vehicleCode,
           ativo: true
         });
-        created++;
       }
+    }
+
+    // Bulk create
+    if (toCreate.length > 0) {
+      console.log(`[SYNC] Criando ${toCreate.length} veículos...`);
+      await base44.entities.Veiculo.bulkCreate(toCreate);
+      created = toCreate.length;
+    }
+
+    // Atualizar um por um com delays
+    if (toUpdate.length > 0) {
+      console.log(`[SYNC] Atualizando ${toUpdate.length} veículos...`);
+      for (let i = 0; i < toUpdate.length; i++) {
+        const v = toUpdate[i];
+        const { id, ...data } = v;
+        await base44.entities.Veiculo.update(id, data);
+        
+        // Pequeno delay a cada 10 atualizações
+        if ((i + 1) % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      updated = toUpdate.length;
     }
 
     console.log(`[SYNC] Criados: ${created}, Atualizados: ${updated}`);
