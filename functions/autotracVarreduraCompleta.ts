@@ -54,19 +54,32 @@ Deno.serve(async (req) => {
     };
 
     // ===== ETAPA 1: SINCRONIZAR VEÍCULOS =====
-    const vehiclesRes = await fetch(`${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles`, {
-      headers: getAuthHeaders()
-    });
+    // API retorna no máximo 10 por página, paginar até buscar todos
+    const PAGE_SIZE = 10;
+    const vehicles = [];
+    let vOffset = 0;
 
-    if (!vehiclesRes.ok) {
-      const text = await vehiclesRes.text();
-      throw new Error(`Falha ao buscar veículos: ${vehiclesRes.status} - ${text}`);
+    while (true) {
+      const vehiclesRes = await fetch(`${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=${PAGE_SIZE}&offset=${vOffset}`, {
+        headers: getAuthHeaders()
+      });
+
+      if (!vehiclesRes.ok) {
+        const text = await vehiclesRes.text();
+        throw new Error(`Falha ao buscar veículos: ${vehiclesRes.status} - ${text}`);
+      }
+
+      const vehiclesData = await vehiclesRes.json();
+      const page = Array.isArray(vehiclesData)
+        ? vehiclesData
+        : (vehiclesData.Data || vehiclesData.data || vehiclesData.vehicles || []);
+
+      vehicles.push(...page);
+
+      if (vehiclesData.IsLastPage === true || page.length < PAGE_SIZE) break;
+      vOffset += PAGE_SIZE;
+      if (vOffset >= PAGE_SIZE * 300) break; // segurança: max 3000 veículos
     }
-
-    const vehiclesData = await vehiclesRes.json();
-    const vehicles = Array.isArray(vehiclesData)
-      ? vehiclesData
-      : (vehiclesData.Data || vehiclesData.data || vehiclesData.vehicles || []);
 
     resultado.veiculos.total = vehicles.length;
 
