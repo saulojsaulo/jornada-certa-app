@@ -91,6 +91,20 @@ export default function Jornada() {
                 </span>
               </div>
 
+              {/* Varredura Completa */}
+              <Button
+                onClick={handleVarreduraCompleta}
+                disabled={varreduraLoading}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+              >
+                {varreduraLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Zap className="w-4 h-4" />
+                )}
+                {varreduraLoading ? 'Sincronizando...' : 'Varredura Completa'}
+              </Button>
+
               {/* Atualizar */}
               <Button
                 variant="outline"
