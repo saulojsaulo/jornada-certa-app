@@ -9,55 +9,22 @@ import { ptBR } from 'date-fns/locale';
 export default function DebugMacrosTab() {
   const [loading, setLoading] = useState(false);
   const [macros, setMacros] = useState([]);
-  const [veiculos, setVeiculos] = useState([]);
-  const [vehicleMap, setVehicleMap] = useState({});
+  const [totalVehicles, setTotalVehicles] = useState(0);
 
   const handleFetchMacros = async () => {
     setLoading(true);
     try {
-      const toastId = toast.loading('Buscando macros das últimas 24 horas...');
+      const toastId = toast.loading('Buscando TODOS os 229 veículos e macros das últimas 48 horas...');
       
-      // Buscar veículos
-      const veiculosData = await base44.entities.Veiculo.list();
-      setVeiculos(veiculosData);
+      const result = await base44.functions.invoke('autotracDebugAllMacros', {});
       
-      const vMap = {};
-      veiculosData.forEach(v => {
-        if (v.autotrac_id) {
-          vMap[v.autotrac_id] = v;
-        }
-      });
-      setVehicleMap(vMap);
-      
-      // Para cada veículo, buscar as macros da API Autotrac
-      const allMacros = [];
-      for (const vehicle of veiculosData) {
-        if (!vehicle.autotrac_id) continue;
-        
-        try {
-          const result = await base44.functions.invoke('autotracGetVehicleMessages', {
-            vehicleCode: String(vehicle.autotrac_id),
-            debug: false
-          });
-          
-          if (result.data.messages && result.data.messages.length > 0) {
-            const macrosWithVehicle = result.data.messages.map(msg => ({
-              veiculo_id: vehicle.id,
-              veiculo_nome: vehicle.nome_veiculo,
-              autotrac_id: vehicle.autotrac_id,
-              numero_macro: msg.MacroNumber,
-              data_criacao: msg.MessageTime,
-              raw: msg
-            }));
-            allMacros.push(...macrosWithVehicle);
-          }
-        } catch (err) {
-          console.error(`Erro ao buscar macros do veículo ${vehicle.autotrac_id}:`, err);
-        }
+      if (result.data.success) {
+        setMacros(result.data.macros || []);
+        setTotalVehicles(result.data.total_vehicles);
+        toast.success(`${result.data.total_macros} macros encontradas em ${result.data.total_vehicles} veículos!`, { id: toastId });
+      } else {
+        toast.error('Erro ao buscar macros: ' + result.data.error, { id: toastId });
       }
-      
-      setMacros(allMacros);
-      toast.success(`${allMacros.length} macros encontradas!`, { id: toastId });
     } catch (error) {
       toast.error('Erro ao buscar macros: ' + error.message);
     } finally {
