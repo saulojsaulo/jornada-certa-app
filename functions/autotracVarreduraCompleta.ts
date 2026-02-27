@@ -133,7 +133,9 @@ Deno.serve(async (req) => {
           }
 
           const msgData = await msgRes.json();
-          const mensagens = Array.isArray(msgData) ? msgData : (msgData.messages || msgData.data || []);
+          const mensagens = Array.isArray(msgData)
+            ? msgData
+            : (msgData.Data || msgData.data || msgData.messages || []);
 
           const macrosParaInserir = [];
 
