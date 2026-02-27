@@ -15,27 +15,17 @@ function getHeaders() {
   };
 }
 
-function parseMacroNumber(msg) {
-  if (!msg || typeof msg !== 'object') return null;
-  const num = msg.MacroNumber || msg.macro || msg.Macro;
-  return num ? parseInt(num) : null;
-}
-
-function parseDateTime(dateStr) {
-  if (!dateStr) return null;
+function isWithinLast48Hours(messageTimeStr) {
+  if (!messageTimeStr) return false;
   try {
-    return new Date(dateStr);
+    const msgDate = new Date(messageTimeStr);
+    const now = new Date();
+    const diffMs = now - msgDate;
+    const diff48h = 48 * 60 * 60 * 1000;
+    return diffMs >= 0 && diffMs <= diff48h;
   } catch {
-    return null;
+    return false;
   }
-}
-
-function isWithinLast48Hours(date) {
-  if (!date) return false;
-  const now = new Date();
-  const diffMs = now - date;
-  const diff48h = 48 * 60 * 60 * 1000;
-  return diffMs >= 0 && diffMs <= diff48h;
 }
 
 Deno.serve(async (req) => {
