@@ -15,6 +15,7 @@ import VehicleGrid from './VehicleGrid';
 export default function AutotracDirectTab() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [veiculos, setVeiculos] = useState([]);
+  const [macros, setMacros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncInProgress, setSyncInProgress] = useState(false);
 
