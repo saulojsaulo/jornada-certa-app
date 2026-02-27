@@ -72,11 +72,11 @@ Deno.serve(async (req) => {
       
       totalProcessados += page.length;
       
-      if (data.IsLastPage === true || page.length < PAGE_SIZE) {
+      if (data.IsLastPage === true || page.length === 0) {
         break;
       }
       
-      offset += PAGE_SIZE;
+      offset += page.length;
       
       // Limit to 2000 vehicles to avoid timeout if infinite
       if (offset > 2000) break;
