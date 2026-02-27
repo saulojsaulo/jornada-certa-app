@@ -47,11 +47,11 @@ async function getVehicleMessages(vehicleCode) {
 
     const now = new Date();
     const validMessages = messages.filter(msg => {
-      const macro = parseInt(msg.MacroNumber || msg.Macro || 0);
+      const macro = msg.MacroNumber;
       if (![1, 2, 3, 4, 5, 6, 9, 10].includes(macro)) return false;
       
       try {
-        const msgDate = new Date(msg.CreatedDate);
+        const msgDate = new Date(msg.MessageTime);
         const diffMs = now - msgDate;
         return diffMs >= 0 && diffMs <= 48 * 60 * 60 * 1000;
       } catch {
@@ -60,9 +60,9 @@ async function getVehicleMessages(vehicleCode) {
     });
 
     return validMessages.map(msg => ({
-      macroNumber: parseInt(msg.MacroNumber || msg.Macro || 0),
-      createdDate: msg.CreatedDate,
-      description: msg.Description || ''
+      macroNumber: msg.MacroNumber,
+      messageTime: msg.MessageTime,
+      landmark: msg.Landmark || ''
     }));
   } catch {
     return [];
