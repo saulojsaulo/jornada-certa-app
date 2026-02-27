@@ -41,15 +41,38 @@ export default function AutotracDirectTab() {
     fetchVehiclesFromAutotrac();
   }, []);
 
-  // Simular carregamento de macros (vazio por enquanto)
-  const macros = [];
   const motoristas = [];
   const gestores = [];
 
   const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const macrosPorVeiculo = {};
-  const macrosOntemPorVeiculo = {};
-  const todasMacrosPorVeiculo = {};
+  const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
+
+  const macrosPorVeiculo = useMemo(() => {
+    const map = {};
+    macros.filter(m => m.data_jornada === dateString).forEach(m => {
+      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
+      map[m.veiculo_id].push(m);
+    });
+    return map;
+  }, [macros, dateString]);
+
+  const macrosOntemPorVeiculo = useMemo(() => {
+    const map = {};
+    macros.filter(m => m.data_jornada === yesterdayString).forEach(m => {
+      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
+      map[m.veiculo_id].push(m);
+    });
+    return map;
+  }, [macros, yesterdayString]);
+
+  const todasMacrosPorVeiculo = useMemo(() => {
+    const map = {};
+    macros.forEach(m => {
+      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
+      map[m.veiculo_id].push(m);
+    });
+    return map;
+  }, [macros]);
 
   const handleSyncFromAutotrac = async () => {
     setSyncInProgress(true);
