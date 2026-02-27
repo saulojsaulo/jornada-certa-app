@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     console.log(`USER: ${AUTOTRAC_USER}`);
     console.log(`API_KEY length: ${AUTOTRAC_API_KEY?.length || 0}`);
 
-    const url = `${AUTOTRAC_BASE_URL}/${AUTOTRAC_ACCOUNT}/v2/vehicles?page=1&pageSize=10`;
+    const url = `${AUTOTRAC_BASE_URL}/v2/vehicles?page=1&pageSize=10`;
     console.log(`Testing URL: ${url}`);
 
     const response = await fetch(url, { headers: getHeaders() });
