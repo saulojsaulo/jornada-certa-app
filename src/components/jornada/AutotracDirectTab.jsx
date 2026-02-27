@@ -191,20 +191,9 @@ export default function AutotracDirectTab() {
   const handleSyncFromAutotrac = async () => {
     setSyncInProgress(true);
     try {
-      const toastId = toast.loading('Sincronizando veículos com Autotrac...');
+      const toastId = toast.loading('Sincronizando com Autotrac...');
       
-      // Sincronizar veículos
-      const syncVehicles = await base44.functions.invoke('autotracSyncVehiclesQuick', {});
-      
-      if (!syncVehicles.data.success) {
-        toast.error('Erro ao sincronizar veículos', { id: toastId });
-        setSyncInProgress(false);
-        return;
-      }
-
-      toast.loading(`Importando macros para o banco de dados...`, { id: toastId });
-
-      // Importar macros para o banco
+      // Executar importação (que roda via automação a cada hora)
       const importResult = await base44.functions.invoke('autotracImportAllMacros', {});
       
       if (importResult.data.success) {
@@ -225,12 +214,12 @@ export default function AutotracDirectTab() {
         });
         
         setRawMacros(mappedMacros);
-        toast.success(`${importResult.data.created_macros} macros importadas com sucesso!`, { id: toastId });
+        toast.success(`${importResult.data.created_macros} macros importadas!`, { id: toastId });
       } else {
-        toast.error('Erro ao importar macros', { id: toastId });
+        toast.error('Erro ao importar', { id: toastId });
       }
     } catch (error) {
-      toast.error('Erro na sincronização: ' + error.message);
+      toast.error('Erro: ' + error.message);
     } finally {
       setSyncInProgress(false);
     }
