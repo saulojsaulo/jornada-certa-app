@@ -97,13 +97,21 @@ Deno.serve(async (req) => {
       errors: []
     };
 
+    let vehicleIndex = 0;
     for (const vehicle of autotracVehicles) {
+      vehicleIndex++;
       const vehicleCode = String(vehicle.VehicleCode);
       const veiculoId = vehicleMap[vehicleCode];
+      
+      if (vehicleIndex <= 5) {
+        console.log(`[IMPORT] Vehicle ${vehicleIndex}: ${vehicleCode} mapped? ${veiculoId ? 'YES' : 'NO'}`);
+      }
       
       if (!veiculoId) {
         continue; // Pular se veículo não existir no banco
       }
+
+      console.log(`[IMPORT] Processing vehicle ${vehicleCode}`);
 
       try {
         const messages = await getVehicleMessages(parseInt(vehicleCode));
