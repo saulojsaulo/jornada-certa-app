@@ -96,12 +96,20 @@ Deno.serve(async (req) => {
       created = toCreate.length;
     }
 
-    // Bulk update com service role
+    // Bulk update com service role em chunks
     if (toUpdate.length > 0) {
       console.log(`[SYNC] Atualizando ${toUpdate.length} veículos...`);
-      for (const v of toUpdate) {
-        const { id, ...data } = v;
-        await base44.asServiceRole.entities.Veiculo.update(id, data);
+      const chunkSize = 50;
+      for (let i = 0; i < toUpdate.length; i += chunkSize) {
+        const chunk = toUpdate.slice(i, i + chunkSize);
+        for (const v of chunk) {
+          const { id, ...data } = v;
+          await base44.asServiceRole.entities.Veiculo.update(id, data);
+        }
+        // Delay entre chunks
+        if (i + chunkSize < toUpdate.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
       }
       updated = toUpdate.length;
     }
