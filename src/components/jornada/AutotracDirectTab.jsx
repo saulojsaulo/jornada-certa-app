@@ -191,9 +191,9 @@ export default function AutotracDirectTab() {
   const handleSyncFromAutotrac = async () => {
     setSyncInProgress(true);
     try {
-      // Primeiro: Sincronizar veículos
-      const toastId = toast.loading('Sincronizando 229 veículos com Autotrac...');
+      const toastId = toast.loading('Sincronizando veículos com Autotrac...');
       
+      // Sincronizar veículos
       const syncVehicles = await base44.functions.invoke('autotracSyncVehiclesQuick', {});
       
       if (!syncVehicles.data.success) {
@@ -202,16 +202,32 @@ export default function AutotracDirectTab() {
         return;
       }
 
-      toast.loading(`Sincronizados ${syncVehicles.data.total_vehicles} veículos. Buscando macros...`, { id: toastId });
+      toast.loading(`Importando macros para o banco de dados...`, { id: toastId });
 
-      // Segundo: Buscar macros
-      const result = await base44.functions.invoke('autotracDebugAllMacros', {});
+      // Importar macros para o banco
+      const importResult = await base44.functions.invoke('autotracImportAllMacros', {});
       
-      if (result.data.success) {
-        setRawMacros(result.data.macros || []);
-        toast.success(`${result.data.total_macros} macros carregadas de ${result.data.total_vehicles} veículos!`, { id: toastId });
+      if (importResult.data.success) {
+        // Recarregar dados do banco
+        const macros = await base44.entities.MacroEvento.list(undefined, 5000);
+        const mappedMacros = macros.map(m => {
+          const veiculo = veiculos.find(v => v.id === m.veiculo_id);
+          return {
+            veiculo_code: veiculo?.autotrac_id || m.veiculo_id,
+            veiculo_id: m.veiculo_id,
+            veiculo_nome: veiculo?.nome_veiculo || 'Desconhecido',
+            placa: veiculo?.placa || '',
+            numero_macro: m.numero_macro,
+            data_criacao: m.data_criacao,
+            jornada_id: m.jornada_id,
+            data_jornada: m.data_jornada
+          };
+        });
+        
+        setRawMacros(mappedMacros);
+        toast.success(`${importResult.data.created_macros} macros importadas com sucesso!`, { id: toastId });
       } else {
-        toast.error('Erro ao buscar macros', { id: toastId });
+        toast.error('Erro ao importar macros', { id: toastId });
       }
     } catch (error) {
       toast.error('Erro na sincronização: ' + error.message);
