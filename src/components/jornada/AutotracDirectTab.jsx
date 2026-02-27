@@ -175,8 +175,7 @@ export default function AutotracDirectTab() {
       const result = await base44.functions.invoke('autotracDebugAllMacros', {});
       
       if (result.data.success) {
-        // Usar as macros direto da API
-        setMacros(result.data.macros || []);
+        setRawMacros(result.data.macros || []);
         toast.success(`${result.data.total_macros} macros carregadas de ${result.data.total_vehicles} veículos!`, { id: toastId });
       } else {
         toast.error('Erro ao buscar macros', { id: toastId });
