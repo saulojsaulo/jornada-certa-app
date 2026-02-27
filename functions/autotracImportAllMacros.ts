@@ -23,7 +23,7 @@ async function getAllVehicles() {
   let hasMore = true;
 
   while (hasMore) {
-    const url = `${AUTOTRAC_BASE_URL}/v2/vehicles?page=${page}&pageSize=100`;
+    const url = `${AUTOTRAC_BASE_URL}/v2/vehicles?page=${page}&pageSize=500`;
     const response = await fetch(url, { headers: getHeaders() });
     const data = await response.json();
 
@@ -35,6 +35,7 @@ async function getAllVehicles() {
     }
   }
 
+  console.log(`[IMPORT] Total de ${vehicles.length} veículos buscados da Autotrac`);
   return vehicles;
 }
 
@@ -80,6 +81,8 @@ Deno.serve(async (req) => {
     const errors = [];
 
     // Process each vehicle
+    console.log(`[IMPORT] Processando ${autotracVehicles.length} veículos...`);
+    
     for (const autotracVehicle of autotracVehicles) {
       const vehicleCode = String(autotracVehicle.code);
       const base44Vehicle = vehicleMap[vehicleCode];
@@ -91,6 +94,7 @@ Deno.serve(async (req) => {
 
       try {
         const messages = await getVehicleMessages(vehicleCode);
+        console.log(`[IMPORT] ${vehicleCode}: ${messages.list?.length || 0} mensagens`);
 
         if (messages.list && Array.isArray(messages.list)) {
           // Batch criação de macros
@@ -121,14 +125,16 @@ Deno.serve(async (req) => {
           if (macrosToCreate.length > 0) {
             await base44.asServiceRole.entities.MacroEvento.bulkCreate(macrosToCreate);
             createdCount += macrosToCreate.length;
+            console.log(`[IMPORT] ${vehicleCode}: ${macrosToCreate.length} macros criadas`);
           }
         }
       } catch (err) {
+        console.error(`[IMPORT] Erro em ${vehicleCode}: ${err.message}`);
         errors.push({ vehicle: vehicleCode, error: err.message });
       }
       
       // Delay para evitar rate limit
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
 
     return Response.json({
