@@ -10,9 +10,8 @@ const ACCOUNT_CODE = 10849;
 const MACROS_VALIDAS = [1, 2, 3, 4, 5, 6, 9, 10];
 
 function getAuthHeaders() {
-  const credentials = btoa(`${USER}:${PASS}`);
   return {
-    'Authorization': `Basic ${credentials}`,
+    'Authorization': `Basic ${USER}:${PASS}`,
     'Ocp-Apim-Subscription-Key': API_KEY,
     'Content-Type': 'application/json'
   };
