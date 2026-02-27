@@ -52,71 +52,120 @@ export default function AutotracDirectTab() {
     fetchMacros();
   }, []);
 
-  const motoristas = [];
-  const gestores = [];
-
   const dateString = format(selectedDate, 'yyyy-MM-dd');
+  const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
 
-  // Processar macros para calcular jornadas
-  const { macrosPorVeiculo, jornadas } = useMemo(() => {
-    const macroMap = {};
-    const jornadasList = [];
+  // Mapear veículos da Autotrac com veículos do banco
+  const vehicleMap = useMemo(() => {
+    const map = {};
+    veiculos.forEach(v => {
+      if (v.autotrac_id) {
+        map[String(v.autotrac_id)] = v;
+      }
+    });
+    return map;
+  }, [veiculos]);
 
-    // Agrupar macros por veículo e data
+  // Processar macros com as mesmas regras da aba Controle
+  const macros = useMemo(() => {
+    return rawMacros
+      .map(m => ({
+        ...m,
+        veiculo_id: vehicleMap[String(m.veiculo_code)]?.id || null,
+        data_criacao: m.data_criacao,
+        numero_macro: m.numero_macro
+      }))
+      .filter(m => m.veiculo_id); // Apenas veículos mapeados
+  }, [rawMacros, vehicleMap]);
+
+  // Dedupicação (igual ControleTab)
+  const macrosUnicos = useMemo(() => {
+    const seen = new Set();
+    const uniqueMacros = [];
+    
     macros.forEach(m => {
-      if (!m.veiculo_code) return;
+      const dateToSecond = new Date(m.data_criacao);
+      dateToSecond.setMilliseconds(0);
+      const key = `${m.veiculo_id}-${m.numero_macro}-${dateToSecond.toISOString()}`;
       
-      const dataJornada = new Date(m.data_criacao).toISOString().split('T')[0];
-      const key = `${m.veiculo_code}-${dataJornada}`;
-      
-      if (!macroMap[key]) {
-        macroMap[key] = {
-          veiculo_code: m.veiculo_code,
-          veiculo_nome: m.veiculo_nome,
-          placa: m.placa,
-          data: dataJornada,
-          macros: []
-        };
-      }
-      macroMap[key].macros.push({
-        numero: m.numero_macro,
-        data_criacao: m.data_criacao
-      });
-    });
-
-    // Calcular jornadas: Macro 1 = início, outras macros = eventos dentro da jornada
-    Object.values(macroMap).forEach(item => {
-      const macrosOrdenadas = item.macros.sort((a, b) => 
-        new Date(a.data_criacao) - new Date(b.data_criacao)
-      );
-      
-      const macro1 = macrosOrdenadas.find(m => m.numero === 1);
-      if (macro1) {
-        const ultimaMacro = macrosOrdenadas[macrosOrdenadas.length - 1];
-        jornadasList.push({
-          veiculo_code: item.veiculo_code,
-          veiculo_nome: item.veiculo_nome,
-          placa: item.placa,
-          data_jornada: item.data,
-          data_inicio: macro1.data_criacao,
-          data_fim: ultimaMacro.data_criacao,
-          total_macros: item.macros.length,
-          macros: macrosOrdenadas
-        });
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueMacros.push(m);
       }
     });
 
-    // Separar por dia
-    const mapa = {};
-    jornadasList
-      .filter(j => j.data_jornada === dateString)
-      .forEach(j => {
-        if (!mapa[j.veiculo_code]) mapa[j.veiculo_code] = [];
-        mapa[j.veiculo_code].push(j);
+    // Calcular jornada_id e data_jornada (igual ControleTab)
+    const macrosPorVeiculo = {};
+    uniqueMacros.forEach(m => {
+      if (!macrosPorVeiculo[m.veiculo_id]) {
+        macrosPorVeiculo[m.veiculo_id] = [];
+      }
+      macrosPorVeiculo[m.veiculo_id].push(m);
+    });
+    
+    Object.values(macrosPorVeiculo).forEach(macrosVeiculo => {
+      macrosVeiculo.sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+      
+      let jornadaAtual = null;
+      
+      macrosVeiculo.forEach(m => {
+        if (m.numero_macro === 1) {
+          const dataJornada = new Date(m.data_criacao).toISOString().split('T')[0];
+          jornadaAtual = {
+            jornadaId: `${m.veiculo_id}-${dataJornada}-${new Date(m.data_criacao).getTime()}`,
+            dataJornada: dataJornada,
+            aberta: true
+          };
+          m.jornada_id = jornadaAtual.jornadaId;
+          m.data_jornada = jornadaAtual.dataJornada;
+        } else if (jornadaAtual && jornadaAtual.aberta) {
+          m.jornada_id = jornadaAtual.jornadaId;
+          m.data_jornada = jornadaAtual.dataJornada;
+          
+          if (m.numero_macro === 2) {
+            jornadaAtual.aberta = false;
+          }
+        }
       });
+    });
+    
+    return uniqueMacros;
+  }, [macros]);
 
-    return { macrosPorVeiculo: mapa, jornadas: jornadasList };
-  }, [macros, dateString]);
+  // Filtrar por data (igual ControleTab)
+  const { macrosHoje, macrosOntem } = useMemo(() => {
+    const hoje = macrosUnicos.filter(m => m.data_jornada === dateString);
+    const ontem = macrosUnicos.filter(m => m.data_jornada === yesterdayString);
+    return { macrosHoje: hoje, macrosOntem: ontem };
+  }, [macrosUnicos, dateString, yesterdayString]);
+
+  // Agrupar por veículo (igual ControleTab)
+  const macrosPorVeiculo = useMemo(() => {
+    const map = {};
+    macrosHoje.forEach(m => {
+      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
+      map[m.veiculo_id].push(m);
+    });
+    return map;
+  }, [macrosHoje]);
+
+  const macrosOntemPorVeiculo = useMemo(() => {
+    const map = {};
+    macrosOntem.forEach(m => {
+      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
+      map[m.veiculo_id].push(m);
+    });
+    return map;
+  }, [macrosOntem]);
+
+  const todasMacrosPorVeiculo = useMemo(() => {
+    const map = {};
+    macrosUnicos.forEach(m => {
+      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
+      map[m.veiculo_id].push(m);
+    });
+    return map;
+  }, [macrosUnicos]);
 
   const handleSyncFromAutotrac = async () => {
     setSyncInProgress(true);
