@@ -144,6 +144,9 @@ Deno.serve(async (req) => {
           totalImportadas += macrosParaInserir.length;
         }
 
+        // Delay para respeitar rate limit da Autotrac
+        await new Promise(r => setTimeout(r, 500));
+
       } catch (err) {
         erros.push(`Veículo ${veiculo.nome_veiculo}: ${err.message}`);
       }
