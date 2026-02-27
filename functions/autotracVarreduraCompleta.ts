@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       if (vOffset >= PAGE_SIZE * 300) break; // segurança: max 3000 veículos
 
       // Respeitar rate limit
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 700));
     }
 
     resultado.veiculos.total = vehicles.length;
