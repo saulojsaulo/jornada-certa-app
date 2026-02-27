@@ -55,10 +55,10 @@ Deno.serve(async (req) => {
     let atualizados = 0;
 
     for (const vehicle of vehicles) {
-      const autotracId = String(vehicle.id || vehicle.vehicleId || vehicle.vehicle_id || '');
-      const nomeVeiculo = vehicle.name || vehicle.plate || vehicle.description || `Veículo ${autotracId}`;
-      const placa = vehicle.plate || vehicle.licensePlate || vehicle.license_plate || '';
-      const numeroFrota = vehicle.fleetNumber || vehicle.fleet_number || vehicle.fleet || '';
+      const autotracId = String(vehicle.Code || vehicle.code || '');
+      const nomeVeiculo = vehicle.Name || vehicle.name || `Veículo ${autotracId}`;
+      const placa = vehicle.LicensePlate || vehicle.licensePlate || vehicle.plate || '';
+      const numeroFrota = vehicle.Address || vehicle.address || vehicle.TripName || '';
 
       if (!autotracId) continue;
 
