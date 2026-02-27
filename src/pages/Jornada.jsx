@@ -230,6 +230,10 @@ export default function Jornada() {
           <TabsContent value="filtro">
             <FiltroMotoristaTab />
           </TabsContent>
+
+          <TabsContent value="debug">
+            <DebugMacrosTab />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
