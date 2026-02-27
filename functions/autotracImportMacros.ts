@@ -19,10 +19,15 @@ function getHeaders() {
 
 async function getAllVehicles() {
   const url = `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?_limit=500`;
+  console.log('Fetching vehicles from:', url);
   const res = await fetch(url, { headers: getHeaders() });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    console.log('API response status:', res.status);
+    return [];
+  }
   
   const data = await res.json();
+  console.log('API response Data length:', (data.Data || []).length);
   return data.Data || [];
 }
 
