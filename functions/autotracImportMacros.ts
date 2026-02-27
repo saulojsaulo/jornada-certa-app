@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-const PROD_URL = Deno.env.get("AUTOTRAC_BASE_URL");
-const ACCOUNT_CODE = Deno.env.get("AUTOTRAC_ACCOUNT");
+const PROD_URL = 'https://aapi3.autotrac-online.com.br/aticapi';
+const ACCOUNT_CODE = 10849;
 const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 const USERNAME = Deno.env.get("AUTOTRAC_USER");
 const PASSWORD = Deno.env.get("AUTOTRAC_PASS");
@@ -9,10 +9,9 @@ const PASSWORD = Deno.env.get("AUTOTRAC_PASS");
 const VALID_MACROS = [1, 2, 3, 4, 5, 6, 9, 10];
 
 function getHeaders() {
-  const auth = btoa(`${USERNAME}:${PASSWORD}`);
   return {
-    'Authorization': `Basic ${auth}`,
-    'X-API-Key': API_KEY,
+    'Authorization': `Basic ${USERNAME}:${PASSWORD}`,
+    'Ocp-Apim-Subscription-Key': API_KEY,
     'Content-Type': 'application/json'
   };
 }
