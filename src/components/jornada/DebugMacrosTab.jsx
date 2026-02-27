@@ -48,7 +48,7 @@ export default function DebugMacrosTab() {
       {macros.length === 0 && !loading && (
         <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
           <AlertCircle className="w-5 h-5" />
-          <span>Clique no botão acima para buscar as macros da API Autotrac</span>
+          <span>Clique no botão acima para buscar TODAS as macros dos 229 veículos (últimas 48 horas)</span>
         </div>
       )}
 
