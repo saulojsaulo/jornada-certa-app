@@ -15,10 +15,26 @@ import VehicleGrid from './VehicleGrid';
 
 export default function AutotracDirectTab() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [veiculos, setVeiculos] = useState([]);
-  const [macros, setMacros] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [rawMacros, setRawMacros] = useState([]);
   const [syncInProgress, setSyncInProgress] = useState(false);
+
+  // Buscar veículos
+  const { data: veiculos = [], isLoading: loadingVeiculos } = useQuery({
+    queryKey: ['veiculos'],
+    queryFn: () => base44.entities.Veiculo.list(),
+  });
+
+  // Buscar motoristas
+  const { data: motoristas = [] } = useQuery({
+    queryKey: ['motoristas'],
+    queryFn: () => base44.entities.Motorista.list(),
+  });
+
+  // Buscar gestores
+  const { data: gestores = [] } = useQuery({
+    queryKey: ['gestores'],
+    queryFn: () => base44.entities.Gestor.list(),
+  });
 
   // Carregar veículos direto da Autotrac (sem usar banco de dados)
   useEffect(() => {
