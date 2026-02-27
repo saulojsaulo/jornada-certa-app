@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     
     // Buscar macros deste veículo específico via API Autotrac
     const agora = new Date();
-    const inicio48h = new Date(agora.getTime() - 48 * 60 * 60 * 1000);
+    const inicio7dias = new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000);
     
     function fmtDate(d) {
       return d.toISOString().replace('T', ' ').substring(0, 19);
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
       };
     }
     
-    const startDateStr = fmtDate(inicio48h);
+    const startDateStr = fmtDate(inicio7dias);
     const endDateStr = fmtDate(agora);
     const ACCOUNT_CODE = 10849;
     
