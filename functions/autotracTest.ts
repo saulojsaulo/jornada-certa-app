@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
     let allMensagens = [];
     let offset = 0;
     const limit = 50;
+    let debugInfo = [];
     
     while (true) {
       const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${veiculo.autotrac_id}/returnmessages` +
@@ -64,6 +65,13 @@ Deno.serve(async (req) => {
       const data = await res.json();
       const page = data.Data || data.data || (Array.isArray(data) ? data : []);
       allMensagens = allMensagens.concat(page);
+      
+      debugInfo.push({
+        offset,
+        pageCount: page.length,
+        isLastPage: data.IsLastPage,
+        dataKeys: Object.keys(data)
+      });
       
       if (data.IsLastPage === true || page.length < limit) break;
       offset += limit;
@@ -88,7 +96,9 @@ Deno.serve(async (req) => {
         MacroNumber: m.MacroNumber,
         MessageTime: m.MessageTime,
         MessageText: m.MessageText
-      }))
+      })),
+      debugInfo,
+      testeUrl: `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${veiculo.autotrac_id}/returnmessages?limit=10`
     });
     
   } catch (error) {
