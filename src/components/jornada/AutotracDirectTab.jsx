@@ -110,18 +110,16 @@ export default function AutotracDirectTab() {
   const handleSyncFromAutotrac = async () => {
     setSyncInProgress(true);
     try {
-      const toastId = toast.loading('Sincronizando macros com Autotrac...');
+      const toastId = toast.loading('Buscando macros de todas as 229 veículos (últimas 48h)...');
       
-      const result = await base44.functions.invoke('autotracImportMacros', {});
+      const result = await base44.functions.invoke('autotracDebugAllMacros', {});
       
       if (result.data.success) {
-        // Recarregar as macros do banco de dados
-        const macrosResponse = await base44.entities.MacroEvento.list('-data_criacao', 5000);
-        setMacros(macrosResponse);
-        
-        toast.success(`${result.data.macros_created} macros importadas!`, { id: toastId });
+        // Usar as macros direto da API
+        setMacros(result.data.macros || []);
+        toast.success(`${result.data.total_macros} macros carregadas de ${result.data.total_vehicles} veículos!`, { id: toastId });
       } else {
-        toast.error('Erro na importação de macros', { id: toastId });
+        toast.error('Erro ao buscar macros', { id: toastId });
       }
     } catch (error) {
       toast.error('Erro na sincronização: ' + error.message);
@@ -130,12 +128,14 @@ export default function AutotracDirectTab() {
     }
   };
 
-  // Carregar macros do banco ao inicializar
+  // Carregar macros ao inicializar
   useEffect(() => {
     const fetchMacros = async () => {
       try {
-        const macrosData = await base44.entities.MacroEvento.list('-data_criacao', 5000);
-        setMacros(macrosData);
+        const result = await base44.functions.invoke('autotracDebugAllMacros', {});
+        if (result.data.success) {
+          setMacros(result.data.macros || []);
+        }
       } catch (error) {
         console.error('Erro ao carregar macros:', error);
       }
