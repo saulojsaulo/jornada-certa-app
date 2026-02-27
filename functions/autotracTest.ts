@@ -19,16 +19,30 @@ Deno.serve(async (req) => {
   try {
     const results = [];
 
-    // Testar com pageSize maior: 50, 100, 200, 500
-    for (const pageSize of [50, 100, 200, 500]) {
-      const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=${pageSize}&offset=0`;
+    // Buscar apenas as primeiras 5 páginas de veículos com delay de 1s entre cada
+    const PAGE_SIZE = 10;
+    const vehicles = [];
+
+    for (let i = 0; i < 5; i++) {
+      const offset = i * PAGE_SIZE;
+      const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=${PAGE_SIZE}&offset=${offset}`;
       const res = await fetch(url, { headers: getAuthHeaders() });
       const data = await res.json();
-      const items = Array.isArray(data) ? data : (data.Data || data.data || []);
-      results.push({ pageSize, status: res.status, count: items.length, isLastPage: data.IsLastPage, limit: data.Limit });
+      const page = Array.isArray(data) ? data : (data.Data || data.data || []);
+      vehicles.push(...page);
+      results.push({ page: i, offset, count: page.length, isLastPage: data.IsLastPage, status: res.status });
+
+      if (data.IsLastPage === true || page.length < PAGE_SIZE) break;
+
+      // delay de 1 segundo
+      await new Promise(r => setTimeout(r, 1000));
     }
 
-    return Response.json({ results });
+    return Response.json({
+      total: vehicles.length,
+      results,
+      sample: vehicles.slice(0, 3).map(v => ({ Code: v.Code, Name: v.Name }))
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
