@@ -88,7 +88,10 @@ Deno.serve(async (req) => {
       try {
         const messages = await getVehicleMessages(vehicleCode);
 
-        if (messages.list) {
+        if (messages.list && Array.isArray(messages.list)) {
+          // Batch criação de macros
+          const macrosToCreate = [];
+          
           for (const msg of messages.list) {
             if (!VALID_MACROS.includes(msg.macroNumber)) continue;
 
@@ -96,24 +99,32 @@ Deno.serve(async (req) => {
             const key = `${base44Vehicle.id}-${msg.macroNumber}-${new Date(msg.messageTime).toISOString()}`;
 
             if (!existingKeys.has(key)) {
-              await base44.asServiceRole.entities.MacroEvento.create({
+              macrosToCreate.push({
                 veiculo_id: base44Vehicle.id,
                 numero_macro: msg.macroNumber,
                 data_criacao: msg.messageTime,
                 jornada_id: `${base44Vehicle.id}-${dataJornada}-${new Date(msg.messageTime).getTime()}`,
                 data_jornada: dataJornada
               });
-
-              createdCount++;
+              
               existingKeys.add(key);
             } else {
               skippedCount++;
             }
           }
+          
+          // Criar em batch
+          if (macrosToCreate.length > 0) {
+            await base44.asServiceRole.entities.MacroEvento.bulkCreate(macrosToCreate);
+            createdCount += macrosToCreate.length;
+          }
         }
       } catch (err) {
         errors.push({ vehicle: vehicleCode, error: err.message });
       }
+      
+      // Delay para evitar rate limit
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     return Response.json({
