@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const messages = await getVehicleMessages(vehicleCode);
+        const messages = await getVehicleMessages(parseInt(vehicleCode));
         
         // Filtrar: apenas macros válidas e últimas 48h
         const validMessages = messages.filter(msg => {
