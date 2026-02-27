@@ -200,28 +200,50 @@ export default function AutotracDirectTab() {
         <strong>{veiculos.length} veículos</strong> carregados direto da Autotrac (sem usar banco de dados)
       </div>
 
-      {/* Stats */}
-      <StatsCards 
-        veiculos={veiculos}
-        macrosPorVeiculo={macrosPorVeiculo}
-        macrosOntemPorVeiculo={macrosOntemPorVeiculo}
-      />
-
-      {/* Grid de Veículos */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <VehicleGrid
-          veiculos={veiculos}
-          motoristas={motoristas}
-          gestores={gestores}
-          macrosPorVeiculo={macrosPorVeiculo}
-          macrosOntemPorVeiculo={macrosOntemPorVeiculo}
-          todasMacrosPorVeiculo={todasMacrosPorVeiculo}
-        />
-      </motion.div>
+      {/* Jornadas Calculadas */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-800">Jornadas ({jornadas.length})</h3>
+        
+        {jornadas.length === 0 ? (
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-600">
+            Nenhuma jornada encontrada para {format(selectedDate, 'dd/MM/yyyy', { locale: ptBR })}
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid gap-3"
+          >
+            {jornadas.map((jornada, idx) => (
+              <div key={idx} className="bg-white border border-slate-200 rounded-lg p-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase">Veículo</p>
+                    <p className="font-semibold text-slate-900">{jornada.veiculo_nome}</p>
+                    <p className="text-sm text-slate-600">{jornada.placa}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase">Horário</p>
+                    <p className="font-semibold text-slate-900">
+                      {format(new Date(jornada.data_inicio), 'HH:mm:ss', { locale: ptBR })}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      até {format(new Date(jornada.data_fim), 'HH:mm:ss', { locale: ptBR })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase">Macros</p>
+                    <p className="font-semibold text-slate-900">{jornada.total_macros} eventos</p>
+                    <p className="text-sm text-slate-600">
+                      {jornada.macros.map(m => m.numero).join(', ')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }
