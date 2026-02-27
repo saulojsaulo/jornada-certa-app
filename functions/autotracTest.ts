@@ -33,9 +33,13 @@ Deno.serve(async (req) => {
     const accountsText = await accountsRes.text();
     results.push({ endpoint: '/v1/accounts', status: accountsRes.status, body: accountsText.substring(0, 1000) });
 
-    // Variação 1: Basic Auth com apikey no header Ocp-Apim-Subscription-Key
     const credB64 = btoa(`${USER}:${PASS}`);
-    const url1 = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles`;
+
+    // Testar account code 10849 (Cocal Cereais)
+    const accountCode = 10849;
+
+    // Variação 1: GET /v1/accounts/10849/vehicles com Basic Auth btoa
+    const url1 = `${BASE_URL}/v1/accounts/${accountCode}/vehicles`;
     const res1 = await fetch(url1, {
       headers: {
         'Authorization': `Basic ${credB64}`,
@@ -43,34 +47,46 @@ Deno.serve(async (req) => {
       }
     });
     const text1 = await res1.text();
-    results.push({ variant: 'Basic Auth + Ocp-Apim-Subscription-Key', status: res1.status, headers: Object.fromEntries(res1.headers.entries()), body: text1.substring(0, 500) });
+    results.push({ variant: `GET /v1/accounts/${accountCode}/vehicles - Basic btoa`, status: res1.status, body: text1.substring(0, 500) });
 
-    // Variação 2: Apenas API Key no header
+    // Variação 2: GET /v1/accounts/10849/vehicles sem Authorization
     const res2 = await fetch(url1, {
-      headers: {
-        'Ocp-Apim-Subscription-Key': API_KEY,
-      }
+      headers: { 'Ocp-Apim-Subscription-Key': API_KEY }
     });
     const text2 = await res2.text();
-    results.push({ variant: 'Only Ocp-Apim-Subscription-Key', status: res2.status, body: text2.substring(0, 500) });
+    results.push({ variant: 'Without Authorization header', status: res2.status, body: text2.substring(0, 500) });
 
-    // Variação 3: Bearer token com apikey
-    const res3 = await fetch(url1, {
+    // Variação 3: Usar ACCOUNT env var diretamente
+    const url3 = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles`;
+    const res3 = await fetch(url3, {
       headers: {
-        'Authorization': `Bearer ${API_KEY}`,
+        'Authorization': `Basic ${credB64}`,
         'Ocp-Apim-Subscription-Key': API_KEY,
       }
     });
     const text3 = await res3.text();
-    results.push({ variant: 'Bearer API_KEY + Ocp-Apim', status: res3.status, body: text3.substring(0, 500) });
+    results.push({ variant: `GET /v1/accounts/${ACCOUNT}/vehicles (ACCOUNT env)`, status: res3.status, body: text3.substring(0, 500) });
 
-    // Variação 4: query param subscription-key
-    const url4 = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles?subscription-key=${API_KEY}`;
+    // Variação 4: GET /v2/accounts/10849/vehicles (testar v2)
+    const url4 = `${BASE_URL}/v2/accounts/${accountCode}/vehicles`;
     const res4 = await fetch(url4, {
-      headers: { 'Authorization': `Basic ${credB64}` }
+      headers: {
+        'Authorization': `Basic ${credB64}`,
+        'Ocp-Apim-Subscription-Key': API_KEY,
+      }
     });
     const text4 = await res4.text();
-    results.push({ variant: 'subscription-key as query + Basic', status: res4.status, body: text4.substring(0, 500) });
+    results.push({ variant: 'v2 endpoint', status: res4.status, body: text4.substring(0, 500) });
+
+    // Info sobre os env vars (sem revelar senhas)
+    results.push({ 
+      info: 'env_vars', 
+      BASE_URL, 
+      ACCOUNT, 
+      USER, 
+      API_KEY_length: API_KEY?.length,
+      PASS_length: PASS?.length
+    });
 
     return Response.json({ results });
 
