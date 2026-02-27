@@ -192,7 +192,7 @@ export default function Jornada() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-4 mx-auto">
+          <TabsList className="grid w-full max-w-4xl grid-cols-5 mx-auto">
             <TabsTrigger value="controle" className="gap-2">
               <Truck className="w-4 h-4" />
               Controle
@@ -208,6 +208,10 @@ export default function Jornada() {
             <TabsTrigger value="filtro" className="gap-2">
               <UserSearch className="w-4 h-4" />
               Filtro de Motorista
+            </TabsTrigger>
+            <TabsTrigger value="debug" className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Debug Macros
             </TabsTrigger>
           </TabsList>
 
