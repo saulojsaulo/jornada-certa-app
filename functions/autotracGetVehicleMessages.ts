@@ -41,7 +41,7 @@ function isWithinLast48Hours(date) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const { vehicleCode } = await req.json();
+    const { vehicleCode, debug = false } = await req.json();
 
     if (!vehicleCode) {
       return Response.json({ error: 'vehicleCode é obrigatório' }, { status: 400 });
@@ -60,6 +60,16 @@ Deno.serve(async (req) => {
 
     const data = await res.json();
     const allMessages = data.Data || [];
+
+    if (debug) {
+      return Response.json({
+        success: true,
+        vehicleCode,
+        debug: true,
+        total_messages: allMessages.length,
+        raw_sample: allMessages.slice(0, 3)
+      });
+    }
 
     // Filtrar: apenas macros válidas e últimas 48h
     const validMessages = allMessages.filter(msg => {
