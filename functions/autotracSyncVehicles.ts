@@ -7,8 +7,9 @@ const PASS = Deno.env.get("AUTOTRAC_PASS");
 const ACCOUNT = Deno.env.get("AUTOTRAC_ACCOUNT");
 
 function getAuthHeaders() {
+  const credentials = btoa(`${USER}:${PASS}`);
   return {
-    'Authorization': `Basic ${USER}:${PASS}`,
+    'Authorization': `Basic ${credentials}`,
     'Ocp-Apim-Subscription-Key': API_KEY,
     'Content-Type': 'application/json'
   };
