@@ -31,20 +31,32 @@ Deno.serve(async (req) => {
     // Cocal Cereais = Code 10849 (ignorar Cedro Transportes Code 11007)
     const accountCode = 10849;
 
-    // Buscar veículos ativos da conta
-    const vehiclesRes = await fetch(`${BASE_URL}/v1/accounts/${accountCode}/vehicles`, {
-      headers: getAuthHeaders()
-    });
+    // Buscar TODOS os veículos da conta paginando (API retorna max 10 por página)
+    const PAGE_SIZE = 10;
+    const vehicles = [];
+    let offset = 0;
 
-    if (!vehiclesRes.ok) {
-      const text = await vehiclesRes.text();
-      throw new Error(`Falha ao buscar veículos: ${vehiclesRes.status} - ${text}`);
+    while (true) {
+      const vehiclesRes = await fetch(`${BASE_URL}/v1/accounts/${accountCode}/vehicles?limit=${PAGE_SIZE}&offset=${offset}`, {
+        headers: getAuthHeaders()
+      });
+
+      if (!vehiclesRes.ok) {
+        const text = await vehiclesRes.text();
+        throw new Error(`Falha ao buscar veículos: ${vehiclesRes.status} - ${text}`);
+      }
+
+      const vehiclesData = await vehiclesRes.json();
+      const page = Array.isArray(vehiclesData)
+        ? vehiclesData
+        : (vehiclesData.Data || vehiclesData.data || vehiclesData.vehicles || []);
+
+      vehicles.push(...page);
+
+      if (vehiclesData.IsLastPage === true || page.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+      if (offset >= PAGE_SIZE * 300) break; // segurança: max 3000 veículos
     }
-
-    const vehiclesData = await vehiclesRes.json();
-    const vehicles = Array.isArray(vehiclesData)
-      ? vehiclesData
-      : (vehiclesData.Data || vehiclesData.data || vehiclesData.vehicles || []);
 
     // Buscar veículos já cadastrados no sistema
     const veiculosExistentes = await base44.asServiceRole.entities.Veiculo.list();
