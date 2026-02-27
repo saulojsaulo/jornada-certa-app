@@ -28,18 +28,8 @@ Deno.serve(async (req) => {
       // Automação agendada sem usuário - OK
     }
 
-    // Buscar contas para obter o Code interno correspondente ao número da conta
-    const accountsRes = await fetch(`${BASE_URL}/v1/accounts`, { headers: getAuthHeaders() });
-    if (!accountsRes.ok) {
-      const text = await accountsRes.text();
-      throw new Error(`Falha ao buscar contas: ${accountsRes.status} - ${text}`);
-    }
-    const accounts = await accountsRes.json();
-    const account = accounts.find(a => String(a.Number) === String(ACCOUNT) || String(a.Code) === String(ACCOUNT));
-    if (!account) {
-      throw new Error(`Conta ${ACCOUNT} não encontrada. Contas disponíveis: ${accounts.map(a => `${a.Number}(Code:${a.Code})`).join(', ')}`);
-    }
-    const accountCode = account.Code;
+    // Cocal Cereais = Code 10849 (ignorar Cedro Transportes Code 11007)
+    const accountCode = 10849;
 
     // Buscar veículos ativos da conta
     const vehiclesRes = await fetch(`${BASE_URL}/v1/accounts/${accountCode}/vehicles`, {
