@@ -24,13 +24,13 @@ async function getAllVehicles() {
 
   try {
     while (hasMore) {
-      const url = `${AUTOTRAC_BASE_URL}/v2/vehicles?page=${page}&pageSize=100`;
+      const url = `${AUTOTRAC_BASE_URL}/${AUTOTRAC_ACCOUNT}/v2/vehicles?page=${page}&pageSize=100`;
       console.log(`[IMPORT] Buscando veículos página ${page}...`);
       
       const response = await fetch(url, { headers: getHeaders() });
       
       if (!response.ok) {
-        console.error(`[IMPORT] Erro ao buscar veículos (página ${page}): ${response.status}`);
+        console.error(`[IMPORT] Erro ao buscar veículos (página ${page}): ${response.status} ${response.statusText}`);
         hasMore = false;
         break;
       }
@@ -59,7 +59,7 @@ async function getVehicleMessages(vehicleCode) {
   const now = new Date();
   const last48h = new Date(now.getTime() - 48 * 60 * 60 * 1000);
   
-  const url = `${AUTOTRAC_BASE_URL}/v2/returnmessages/${vehicleCode}?pageSize=1000&startDate=${last48h.toISOString()}&endDate=${now.toISOString()}`;
+  const url = `${AUTOTRAC_BASE_URL}/${AUTOTRAC_ACCOUNT}/v2/returnmessages/${vehicleCode}?pageSize=1000&startDate=${last48h.toISOString()}&endDate=${now.toISOString()}`;
   const response = await fetch(url, { headers: getHeaders() });
   return await response.json();
 }
