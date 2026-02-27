@@ -190,21 +190,7 @@ export default function AutotracDirectTab() {
     }
   };
 
-  // Carregar macros ao inicializar
-  useEffect(() => {
-    const fetchMacros = async () => {
-      try {
-        const result = await base44.functions.invoke('autotracDebugAllMacros', {});
-        if (result.data.success) {
-          setMacros(result.data.macros || []);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar macros:', error);
-      }
-    };
-    
-    fetchMacros();
-  }, []);
+
 
   if (loadingVeiculos) {
     return (
