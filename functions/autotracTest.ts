@@ -17,56 +17,28 @@ function getAuthHeaders() {
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
     const results = [];
 
-    // Primeiro: buscar veículos para pegar um autotrac_id real
-    const vehiclesRes = await fetch(`${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles`, {
-      headers: getAuthHeaders()
-    });
-    const vehiclesData = await vehiclesRes.json();
-    const vehicles = Array.isArray(vehiclesData) ? vehiclesData : (vehiclesData.Data || vehiclesData.data || []);
-    results.push({ step: 'vehicles', count: vehicles.length, sample: vehicles[0] });
-
-    if (vehicles.length === 0) {
-      return Response.json({ results, error: 'Sem veículos' });
-    }
-
-    const vehicleCode = vehicles[0].Code;
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const dateStart = yesterday.toISOString().split('T')[0];
-    const dateEnd = now.toISOString().split('T')[0];
-
-    // Testar endpoint returnmessages
-    const url1 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${vehicleCode}/returnmessages`;
+    // Testar paginação de veículos com limit/offset
+    const url1 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=100&offset=0`;
     const res1 = await fetch(url1, { headers: getAuthHeaders() });
-    const text1 = await res1.text();
-    results.push({ endpoint: url1, status: res1.status, body: text1.substring(0, 1000) });
+    const data1 = await res1.json();
+    const page1 = Array.isArray(data1) ? data1 : (data1.Data || data1.data || []);
+    results.push({ test: 'vehicles?limit=100&offset=0', status: res1.status, count: page1.length, isLastPage: data1.IsLastPage, raw_keys: Object.keys(data1) });
 
-    // Testar com parâmetros de data
-    const url2 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${vehicleCode}/returnmessages?startDate=${dateStart}&endDate=${dateEnd}`;
+    // Testar com offset=10
+    const url2 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=100&offset=10`;
     const res2 = await fetch(url2, { headers: getAuthHeaders() });
-    const text2 = await res2.text();
-    results.push({ endpoint: `returnmessages?startDate=${dateStart}&endDate=${dateEnd}`, status: res2.status, body: text2.substring(0, 1000) });
+    const data2 = await res2.json();
+    const page2 = Array.isArray(data2) ? data2 : (data2.Data || data2.data || []);
+    results.push({ test: 'vehicles?limit=100&offset=10', status: res2.status, count: page2.length, isLastPage: data2.IsLastPage });
 
-    // Testar /messages em vez de /returnmessages
-    const url3 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${vehicleCode}/messages`;
+    // Testar sem limit (default)
+    const url3 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles`;
     const res3 = await fetch(url3, { headers: getAuthHeaders() });
-    const text3 = await res3.text();
-    results.push({ endpoint: 'messages', status: res3.status, body: text3.substring(0, 1000) });
-
-    // Testar /macros
-    const url4 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${vehicleCode}/macros`;
-    const res4 = await fetch(url4, { headers: getAuthHeaders() });
-    const text4 = await res4.text();
-    results.push({ endpoint: 'macros', status: res4.status, body: text4.substring(0, 1000) });
-
-    // Testar /v1/accounts/{code}/returnmessages (nível de conta, não veículo)
-    const url5 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/returnmessages?startDate=${dateStart}&endDate=${dateEnd}`;
-    const res5 = await fetch(url5, { headers: getAuthHeaders() });
-    const text5 = await res5.text();
-    results.push({ endpoint: `account-level returnmessages?date=${dateStart}`, status: res5.status, body: text5.substring(0, 1000) });
+    const data3 = await res3.json();
+    const page3 = Array.isArray(data3) ? data3 : (data3.Data || data3.data || []);
+    results.push({ test: 'vehicles (no params)', status: res3.status, count: page3.length, isLastPage: data3.IsLastPage, total: data3.Total || data3.total });
 
     return Response.json({ results });
   } catch (error) {
