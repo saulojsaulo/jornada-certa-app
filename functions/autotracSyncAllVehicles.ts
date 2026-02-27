@@ -83,9 +83,9 @@ Deno.serve(async (req) => {
       
       // Limit to 2000 vehicles to avoid timeout if infinite
       if (offset > 2000) break;
-      
-      await new Promise(r => setTimeout(r, 200)); // Pequeno delay
-    }
+
+      await new Promise(r => setTimeout(r, 1000)); // Delay para evitar rate limit
+      }
     
     return Response.json({
       success: true,
