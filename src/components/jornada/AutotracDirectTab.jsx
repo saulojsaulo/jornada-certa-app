@@ -36,26 +36,20 @@ export default function AutotracDirectTab() {
     queryFn: () => base44.entities.Gestor.list(),
   });
 
-  // Carregar veículos direto da Autotrac (sem usar banco de dados)
+  // Carregar macros da API Autotrac ao inicializar
   useEffect(() => {
-    const fetchVehiclesFromAutotrac = async () => {
+    const fetchMacros = async () => {
       try {
-        setLoading(true);
-        const result = await base44.functions.invoke('autotracGetAllVehicles', {});
-        
-        if (result.data.success && result.data.vehicles && result.data.vehicles.length > 0) {
-          setVeiculos(result.data.vehicles);
-        } else {
-          toast.error('Nenhum veículo encontrado na API Autotrac');
+        const result = await base44.functions.invoke('autotracDebugAllMacros', {});
+        if (result.data.success) {
+          setRawMacros(result.data.macros || []);
         }
       } catch (error) {
-        toast.error('Erro ao carregar veículos: ' + error.message);
-      } finally {
-        setLoading(false);
+        console.error('Erro ao carregar macros:', error);
       }
     };
-
-    fetchVehiclesFromAutotrac();
+    
+    fetchMacros();
   }, []);
 
   const motoristas = [];
