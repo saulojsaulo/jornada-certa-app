@@ -47,32 +47,66 @@ export default function AutotracDirectTab() {
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
 
-  const macrosPorVeiculo = useMemo(() => {
-    const map = {};
-    macros.filter(m => m.data_jornada === dateString).forEach(m => {
-      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
-      map[m.veiculo_id].push(m);
-    });
-    return map;
-  }, [macros, dateString]);
+  // Processar macros para calcular jornadas
+  const { macrosPorVeiculo, jornadas } = useMemo(() => {
+    const macroMap = {};
+    const jornadasList = [];
 
-  const macrosOntemPorVeiculo = useMemo(() => {
-    const map = {};
-    macros.filter(m => m.data_jornada === yesterdayString).forEach(m => {
-      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
-      map[m.veiculo_id].push(m);
-    });
-    return map;
-  }, [macros, yesterdayString]);
-
-  const todasMacrosPorVeiculo = useMemo(() => {
-    const map = {};
+    // Agrupar macros por veículo e data
     macros.forEach(m => {
-      if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
-      map[m.veiculo_id].push(m);
+      if (!m.veiculo_code) return;
+      
+      const dataJornada = new Date(m.data_criacao).toISOString().split('T')[0];
+      const key = `${m.veiculo_code}-${dataJornada}`;
+      
+      if (!macroMap[key]) {
+        macroMap[key] = {
+          veiculo_code: m.veiculo_code,
+          veiculo_nome: m.veiculo_nome,
+          placa: m.placa,
+          data: dataJornada,
+          macros: []
+        };
+      }
+      macroMap[key].macros.push({
+        numero: m.numero_macro,
+        data_criacao: m.data_criacao
+      });
     });
-    return map;
-  }, [macros]);
+
+    // Calcular jornadas: Macro 1 = início, outras macros = eventos dentro da jornada
+    Object.values(macroMap).forEach(item => {
+      const macrosOrdenadas = item.macros.sort((a, b) => 
+        new Date(a.data_criacao) - new Date(b.data_criacao)
+      );
+      
+      const macro1 = macrosOrdenadas.find(m => m.numero === 1);
+      if (macro1) {
+        const ultimaMacro = macrosOrdenadas[macrosOrdenadas.length - 1];
+        jornadasList.push({
+          veiculo_code: item.veiculo_code,
+          veiculo_nome: item.veiculo_nome,
+          placa: item.placa,
+          data_jornada: item.data,
+          data_inicio: macro1.data_criacao,
+          data_fim: ultimaMacro.data_criacao,
+          total_macros: item.macros.length,
+          macros: macrosOrdenadas
+        });
+      }
+    });
+
+    // Separar por dia
+    const mapa = {};
+    jornadasList
+      .filter(j => j.data_jornada === dateString)
+      .forEach(j => {
+        if (!mapa[j.veiculo_code]) mapa[j.veiculo_code] = [];
+        mapa[j.veiculo_code].push(j);
+      });
+
+    return { macrosPorVeiculo: mapa, jornadas: jornadasList };
+  }, [macros, dateString]);
 
   const handleSyncFromAutotrac = async () => {
     setSyncInProgress(true);
