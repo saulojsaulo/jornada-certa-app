@@ -19,23 +19,27 @@ function getHeaders() {
 
 async function getAllVehicles() {
   const vehicles = [];
-  let page = 1;
-  let hasMore = true;
-
-  while (hasMore) {
-    const url = `${AUTOTRAC_BASE_URL}/v2/vehicles?page=${page}&pageSize=500`;
+  
+  try {
+    // Primeira requisição para pegar todos de uma vez
+    const url = `${AUTOTRAC_BASE_URL}/v2/vehicles?pageSize=1000`;
     const response = await fetch(url, { headers: getHeaders() });
-    const data = await response.json();
-
-    if (data.list && data.list.length > 0) {
-      vehicles.push(...data.list);
-      page++;
-    } else {
-      hasMore = false;
+    
+    if (!response.ok) {
+      console.error(`[IMPORT] Erro ao buscar veículos: ${response.status}`);
+      return vehicles;
     }
+    
+    const data = await response.json();
+    
+    if (data.list && Array.isArray(data.list)) {
+      vehicles.push(...data.list);
+      console.log(`[IMPORT] Total de ${vehicles.length} veículos buscados da Autotrac`);
+    }
+  } catch (err) {
+    console.error(`[IMPORT] Erro ao buscar veículos: ${err.message}`);
   }
 
-  console.log(`[IMPORT] Total de ${vehicles.length} veículos buscados da Autotrac`);
   return vehicles;
 }
 
