@@ -12,6 +12,7 @@ import { ptBR } from 'date-fns/locale';
 import ControleTab from '../components/jornada/ControleTab';
 import RankingTab from '../components/jornada/RankingTab';
 import FiltroMotoristaTab from '../components/jornada/FiltroMotoristaTab';
+import AutotracDirectTab from '../components/jornada/AutotracDirectTab';
 
 export default function Jornada() {
   const queryClient = useQueryClient();
@@ -190,10 +191,14 @@ export default function Jornada() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 mx-auto">
+          <TabsList className="grid w-full max-w-3xl grid-cols-4 mx-auto">
             <TabsTrigger value="controle" className="gap-2">
               <Truck className="w-4 h-4" />
               Controle
+            </TabsTrigger>
+            <TabsTrigger value="autotrac" className="gap-2">
+              <Database className="w-4 h-4" />
+              Autotrac
             </TabsTrigger>
             <TabsTrigger value="ranking" className="gap-2">
               <TrendingUp className="w-4 h-4" />
@@ -207,6 +212,10 @@ export default function Jornada() {
 
           <TabsContent value="controle">
             <ControleTab onImportLogUpdate={refetchImportLogs} />
+          </TabsContent>
+
+          <TabsContent value="autotrac">
+            <AutotracDirectTab />
           </TabsContent>
 
           <TabsContent value="ranking">
