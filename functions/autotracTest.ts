@@ -20,34 +20,46 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    // Testar múltiplas variações
     const results = [];
 
-    // Variação 1: GET /vehicles sem query params
+    // Variação 1: Basic Auth com apikey no header Ocp-Apim-Subscription-Key
+    const credB64 = btoa(`${USER}:${PASS}`);
     const url1 = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles`;
-    const res1 = await fetch(url1, { headers: getAuthHeaders() });
+    const res1 = await fetch(url1, {
+      headers: {
+        'Authorization': `Basic ${credB64}`,
+        'Ocp-Apim-Subscription-Key': API_KEY,
+      }
+    });
     const text1 = await res1.text();
-    results.push({ variant: 'v1 GET vehicles', status: res1.status, body: text1.substring(0, 300) });
+    results.push({ variant: 'Basic Auth + Ocp-Apim-Subscription-Key', status: res1.status, headers: Object.fromEntries(res1.headers.entries()), body: text1.substring(0, 500) });
 
-    // Variação 2: GET /vehicles com isActive=true
-    const url2 = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles?isActive=true`;
-    const res2 = await fetch(url2, { headers: getAuthHeaders() });
+    // Variação 2: Apenas API Key no header
+    const res2 = await fetch(url1, {
+      headers: {
+        'Ocp-Apim-Subscription-Key': API_KEY,
+      }
+    });
     const text2 = await res2.text();
-    results.push({ variant: 'v1 GET vehicles?isActive=true', status: res2.status, body: text2.substring(0, 300) });
+    results.push({ variant: 'Only Ocp-Apim-Subscription-Key', status: res2.status, body: text2.substring(0, 500) });
 
-    // Variação 3: Testar authorized-units endpoint (mencionado no manual)
-    const url3 = `${BASE_URL}/v1/accounts/${ACCOUNT}/authorized-units`;
-    const res3 = await fetch(url3, { headers: getAuthHeaders() });
+    // Variação 3: Bearer token com apikey
+    const res3 = await fetch(url1, {
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Ocp-Apim-Subscription-Key': API_KEY,
+      }
+    });
     const text3 = await res3.text();
-    results.push({ variant: 'v1 authorized-units', status: res3.status, body: text3.substring(0, 300) });
+    results.push({ variant: 'Bearer API_KEY + Ocp-Apim', status: res3.status, body: text3.substring(0, 500) });
 
-    // Variação 4: Usar apikey como query param
+    // Variação 4: query param subscription-key
     const url4 = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles?subscription-key=${API_KEY}`;
-    const res4 = await fetch(url4, { headers: { 'Authorization': `Basic ${btoa(`${USER}:${PASS}`)}`, 'Content-Type': 'application/json' } });
+    const res4 = await fetch(url4, {
+      headers: { 'Authorization': `Basic ${credB64}` }
+    });
     const text4 = await res4.text();
-    results.push({ variant: 'apikey as query param', status: res4.status, body: text4.substring(0, 300) });
-
-    console.log("Results:", JSON.stringify(results, null, 2));
+    results.push({ variant: 'subscription-key as query + Basic', status: res4.status, body: text4.substring(0, 500) });
 
     return Response.json({ results });
 
