@@ -98,6 +98,8 @@ Deno.serve(async (req) => {
       const vehicleCode = parseInt(vehicle.VehicleCode);
       const veiculoId = vehicleMap[vehicleCode];
       
+      console.log(`Processing vehicle ${vehicleCode}: ${veiculoId ? 'found' : 'NOT found in local DB'}`);
+      
       if (!veiculoId) {
         continue; // Pular se veículo não existir no banco
       }
