@@ -19,34 +19,16 @@ Deno.serve(async (req) => {
   try {
     const results = [];
 
-    // Buscar todas as páginas de veículos
-    let offset = 0;
-    const pageSize = 10;
-    let totalVehicles = [];
-    let page = 0;
-
-    while (true) {
-      const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=${pageSize}&offset=${offset}`;
+    // Testar com pageSize maior: 50, 100, 200, 500
+    for (const pageSize of [50, 100, 200, 500]) {
+      const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=${pageSize}&offset=0`;
       const res = await fetch(url, { headers: getAuthHeaders() });
       const data = await res.json();
       const items = Array.isArray(data) ? data : (data.Data || data.data || []);
-
-      totalVehicles.push(...items);
-      results.push({ page, offset, count: items.length, isLastPage: data.IsLastPage });
-
-      page++;
-      offset += pageSize;
-
-      // Parar se IsLastPage === true ou sem itens ou muitas páginas (segurança)
-      if (data.IsLastPage === true || items.length === 0 || page >= 40) break;
+      results.push({ pageSize, status: res.status, count: items.length, isLastPage: data.IsLastPage, limit: data.Limit });
     }
 
-    return Response.json({ 
-      total_vehicles: totalVehicles.length,
-      pages_fetched: page,
-      results,
-      sample_vehicles: totalVehicles.slice(0, 3).map(v => ({ Code: v.Code, Name: v.Name }))
-    });
+    return Response.json({ results });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
