@@ -19,23 +19,34 @@ function getHeaders() {
 
 async function getAllVehicles() {
   const vehicles = [];
-  
+  let page = 1;
+  let hasMore = true;
+
   try {
-    // Primeira requisição para pegar todos de uma vez
-    const url = `${AUTOTRAC_BASE_URL}/v2/vehicles?pageSize=1000`;
-    const response = await fetch(url, { headers: getHeaders() });
-    
-    if (!response.ok) {
-      console.error(`[IMPORT] Erro ao buscar veículos: ${response.status}`);
-      return vehicles;
+    while (hasMore) {
+      const url = `${AUTOTRAC_BASE_URL}/v2/vehicles?page=${page}&pageSize=100`;
+      console.log(`[IMPORT] Buscando veículos página ${page}...`);
+      
+      const response = await fetch(url, { headers: getHeaders() });
+      
+      if (!response.ok) {
+        console.error(`[IMPORT] Erro ao buscar veículos (página ${page}): ${response.status}`);
+        hasMore = false;
+        break;
+      }
+      
+      const data = await response.json();
+      
+      if (data.list && Array.isArray(data.list) && data.list.length > 0) {
+        vehicles.push(...data.list);
+        console.log(`[IMPORT] Página ${page}: ${data.list.length} veículos`);
+        page++;
+      } else {
+        hasMore = false;
+      }
     }
     
-    const data = await response.json();
-    
-    if (data.list && Array.isArray(data.list)) {
-      vehicles.push(...data.list);
-      console.log(`[IMPORT] Total de ${vehicles.length} veículos buscados da Autotrac`);
-    }
+    console.log(`[IMPORT] Total de ${vehicles.length} veículos buscados da Autotrac`);
   } catch (err) {
     console.error(`[IMPORT] Erro ao buscar veículos: ${err.message}`);
   }
