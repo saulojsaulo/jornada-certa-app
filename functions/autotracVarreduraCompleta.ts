@@ -123,19 +123,38 @@ Deno.serve(async (req) => {
       resultado.macros.veiculos_processados = veiculosComId.length;
 
       for (const veiculo of veiculosComId) {
-        try {
-          const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${veiculo.autotrac_id}/returnmessages`;
+      try {
+        // Buscar todas as páginas de mensagens
+        let offset = 0;
+        const limit = 50;
+        let isLastPage = false;
+        const mensagens = [];
+
+        while (!isLastPage) {
+          const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${veiculo.autotrac_id}/returnmessages?limit=${limit}&offset=${offset}`;
           const msgRes = await fetch(url, { headers: getAuthHeaders() });
 
           if (!msgRes.ok) {
             resultado.erros.push(`Veículo ${veiculo.autotrac_id}: HTTP ${msgRes.status}`);
-            continue;
+            break;
           }
 
           const msgData = await msgRes.json();
-          const mensagens = Array.isArray(msgData)
+          const page = Array.isArray(msgData)
             ? msgData
             : (msgData.Data || msgData.data || msgData.messages || []);
+
+          mensagens.push(...page);
+          isLastPage = msgData.IsLastPage !== false && page.length < limit;
+          offset += limit;
+
+          // Segurança: parar após 10 páginas
+          if (offset >= limit * 10) break;
+        }
+
+        if (mensagens.length === 0 && resultado.erros.some(e => e.includes(veiculo.autotrac_id))) {
+          continue;
+        }
 
           const macrosParaInserir = [];
 
