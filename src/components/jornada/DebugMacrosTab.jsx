@@ -63,7 +63,7 @@ export default function DebugMacrosTab() {
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
-              <strong>{macros.length} macros</strong> encontradas da API Autotrac (últimas 24 horas)
+              <strong>{macros.length} macros</strong> encontradas em <strong>{totalVehicles} veículos</strong> da API Autotrac (últimas 48 horas)
             </p>
           </div>
 
