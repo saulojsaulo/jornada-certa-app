@@ -40,19 +40,46 @@ export default function Jornada() {
 
   const handleVarreduraCompleta = async () => {
     setVarreduraLoading(true);
+    const toastId = toast.loading('Iniciando varredura completa...');
     try {
-      const response = await base44.functions.invoke('autotracVarreduraCompleta', {});
-      const data = response.data;
-      if (data.success) {
-        toast.success(data.message);
-        queryClient.invalidateQueries({ queryKey: ['veiculos'] });
-        queryClient.invalidateQueries({ queryKey: ['macros'] });
-        refetchImportLogs();
-      } else {
-        toast.error(data.error || 'Erro na varredura');
+      // Passo 1: Sincronizar veículos
+      toast.loading('Sincronizando veículos...', { id: toastId });
+      let vOffset = 0;
+      let vRodadas = 0;
+      while (vRodadas < 50) {
+        const res = await base44.functions.invoke('autotracSyncVehicles', { offset: vOffset });
+        const data = res.data;
+        if (!data.success) throw new Error(data.error || 'Erro na sincronização de veículos');
+        vOffset = data.next_offset;
+        vRodadas++;
+        if (data.concluido) break;
       }
+      
+      // Passo 2: Sincronizar macros
+      toast.loading('Sincronizando macros (isso pode levar alguns minutos)...', { id: toastId });
+      let mOffset = 0;
+      let mRodadas = 0;
+      while (mRodadas < 50) {
+        const res = await base44.functions.invoke('autotracSyncMacros', { veiculoOffset: mOffset });
+        const data = res.data;
+        if (!data.success) throw new Error(data.error || 'Erro na sincronização de macros');
+        mOffset = data.proximo_offset;
+        mRodadas++;
+        
+        // Atualiza mensagem com progresso
+        if (data.veiculos_total) {
+          toast.loading(`Sincronizando macros: ${Math.min(mOffset || data.veiculos_total, data.veiculos_total)} de ${data.veiculos_total} veículos...`, { id: toastId });
+        }
+        
+        if (data.concluido) break;
+      }
+
+      toast.success('Varredura completa concluída com sucesso!', { id: toastId });
+      queryClient.invalidateQueries({ queryKey: ['veiculos'] });
+      queryClient.invalidateQueries({ queryKey: ['macros'] });
+      refetchImportLogs();
     } catch (err) {
-      toast.error('Erro ao executar varredura: ' + err.message);
+      toast.error('Erro ao executar varredura: ' + err.message, { id: toastId });
     } finally {
       setVarreduraLoading(false);
     }
