@@ -33,19 +33,7 @@ function parseDataCriacao(msg) {
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-// Busca TODOS os registros de uma entidade paginando
-async function listAll(entity) {
-  const all = [];
-  let skip = 0;
-  const limit = 100;
-  while (true) {
-    const page = await entity.list('-created_date', limit, skip);
-    all.push(...page);
-    if (page.length < limit) break;
-    skip += limit;
-  }
-  return all;
-}
+
 
 Deno.serve(async (req) => {
   try {
