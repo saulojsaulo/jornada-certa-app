@@ -18,21 +18,24 @@ Deno.serve(async (req) => {
   try {
     console.log(`[DEBUG] BASE_URL: ${AUTOTRAC_BASE_URL}`);
     console.log(`[DEBUG] USER: ${AUTOTRAC_USER}`);
-    console.log(`[DEBUG] API_KEY existe: ${!!AUTOTRAC_API_KEY}`);
 
-    const url = `${AUTOTRAC_BASE_URL}/v2/vehicles?pageSize=1000`;
-    console.log(`[DEBUG] Fazendo request para: ${url}`);
+    // Teste 1: Sem pageSize
+    const url1 = `${AUTOTRAC_BASE_URL}/v2/vehicles`;
+    console.log(`[DEBUG] Teste 1: ${url1}`);
+    const response1 = await fetch(url1, { headers: getHeaders() });
+    const data1 = await response1.json();
+    console.log(`[DEBUG] Resposta 1: ${JSON.stringify(data1).substring(0, 300)}`);
 
-    const response = await fetch(url, { headers: getHeaders() });
-    console.log(`[DEBUG] Status: ${response.status}`);
-
-    const data = await response.json();
-    console.log(`[DEBUG] Resposta: ${JSON.stringify(data).substring(0, 500)}`);
+    // Teste 2: Com pageSize
+    const url2 = `${AUTOTRAC_BASE_URL}/v2/vehicles?pageSize=100`;
+    console.log(`[DEBUG] Teste 2: ${url2}`);
+    const response2 = await fetch(url2, { headers: getHeaders() });
+    const data2 = await response2.json();
+    console.log(`[DEBUG] Resposta 2: ${JSON.stringify(data2).substring(0, 300)}`);
 
     return Response.json({
-      status: response.status,
-      total_vehicles: data.list?.length || 0,
-      debug: data
+      test1: { status: response1.status, vehicles: data1.list?.length || 0 },
+      test2: { status: response2.status, vehicles: data2.list?.length || 0 }
     });
   } catch (error) {
     console.error(`[DEBUG] Erro: ${error.message}`);
