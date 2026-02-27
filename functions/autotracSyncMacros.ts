@@ -8,11 +8,12 @@ const ACCOUNT = Deno.env.get("AUTOTRAC_ACCOUNT");
 
 const MACROS_VALIDAS = [1, 2, 3, 4, 5, 6, 9, 10];
 
+// Cocal Cereais = Code 10849 (ignorar Cedro Transportes Code 11007)
+const ACCOUNT_CODE = 10849;
+
 function getAuthHeaders() {
-  const credentials = btoa(`${USER}:${PASS}`);
   return {
-    'Authorization': `Basic ${credentials}`,
-    'x-api-key': API_KEY,
+    'Authorization': `Basic ${USER}:${PASS}`,
     'Ocp-Apim-Subscription-Key': API_KEY,
     'Content-Type': 'application/json'
   };
