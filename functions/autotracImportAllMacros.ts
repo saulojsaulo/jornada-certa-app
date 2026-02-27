@@ -39,7 +39,11 @@ async function getAllVehicles() {
 }
 
 async function getVehicleMessages(vehicleCode) {
-  const url = `${AUTOTRAC_BASE_URL}/v2/returnmessages/${vehicleCode}?pageSize=1000`;
+  // Buscar apenas últimas 48 horas
+  const now = new Date();
+  const last48h = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+  
+  const url = `${AUTOTRAC_BASE_URL}/v2/returnmessages/${vehicleCode}?pageSize=1000&startDate=${last48h.toISOString()}&endDate=${now.toISOString()}`;
   const response = await fetch(url, { headers: getHeaders() });
   return await response.json();
 }
