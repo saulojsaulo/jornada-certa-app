@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
         for (const msg of validMessages) {
           const data_criacao = msg.MessageTime;
           const data_jornada = new Date(data_criacao).toISOString().split('T')[0];
-          const key = `${veiculoId}-${msg.MacroNumber}-${new Date(data_criacao).toISOString().split('.')[0]}`;
+          const key = `${veiculoId}-${msg.MacroNumber}-${data_jornada}`;
           
           if (!existingKeys.has(key)) {
             macrosToCreate.push({
