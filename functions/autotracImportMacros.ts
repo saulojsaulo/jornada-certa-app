@@ -62,11 +62,11 @@ Deno.serve(async (req) => {
     console.log(`Total de veículos na Autotrac: ${autotracVehicles.length}`);
 
     // Buscar veículos já cadastrados no banco
-    const localVehicles = await base44.entities.Veiculo.list('', 5000);
+    const localVehicles = await base44.entities.Veiculo.list();
     const vehicleMap = {};
     localVehicles.forEach(v => {
       if (v.autotrac_id) {
-        vehicleMap[v.autotrac_id] = v.id;
+        vehicleMap[parseInt(v.autotrac_id)] = v.id;
       }
     });
 
