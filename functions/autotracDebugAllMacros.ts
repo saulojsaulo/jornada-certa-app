@@ -15,11 +15,28 @@ function getHeaders() {
 }
 
 async function getAllVehicles() {
-  const url = `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?_limit=500`;
-  const res = await fetch(url, { headers: getHeaders() });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.Data || [];
+  const allVehicles = [];
+  let offset = 0;
+  const limit = 100;
+  
+  while (true) {
+    const url = `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?_limit=${limit}&_offset=${offset}`;
+    const res = await fetch(url, { headers: getHeaders() });
+    if (!res.ok) break;
+    
+    const data = await res.json();
+    const vehicles = data.Data || [];
+    
+    if (vehicles.length === 0) break;
+    allVehicles.push(...vehicles);
+    
+    // Se retornou menos do que o limite, chegou ao final
+    if (vehicles.length < limit) break;
+    
+    offset += limit;
+  }
+  
+  return allVehicles;
 }
 
 async function getVehicleMessages(vehicleCode) {
