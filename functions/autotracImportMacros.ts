@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     };
 
     for (const vehicle of autotracVehicles) {
-      const vehicleCode = vehicle.VehicleCode;
+      const vehicleCode = parseInt(vehicle.VehicleCode);
       const veiculoId = vehicleMap[vehicleCode];
       
       if (!veiculoId) {
