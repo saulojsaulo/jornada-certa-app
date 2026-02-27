@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     console.log(`Existing macros: ${existingMacros.length}`);
     const existingKeys = new Set();
     existingMacros.forEach(m => {
-      const key = `${m.veiculo_id}-${m.numero_macro}-${new Date(m.data_criacao).toISOString().split('.')[0]}`;
+      const key = `${m.veiculo_id}-${m.numero_macro}-${m.data_jornada}`;
       existingKeys.add(key);
     });
 
