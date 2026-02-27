@@ -23,23 +23,10 @@ export default function AutotracDirectTab() {
     const fetchVehiclesFromAutotrac = async () => {
       try {
         setLoading(true);
-        const result = await base44.functions.invoke('autotracDiagV2', { step: 'vehicles' });
+        const result = await base44.functions.invoke('autotracGetAllVehicles', {});
         
-        if (result.data.status === 200 && result.data.count > 0) {
-          // Transformar dados da Autotrac para o formato esperado
-          const vehiclesData = result.data.sample && result.data.sample.length > 0 
-            ? result.data.sample.map(v => ({
-                id: `temp_${v.Code}`,
-                autotrac_id: String(v.Code),
-                nome_veiculo: v.Name || `Veículo ${v.Code}`,
-                placa: v.LicensePlate || '',
-                numero_frota: String(v.Address || ''),
-                ativo: true,
-                created_date: new Date().toISOString(),
-                updated_date: new Date().toISOString()
-              }))
-            : [];
-          setVeiculos(vehiclesData);
+        if (result.data.success && result.data.vehicles && result.data.vehicles.length > 0) {
+          setVeiculos(result.data.vehicles);
         } else {
           toast.error('Nenhum veículo encontrado na API Autotrac');
         }
