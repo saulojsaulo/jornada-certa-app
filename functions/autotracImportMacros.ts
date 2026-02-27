@@ -93,10 +93,8 @@ Deno.serve(async (req) => {
     };
 
     for (const vehicle of autotracVehicles) {
-      const vehicleCode = parseInt(vehicle.VehicleCode);
+      const vehicleCode = String(vehicle.VehicleCode);
       const veiculoId = vehicleMap[vehicleCode];
-      
-      console.log(`Processing vehicle ${vehicleCode}: ${veiculoId ? 'found' : 'NOT found in local DB'}`);
       
       if (!veiculoId) {
         continue; // Pular se veículo não existir no banco
