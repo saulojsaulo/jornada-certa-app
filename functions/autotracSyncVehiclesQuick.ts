@@ -89,25 +89,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Bulk create
+    // Bulk create com service role
     if (toCreate.length > 0) {
       console.log(`[SYNC] Criando ${toCreate.length} veículos...`);
-      await base44.entities.Veiculo.bulkCreate(toCreate);
+      await base44.asServiceRole.entities.Veiculo.bulkCreate(toCreate);
       created = toCreate.length;
     }
 
-    // Atualizar um por um com delays
+    // Bulk update com service role
     if (toUpdate.length > 0) {
       console.log(`[SYNC] Atualizando ${toUpdate.length} veículos...`);
-      for (let i = 0; i < toUpdate.length; i++) {
-        const v = toUpdate[i];
+      for (const v of toUpdate) {
         const { id, ...data } = v;
-        await base44.entities.Veiculo.update(id, data);
-        
-        // Pequeno delay a cada 10 atualizações
-        if ((i + 1) % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
+        await base44.asServiceRole.entities.Veiculo.update(id, data);
       }
       updated = toUpdate.length;
     }
