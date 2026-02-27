@@ -8,8 +8,8 @@ const ACCOUNT_CODE = 10849;
 const MACROS_VALIDAS = [1, 2, 3, 4, 5, 6, 9, 10];
 
 // Máximo de veículos processados por execução (para evitar timeout de 60s)
-// Com 5min de automação e ~250 veículos, processamos 30 por vez = ~8x rodadas = cobre tudo em 40min
-const MAX_VEICULOS_POR_RODADA = 30;
+// Reduzido para 15 para garantir que não estoure o tempo limite
+const MAX_VEICULOS_POR_RODADA = 15;
 
 function getAuthHeaders() {
   return {
