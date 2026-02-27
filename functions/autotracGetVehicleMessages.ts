@@ -63,11 +63,9 @@ Deno.serve(async (req) => {
 
     // Filtrar: apenas macros válidas e últimas 48h
     const validMessages = allMessages.filter(msg => {
-      const macroNum = parseMacroNumber(msg);
+      const macroNum = msg.MacroNumber;
       if (!VALID_MACROS.includes(macroNum)) return false;
-      
-      const createdDate = parseDateTime(msg.CreatedDate);
-      return isWithinLast48Hours(createdDate);
+      return isWithinLast48Hours(msg.MessageTime);
     });
 
     return Response.json({
@@ -76,10 +74,10 @@ Deno.serve(async (req) => {
       total_messages: allMessages.length,
       valid_messages: validMessages.length,
       messages: validMessages.map(msg => ({
-        id: msg.Id,
-        macroNumber: parseMacroNumber(msg),
-        createdDate: msg.CreatedDate,
-        message: msg.Description || ''
+        id: msg.ID,
+        macroNumber: msg.MacroNumber,
+        messageTime: msg.MessageTime,
+        message: msg.MessageText || ''
       }))
     });
 
