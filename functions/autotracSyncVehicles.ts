@@ -86,6 +86,8 @@ Deno.serve(async (req) => {
           });
           criados++;
         }
+        // Small delay to prevent Base44 SDK Rate limit
+        await new Promise(r => setTimeout(r, 50));
       }
 
       totalProcessados += page.length;
