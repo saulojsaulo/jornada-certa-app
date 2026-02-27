@@ -69,12 +69,15 @@ export default function AutotracDirectTab() {
   // Processar macros com as mesmas regras da aba Controle
   const macros = useMemo(() => {
     return rawMacros
-      .map(m => ({
-        ...m,
-        veiculo_id: vehicleMap[String(m.veiculo_code)]?.id || null,
-        data_criacao: m.data_criacao,
-        numero_macro: m.numero_macro
-      }))
+      .map(m => {
+        const veiculo = vehicleMap[String(m.veiculo_code)];
+        return {
+          ...m,
+          veiculo_id: veiculo?.id || null,
+          data_criacao: m.data_criacao,
+          numero_macro: m.numero_macro
+        };
+      })
       .filter(m => m.veiculo_id); // Apenas veículos mapeados
   }, [rawMacros, vehicleMap]);
 
