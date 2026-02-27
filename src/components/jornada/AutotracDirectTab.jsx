@@ -55,7 +55,7 @@ export default function AutotracDirectTab() {
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
 
-  // Mapear veículos da Autotrac com veículos do banco
+  // Mapear veículos da Autotrac com veículos do banco (igual ControleTab)
   const vehicleMap = useMemo(() => {
     const map = {};
     veiculos.forEach(v => {
