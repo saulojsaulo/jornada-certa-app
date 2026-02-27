@@ -31,9 +31,31 @@ export default function Jornada() {
 
   const lastImport = importLogs[0] || null;
 
+  const [varreduraLoading, setVarreduraLoading] = useState(false);
+
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['veiculos'] });
     queryClient.invalidateQueries({ queryKey: ['macros'] });
+  };
+
+  const handleVarreduraCompleta = async () => {
+    setVarreduraLoading(true);
+    try {
+      const response = await base44.functions.invoke('autotracVarreduraCompleta', {});
+      const data = response.data;
+      if (data.success) {
+        toast.success(data.message);
+        queryClient.invalidateQueries({ queryKey: ['veiculos'] });
+        queryClient.invalidateQueries({ queryKey: ['macros'] });
+        refetchImportLogs();
+      } else {
+        toast.error(data.error || 'Erro na varredura');
+      }
+    } catch (err) {
+      toast.error('Erro ao executar varredura: ' + err.message);
+    } finally {
+      setVarreduraLoading(false);
+    }
   };
 
   return (
