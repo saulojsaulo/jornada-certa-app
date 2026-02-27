@@ -203,20 +203,11 @@ export default function AutotracDirectTab() {
     fetchMacros();
   }, []);
 
-  if (loading) {
+  if (loadingVeiculos) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-        <span className="ml-3 text-slate-600">Carregando veículos da Autotrac...</span>
-      </div>
-    );
-  }
-
-  if (veiculos.length === 0) {
-    return (
-      <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
-        <AlertCircle className="w-5 h-5" />
-        <span>Nenhum veículo encontrado na API Autotrac</span>
+        <span className="ml-3 text-slate-600">Carregando veículos...</span>
       </div>
     );
   }
