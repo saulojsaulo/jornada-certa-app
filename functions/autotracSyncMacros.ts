@@ -13,6 +13,7 @@ function getAuthHeaders() {
   return {
     'Authorization': `Basic ${credentials}`,
     'x-api-key': API_KEY,
+    'Ocp-Apim-Subscription-Key': API_KEY,
     'Content-Type': 'application/json'
   };
 }
