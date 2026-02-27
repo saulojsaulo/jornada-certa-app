@@ -5,6 +5,16 @@ const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
 
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    const veiculos = await base44.asServiceRole.entities.Veiculo.list('-created_date', 5000);
+    return Response.json({ count: veiculos.length });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+});
+
 const ACCOUNT_CODE = 10849;
 
 function getAuthHeaders() {
