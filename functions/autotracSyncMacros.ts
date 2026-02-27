@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
           // Segurança: max 20 páginas por veículo (1000 mensagens)
           if (offset >= limit * 20) break;
 
-          await new Promise(r => setTimeout(r, 200));
+          await new Promise(r => setTimeout(r, 1000));
         }
 
         // Filtrar e preparar macros para inserção
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
         }
 
         // Delay entre veículos para respeitar rate limit
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 1200));
 
       } catch (err) {
         erros.push(`Veículo ${veiculo.nome_veiculo}: ${err.message}`);

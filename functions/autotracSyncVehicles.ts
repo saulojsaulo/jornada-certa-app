@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 800));
     }
 
     // Ainda há páginas, retornar próximo offset para continuar
