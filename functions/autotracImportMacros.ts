@@ -135,11 +135,11 @@ Deno.serve(async (req) => {
         const messages = await getVehicleMessages(parseInt(vehicleCode));
         console.log(`[IMPORT] Vehicle ${vehicleCode}: ${messages.length} messages from API`);
         
-        // Filtrar: apenas macros válidas e últimas 48h
+        // Filtrar: apenas macros válidas e últimos 30 dias
         const validMessages = messages.filter(msg => {
           const macro = msg.MacroNumber;
           if (!VALID_MACROS.includes(macro)) return false;
-          return isWithinLast48Hours(msg.MessageTime);
+          return isWithinLastDays(msg.MessageTime, 30);
         });
         
         console.log(`[IMPORT] Vehicle ${vehicleCode}: ${validMessages.length} valid messages (within 48h)`);
