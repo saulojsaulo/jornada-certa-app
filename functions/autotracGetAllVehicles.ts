@@ -4,46 +4,107 @@ const PROD_URL = 'https://aapi3.autotrac-online.com.br/aticapi';
 const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
-const ACCOUNT_CODE = 10849;
-const PAGE_SIZE = 500;
+const ACCOUNT_NUMBER = '268532276';
+const PAGE_SIZE = 1000;
 
-function getHeaders() {
-  return {
-    'Authorization': `Basic ${USER}:${PASS}`,
+function getHeaders(useRawAuth = false) {
+  const headers = {
     'Ocp-Apim-Subscription-Key': API_KEY,
     'Content-Type': 'application/json'
   };
+  
+  if (useRawAuth) {
+    headers['Authorization'] = `${USER}:${PASS}`;
+  } else {
+    headers['Authorization'] = `Basic ${btoa(`${USER}:${PASS}`)}`;
+  }
+  
+  return headers;
+}
+
+async function discoverAccountCode() {
+  try {
+    const url = `${PROD_URL}/v1/accounts`;
+    const res = await fetch(url, { headers: getHeaders() });
+    
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    const accounts = data.Data || [];
+    
+    const targetAccount = accounts.find(acc => String(acc.AccountNumber) === ACCOUNT_NUMBER);
+    return targetAccount ? targetAccount.Code : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchVehiclesWithUrl(url, useRawAuth = false) {
+  try {
+    const res = await fetch(url, { headers: getHeaders(useRawAuth) });
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    return data.Data || [];
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
+    // 1. Descobrir o Account Code interno
+    const internalCode = await discoverAccountCode();
+    const accountCodeToUse = internalCode || '10849'; // fallback para o original
+
     const allVehicles = [];
     let offset = 0;
+    let successUrl = null;
 
-    // Paginar até buscar todos os veículos
-    while (true) {
-      const url = `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=${PAGE_SIZE}&offset=${offset}`;
-      const res = await fetch(url, { headers: getHeaders() });
+    // 2. Tentar múltiplas URLs em sequência
+    const urlVariations = [
+      `${PROD_URL}/v1/accounts/${accountCodeToUse}/vehicles?_limit=${PAGE_SIZE}`,
+      `${PROD_URL}/v1/accounts/${ACCOUNT_NUMBER}/vehicles?_limit=${PAGE_SIZE}`,
+      `${PROD_URL}/v1/accounts/${accountCodeToUse}/vehicles?limit=${PAGE_SIZE}`,
+      `${PROD_URL}/v1/accounts/${accountCodeToUse}/vehicles`
+    ];
 
-      if (!res.ok) {
-        return Response.json({ error: `HTTP ${res.status}` }, { status: 500 });
+    let vehicles = null;
+    for (const url of urlVariations) {
+      // Tentar com Base64 first
+      vehicles = await fetchVehiclesWithUrl(url, false);
+      if (vehicles && vehicles.length > 0) {
+        successUrl = url;
+        break;
       }
-
-      const data = await res.json();
-      const page = data.Data || [];
-      allVehicles.push(...page);
-
-      if (data.IsLastPage === true || page.length < PAGE_SIZE) break;
-      offset += PAGE_SIZE;
       
-      await new Promise(r => setTimeout(r, 300));
+      // Se falhou, tentar com Raw auth
+      vehicles = await fetchVehiclesWithUrl(url, true);
+      if (vehicles && vehicles.length > 0) {
+        successUrl = url;
+        break;
+      }
     }
+
+    if (!vehicles) {
+      return Response.json({
+        error: 'Nenhuma URL funcionou para buscar veículos',
+        attempted_urls: urlVariations,
+        internal_code: internalCode,
+        account_to_use: accountCodeToUse
+      }, { status: 500 });
+    }
+
+    allVehicles.push(...vehicles);
 
     return Response.json({
       success: true,
       total: allVehicles.length,
+      internal_code: internalCode,
+      account_used: accountCodeToUse,
+      success_url: successUrl,
       vehicles: allVehicles.map(v => ({
         id: `temp_${v.Code}`,
         autotrac_id: String(v.Code),
