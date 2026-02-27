@@ -64,7 +64,9 @@ Deno.serve(async (req) => {
     }
 
     const vehiclesData = await vehiclesRes.json();
-    const vehicles = Array.isArray(vehiclesData) ? vehiclesData : (vehiclesData.vehicles || vehiclesData.data || []);
+    const vehicles = Array.isArray(vehiclesData)
+      ? vehiclesData
+      : (vehiclesData.Data || vehiclesData.data || vehiclesData.vehicles || []);
 
     resultado.veiculos.total = vehicles.length;
 
