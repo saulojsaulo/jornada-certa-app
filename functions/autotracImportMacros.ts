@@ -54,8 +54,10 @@ function isWithinLast48Hours(messageTimeStr) {
 
 Deno.serve(async (req) => {
   try {
+    console.log('[IMPORT] Function called');
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
+    console.log(`[IMPORT] User authenticated: ${user ? user.email : 'NO'}`);
     
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
