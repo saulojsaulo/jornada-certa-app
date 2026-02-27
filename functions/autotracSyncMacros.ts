@@ -20,8 +20,7 @@ function getAuthHeaders() {
 }
 
 function parseMacroNumber(msg) {
-  // Campos comuns onde a macro pode estar
-  const raw = msg.macro ?? msg.macroCode ?? msg.macro_code ?? msg.code ?? 
+  const raw = msg.MacroNumber ?? msg.macro ?? msg.macroCode ?? msg.macro_code ?? msg.code ??
               msg.messageCode ?? msg.message_code ?? msg.returnCode ?? msg.return_code ??
               msg.messageType ?? msg.message_type ?? msg.type;
   if (raw === undefined || raw === null) return null;
@@ -30,7 +29,7 @@ function parseMacroNumber(msg) {
 }
 
 function parseDataCriacao(msg) {
-  const raw = msg.date ?? msg.datetime ?? msg.createdAt ?? msg.created_at ?? 
+  const raw = msg.MessageTime ?? msg.date ?? msg.datetime ?? msg.createdAt ?? msg.created_at ??
               msg.timestamp ?? msg.sentAt ?? msg.sent_at ?? msg.dateTime ?? msg.dateCreated;
   if (!raw) return null;
   const d = new Date(raw);
