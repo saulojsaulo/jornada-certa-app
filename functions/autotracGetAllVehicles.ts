@@ -5,10 +5,11 @@ const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
 const ACCOUNT_CODE = 10849;
+const PAGE_SIZE = 500;
 
 function getHeaders() {
   return {
-    'Authorization': `Basic ${btoa(`${USER}:${PASS}`)}`,
+    'Authorization': `Basic ${USER}:${PASS}`,
     'Ocp-Apim-Subscription-Key': API_KEY,
     'Content-Type': 'application/json'
   };
@@ -19,46 +20,30 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
 
     const allVehicles = [];
+    let offset = 0;
 
-    // Tentar com _limit=1000 primeiro, depois fallback para limit
-    const urlVariations = [
-      `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?_limit=1000`,
-      `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=1000`,
-      `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles`
-    ];
+    // Paginar até buscar todos os veículos
+    while (true) {
+      const url = `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?_limit=${PAGE_SIZE}&offset=${offset}`;
+      const res = await fetch(url, { headers: getHeaders() });
 
-    let vehicles = null;
-    let successUrl = null;
-
-    for (const url of urlVariations) {
-      try {
-        const res = await fetch(url, { headers: getHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          vehicles = data.Data || [];
-          if (vehicles.length > 0) {
-            successUrl = url;
-            break;
-          }
-        }
-      } catch {
-        // Continua para próxima URL
+      if (!res.ok) {
+        return Response.json({ error: `HTTP ${res.status}` }, { status: 500 });
       }
-    }
 
-    if (!vehicles || vehicles.length === 0) {
-      return Response.json({
-        error: 'Nenhum veículo encontrado em nenhuma URL',
-        attempted_urls: urlVariations
-      }, { status: 500 });
-    }
+      const data = await res.json();
+      const page = data.Data || [];
+      allVehicles.push(...page);
 
-    allVehicles.push(...vehicles);
+      if (data.IsLastPage === true || page.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+      
+      await new Promise(r => setTimeout(r, 300));
+    }
 
     return Response.json({
       success: true,
       total: allVehicles.length,
-      success_url: successUrl,
       vehicles: allVehicles.map(v => ({
         id: `temp_${v.Code}`,
         autotrac_id: String(v.Code),
