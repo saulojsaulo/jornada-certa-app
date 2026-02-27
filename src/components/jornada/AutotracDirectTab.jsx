@@ -45,7 +45,6 @@ export default function AutotracDirectTab() {
   const gestores = [];
 
   const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
 
   // Processar macros para calcular jornadas
   const { macrosPorVeiculo, jornadas } = useMemo(() => {
