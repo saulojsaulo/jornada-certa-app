@@ -36,21 +36,39 @@ export default function AutotracDirectTab() {
     queryFn: () => base44.entities.Gestor.list(),
   });
 
-  // Carregar macros da API Autotrac ao inicializar
+  // Carregar macros do banco de dados ao inicializar
   useEffect(() => {
-    const fetchMacros = async () => {
+    const loadMacrosFromDatabase = async () => {
       try {
-        const result = await base44.functions.invoke('autotracDebugAllMacros', {});
-        if (result.data.success) {
-          setRawMacros(result.data.macros || []);
-        }
+        const macros = await base44.entities.MacroEvento.list(undefined, 5000);
+        
+        // Mapear para o formato esperado
+        const mappedMacros = await Promise.all(
+          macros.map(async (m) => {
+            const veiculo = veiculos.find(v => v.id === m.veiculo_id);
+            return {
+              veiculo_code: veiculo?.autotrac_id || m.veiculo_id,
+              veiculo_id: m.veiculo_id,
+              veiculo_nome: veiculo?.nome_veiculo || 'Desconhecido',
+              placa: veiculo?.placa || '',
+              numero_macro: m.numero_macro,
+              data_criacao: m.data_criacao,
+              jornada_id: m.jornada_id,
+              data_jornada: m.data_jornada
+            };
+          })
+        );
+        
+        setRawMacros(mappedMacros);
       } catch (error) {
         console.error('Erro ao carregar macros:', error);
       }
     };
     
-    fetchMacros();
-  }, []);
+    if (veiculos.length > 0) {
+      loadMacrosFromDatabase();
+    }
+  }, [veiculos]);
 
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
