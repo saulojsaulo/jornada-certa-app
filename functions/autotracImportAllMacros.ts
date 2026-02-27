@@ -23,19 +23,25 @@ async function getAllVehicles() {
   let hasMore = true;
 
   try {
+    console.log(`[IMPORT] BASE_URL: ${AUTOTRAC_BASE_URL}`);
+    console.log(`[IMPORT] ACCOUNT: ${AUTOTRAC_ACCOUNT}`);
+    
     while (hasMore) {
       const url = `${AUTOTRAC_BASE_URL}/${AUTOTRAC_ACCOUNT}/v2/vehicles?page=${page}&pageSize=100`;
-      console.log(`[IMPORT] Buscando veículos página ${page}...`);
+      console.log(`[IMPORT] URL: ${url}`);
       
       const response = await fetch(url, { headers: getHeaders() });
+      console.log(`[IMPORT] Response status: ${response.status}`);
       
       if (!response.ok) {
-        console.error(`[IMPORT] Erro ao buscar veículos (página ${page}): ${response.status} ${response.statusText}`);
+        const text = await response.text();
+        console.error(`[IMPORT] Erro ao buscar veículos (página ${page}): ${response.status} - ${text}`);
         hasMore = false;
         break;
       }
       
       const data = await response.json();
+      console.log(`[IMPORT] Data recebida:`, JSON.stringify(data).substring(0, 500));
       
       if (data.list && Array.isArray(data.list) && data.list.length > 0) {
         vehicles.push(...data.list);
