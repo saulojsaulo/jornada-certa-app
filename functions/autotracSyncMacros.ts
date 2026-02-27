@@ -4,11 +4,8 @@ const BASE_URL = Deno.env.get("AUTOTRAC_BASE_URL");
 const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
-const ACCOUNT = Deno.env.get("AUTOTRAC_ACCOUNT");
 
 const MACROS_VALIDAS = [1, 2, 3, 4, 5, 6, 9, 10];
-
-// Cocal Cereais = Code 10849 (ignorar Cedro Transportes Code 11007)
 const ACCOUNT_CODE = 10849;
 
 function getAuthHeaders() {
@@ -36,6 +33,20 @@ function parseDataCriacao(msg) {
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+// Busca TODOS os registros de uma entidade paginando
+async function listAll(entity) {
+  const all = [];
+  let skip = 0;
+  const limit = 500;
+  while (true) {
+    const page = await entity.list(undefined, limit, skip);
+    all.push(...page);
+    if (page.length < limit) break;
+    skip += limit;
+  }
+  return all;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -49,22 +60,22 @@ Deno.serve(async (req) => {
       // Automação agendada sem usuário - OK
     }
 
-    // Buscar veículos cadastrados no sistema com autotrac_id
-    const veiculos = await base44.asServiceRole.entities.Veiculo.list();
+    // Buscar TODOS os veículos cadastrados no sistema
+    const veiculos = await listAll(base44.asServiceRole.entities.Veiculo);
     const veiculosComId = veiculos.filter(v => v.autotrac_id && v.ativo !== false);
 
     if (veiculosComId.length === 0) {
       return Response.json({ success: true, message: 'Nenhum veículo com autotrac_id encontrado. Sincronize os veículos primeiro.' });
     }
 
-    // Buscar macros existentes para evitar duplicatas
+    // Buscar TODAS as macros existentes nas últimas 48h para deduplicação
     const agora = new Date();
     const limite48h = new Date(agora.getTime() - 48 * 60 * 60 * 1000);
 
-    const macrosExistentes = await base44.asServiceRole.entities.MacroEvento.list();
+    const macrosExistentes = await listAll(base44.asServiceRole.entities.MacroEvento);
     const macrosIndex = new Set();
     for (const m of macrosExistentes) {
-      if (m.data_criacao) {
+      if (m.data_criacao && new Date(m.data_criacao) >= limite48h) {
         const key = `${m.veiculo_id}_${m.numero_macro}_${m.data_criacao.substring(0, 16)}`;
         macrosIndex.add(key);
       }
@@ -73,7 +84,6 @@ Deno.serve(async (req) => {
     let totalImportadas = 0;
     let totalIgnoradas = 0;
     const erros = [];
-    let rawSample = null; // Para debug
 
     for (const veiculo of veiculosComId) {
       try {
@@ -89,11 +99,6 @@ Deno.serve(async (req) => {
         const mensagens = Array.isArray(msgData)
           ? msgData
           : (msgData.Data || msgData.data || msgData.messages || []);
-
-        // Guardar amostra para debug
-        if (!rawSample && mensagens.length > 0) {
-          rawSample = mensagens[0];
-        }
 
         const macrosParaInserir = [];
 
@@ -124,13 +129,12 @@ Deno.serve(async (req) => {
           macrosIndex.add(key);
         }
 
-        // Calcular jornada_id para cada macro inserida
+        // Calcular jornada_id
         const macro1s = macrosParaInserir.filter(m => m.numero_macro === 1);
         for (const m of macrosParaInserir) {
           const macro1Ref = macro1s
             .filter(m1 => m1.data_criacao <= m.data_criacao)
             .sort((a, b) => b.data_criacao.localeCompare(a.data_criacao))[0];
-
           m.jornada_id = `${veiculo.id}-${(macro1Ref || m).data_criacao.substring(0, 10)}`;
           if (macro1Ref) m.data_jornada = macro1Ref.data_criacao.substring(0, 10);
         }
@@ -151,7 +155,6 @@ Deno.serve(async (req) => {
       veiculos_processados: veiculosComId.length,
       macros_importadas: totalImportadas,
       macros_ignoradas_duplicatas: totalIgnoradas,
-      raw_sample: rawSample, // Para debug da estrutura
       erros: erros.length > 0 ? erros : undefined
     });
 
