@@ -56,6 +56,9 @@ Deno.serve(async (req) => {
       if (vehiclesData.IsLastPage === true || page.length < PAGE_SIZE) break;
       offset += PAGE_SIZE;
       if (offset >= PAGE_SIZE * 300) break; // segurança: max 3000 veículos
+
+      // Respeitar rate limit da API
+      await new Promise(r => setTimeout(r, 300));
     }
 
     // Buscar veículos já cadastrados no sistema
