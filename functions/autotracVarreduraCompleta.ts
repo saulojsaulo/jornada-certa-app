@@ -218,6 +218,9 @@ Deno.serve(async (req) => {
             resultado.macros.importadas += macrosParaInserir.length;
           }
 
+          // Pequeno delay entre os veículos para não sobrecarregar
+          await new Promise(r => setTimeout(r, 200));
+
         } catch (err) {
           resultado.erros.push(`Veículo ${veiculo.nome_veiculo}: ${err.message}`);
         }
