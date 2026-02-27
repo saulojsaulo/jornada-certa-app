@@ -33,9 +33,14 @@ async function getAllVehicles() {
 async function getVehicleMessages(vehicleCode) {
   const url = `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${vehicleCode}/returnmessages`;
   const res = await fetch(url, { headers: getHeaders() });
-  if (!res.ok) return [];
+  console.log(`[API] ${url} -> status ${res.status}`);
+  if (!res.ok) {
+    console.log(`[API] Error response:`, await res.text());
+    return [];
+  }
   
   const data = await res.json();
+  console.log(`[API] Response has Data property:`, !!data.Data, 'length:', (data.Data || []).length);
   return data.Data || [];
 }
 
