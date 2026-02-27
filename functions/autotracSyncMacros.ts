@@ -37,9 +37,9 @@ function parseDataCriacao(msg) {
 async function listAll(entity) {
   const all = [];
   let skip = 0;
-  const limit = 500;
+  const limit = 100;
   while (true) {
-    const page = await entity.list(undefined, limit, skip);
+    const page = await entity.list('-created_date', limit, skip);
     all.push(...page);
     if (page.length < limit) break;
     skip += limit;
