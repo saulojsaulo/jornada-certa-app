@@ -76,8 +76,8 @@ function calculateJornadas(messages) {
   const messagesByDate = {};
   
   messages.forEach(msg => {
-    if (!msg.createdDate) return;
-    const date = new Date(msg.createdDate).toISOString().split('T')[0];
+    if (!msg.messageTime) return;
+    const date = new Date(msg.messageTime).toISOString().split('T')[0];
     if (!messagesByDate[date]) messagesByDate[date] = [];
     messagesByDate[date].push(msg);
   });
@@ -85,7 +85,7 @@ function calculateJornadas(messages) {
   // Processar cada jornada
   Object.entries(messagesByDate).forEach(([date, dayMessages]) => {
     const sortedMsgs = dayMessages.sort((a, b) => 
-      new Date(a.createdDate) - new Date(b.createdDate)
+      new Date(a.messageTime) - new Date(b.messageTime)
     );
 
     if (sortedMsgs.length === 0) return;
@@ -95,20 +95,20 @@ function calculateJornadas(messages) {
 
     if (!macro1) return;
 
-    const startTime = new Date(macro1.createdDate);
-    const endTime = macro2 ? new Date(macro2.createdDate) : new Date();
+    const startTime = new Date(macro1.messageTime);
+    const endTime = macro2 ? new Date(macro2.messageTime) : new Date();
     const durationMs = endTime - startTime;
     const durationHours = durationMs / (1000 * 60 * 60);
 
     jornadas.push({
       data: date,
-      inicio: macro1.createdDate,
-      fim: macro2?.createdDate || null,
+      inicio: macro1.messageTime,
+      fim: macro2?.messageTime || null,
       duracao_bruta: Math.round(durationHours * 100) / 100,
       macros: sortedMsgs.map(m => ({
         numero: m.macroNumber,
-        horario: m.createdDate,
-        descricao: m.description
+        horario: m.messageTime,
+        landmark: m.landmark
       }))
     });
   });
