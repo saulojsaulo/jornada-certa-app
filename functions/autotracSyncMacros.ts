@@ -1,12 +1,15 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-const BASE_URL = Deno.env.get("AUTOTRAC_BASE_URL");
+const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi';
 const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
-
-const MACROS_VALIDAS = [1, 2, 3, 4, 5, 6, 9, 10];
 const ACCOUNT_CODE = 10849;
+const MACROS_VALIDAS = [1, 2, 3, 4, 5, 6, 9, 10];
+
+// Máximo de veículos processados por execução (para evitar timeout de 60s)
+// Com 5min de automação e ~250 veículos, processamos 30 por vez = ~8x rodadas = cobre tudo em 40min
+const MAX_VEICULOS_POR_RODADA = 30;
 
 function getAuthHeaders() {
   return {
@@ -16,24 +19,10 @@ function getAuthHeaders() {
   };
 }
 
-function parseMacroNumber(msg) {
-  const raw = msg.MacroNumber ?? msg.macro ?? msg.macroCode ?? msg.macro_code ?? msg.code ??
-              msg.messageCode ?? msg.message_code ?? msg.returnCode ?? msg.return_code ??
-              msg.messageType ?? msg.message_type ?? msg.type;
-  if (raw === undefined || raw === null) return null;
-  const num = parseInt(String(raw), 10);
-  return isNaN(num) ? null : num;
+function fmtDate(d) {
+  // Formato esperado pela API: "YYYY-MM-DD HH:MM:SS"
+  return d.toISOString().replace('T', ' ').substring(0, 19);
 }
-
-function parseDataCriacao(msg) {
-  const raw = msg.MessageTime ?? msg.date ?? msg.datetime ?? msg.createdAt ?? msg.created_at ??
-              msg.timestamp ?? msg.sentAt ?? msg.sent_at ?? msg.dateTime ?? msg.dateCreated;
-  if (!raw) return null;
-  const d = new Date(raw);
-  return isNaN(d.getTime()) ? null : d.toISOString();
-}
-
-
 
 Deno.serve(async (req) => {
   try {
@@ -48,22 +37,34 @@ Deno.serve(async (req) => {
       // Automação agendada sem usuário - OK
     }
 
-    // Buscar TODOS os veículos cadastrados no sistema (até 5000)
+    // Aceitar offset de veículos para processar em lotes (via automação ou chamada manual)
+    const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    const veiculoOffset = body.veiculoOffset ?? 0;
+
+    // Buscar TODOS os veículos com autotrac_id
     const veiculos = await base44.asServiceRole.entities.Veiculo.list('-created_date', 5000);
     const veiculosComId = veiculos.filter(v => v.autotrac_id && v.ativo !== false);
 
     if (veiculosComId.length === 0) {
-      return Response.json({ success: true, message: 'Nenhum veículo com autotrac_id encontrado. Sincronize os veículos primeiro.' });
+      return Response.json({ success: true, message: 'Nenhum veículo com autotrac_id. Sincronize veículos primeiro.' });
     }
 
-    // Buscar TODAS as macros existentes nas últimas 48h para deduplicação
-    const agora = new Date();
-    const limite48h = new Date(agora.getTime() - 48 * 60 * 60 * 1000);
+    // Processar fatia de veículos
+    const lote = veiculosComId.slice(veiculoOffset, veiculoOffset + MAX_VEICULOS_POR_RODADA);
+    const proxOffset = veiculoOffset + MAX_VEICULOS_POR_RODADA;
+    const temMais = proxOffset < veiculosComId.length;
 
-    const macrosExistentes = await base44.asServiceRole.entities.MacroEvento.list('-created_date', 5000);
+    // Janela de tempo: últimas 48h (API guarda 7 dias, mas 48h é suficiente para continuidade)
+    const agora = new Date();
+    const inicio48h = new Date(agora.getTime() - 48 * 60 * 60 * 1000);
+    const startDateStr = fmtDate(inicio48h);
+    const endDateStr = fmtDate(agora);
+
+    // Carregar macros existentes nas últimas 48h para deduplicação (chave: veiculo_id + macro + minuto)
+    const macrosExistentes = await base44.asServiceRole.entities.MacroEvento.list('-created_date', 10000);
     const macrosIndex = new Set();
     for (const m of macrosExistentes) {
-      if (m.data_criacao && new Date(m.data_criacao) >= limite48h) {
+      if (m.data_criacao && new Date(m.data_criacao) >= inicio48h) {
         const key = `${m.veiculo_id}_${m.numero_macro}_${m.data_criacao.substring(0, 16)}`;
         macrosIndex.add(key);
       }
@@ -73,33 +74,56 @@ Deno.serve(async (req) => {
     let totalIgnoradas = 0;
     const erros = [];
 
-    for (const veiculo of veiculosComId) {
+    for (const veiculo of lote) {
       try {
-        const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${veiculo.autotrac_id}/returnmessages`;
-        const msgRes = await fetch(url, { headers: getAuthHeaders() });
+        // Buscar todas as páginas de mensagens de retorno com filtro de data
+        let allMensagens = [];
+        let offset = 0;
+        const limit = 50;
 
-        if (!msgRes.ok) {
-          erros.push(`Veículo ${veiculo.autotrac_id}: HTTP ${msgRes.status}`);
-          continue;
+        while (true) {
+          const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${veiculo.autotrac_id}/returnmessages` +
+            `?startDate=${encodeURIComponent(startDateStr)}&endDate=${encodeURIComponent(endDateStr)}` +
+            `&limit=${limit}&offset=${offset}`;
+
+          const res = await fetch(url, { headers: getAuthHeaders() });
+
+          if (!res.ok) {
+            const text = await res.text();
+            erros.push(`Veículo ${veiculo.autotrac_id} (${veiculo.nome_veiculo}): HTTP ${res.status} - ${text.substring(0, 100)}`);
+            break;
+          }
+
+          const data = await res.json();
+          // API retorna { Data: [...], Limit, Offset, IsLastPage }
+          const page = data.Data || data.data || (Array.isArray(data) ? data : []);
+          allMensagens = allMensagens.concat(page);
+
+          if (data.IsLastPage === true || page.length < limit) break;
+          offset += limit;
+
+          // Segurança: max 20 páginas por veículo (1000 mensagens)
+          if (offset >= limit * 20) break;
+
+          await new Promise(r => setTimeout(r, 200));
         }
 
-        const msgData = await msgRes.json();
-        const mensagens = Array.isArray(msgData)
-          ? msgData
-          : (msgData.Data || msgData.data || msgData.messages || []);
-
+        // Filtrar e preparar macros para inserção
         const macrosParaInserir = [];
 
-        for (const msg of mensagens) {
-          const numeroMacro = parseMacroNumber(msg);
-          if (numeroMacro === null || !MACROS_VALIDAS.includes(numeroMacro)) continue;
+        for (const msg of allMensagens) {
+          // Campo correto conforme documentação: MacroNumber
+          const numeroMacro = msg.MacroNumber;
+          if (numeroMacro === null || numeroMacro === undefined || !MACROS_VALIDAS.includes(numeroMacro)) continue;
 
-          const dataCriacao = parseDataCriacao(msg);
+          // Campo correto conforme documentação: MessageTime
+          const dataCriacao = msg.MessageTime;
           if (!dataCriacao) continue;
 
-          if (new Date(dataCriacao) < limite48h) continue;
+          const dataCriacaoISO = new Date(dataCriacao).toISOString();
+          if (new Date(dataCriacaoISO) < inicio48h) continue;
 
-          const key = `${veiculo.id}_${numeroMacro}_${dataCriacao.substring(0, 16)}`;
+          const key = `${veiculo.id}_${numeroMacro}_${dataCriacaoISO.substring(0, 16)}`;
           if (macrosIndex.has(key)) {
             totalIgnoradas++;
             continue;
@@ -108,8 +132,8 @@ Deno.serve(async (req) => {
           macrosParaInserir.push({
             veiculo_id: veiculo.id,
             numero_macro: numeroMacro,
-            data_criacao: dataCriacao,
-            data_jornada: dataCriacao.substring(0, 10),
+            data_criacao: dataCriacaoISO,
+            data_jornada: dataCriacaoISO.substring(0, 10),
             excluido: false,
             editado_manualmente: false
           });
@@ -117,7 +141,7 @@ Deno.serve(async (req) => {
           macrosIndex.add(key);
         }
 
-        // Calcular jornada_id
+        // Calcular jornada_id baseado na Macro 1 mais próxima anterior
         const macro1s = macrosParaInserir.filter(m => m.numero_macro === 1);
         for (const m of macrosParaInserir) {
           const macro1Ref = macro1s
@@ -132,8 +156,8 @@ Deno.serve(async (req) => {
           totalImportadas += macrosParaInserir.length;
         }
 
-        // Delay para respeitar rate limit da Autotrac
-        await new Promise(r => setTimeout(r, 500));
+        // Delay entre veículos para respeitar rate limit
+        await new Promise(r => setTimeout(r, 400));
 
       } catch (err) {
         erros.push(`Veículo ${veiculo.nome_veiculo}: ${err.message}`);
@@ -142,10 +166,13 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      message: `Sincronização de macros concluída.`,
-      veiculos_processados: veiculosComId.length,
+      message: `Lote ${veiculoOffset}-${veiculoOffset + lote.length} de ${veiculosComId.length} veículos processados.`,
+      veiculos_neste_lote: lote.length,
+      veiculos_total: veiculosComId.length,
       macros_importadas: totalImportadas,
       macros_ignoradas_duplicatas: totalIgnoradas,
+      proximo_offset: temMais ? proxOffset : null,
+      concluido: !temMais,
       erros: erros.length > 0 ? erros : undefined
     });
 
