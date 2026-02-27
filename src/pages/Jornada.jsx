@@ -13,6 +13,7 @@ import ControleTab from '../components/jornada/ControleTab';
 import RankingTab from '../components/jornada/RankingTab';
 import FiltroMotoristaTab from '../components/jornada/FiltroMotoristaTab';
 import AutotracDirectTab from '../components/jornada/AutotracDirectTab';
+import DebugMacrosTab from '../components/jornada/DebugMacrosTab';
 
 export default function Jornada() {
   const queryClient = useQueryClient();
