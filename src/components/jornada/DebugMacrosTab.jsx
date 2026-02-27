@@ -71,11 +71,12 @@ export default function DebugMacrosTab() {
             <table className="w-full text-sm">
               <thead className="bg-slate-100 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-4 py-2 font-semibold">Veículo</th>
-                  <th className="text-left px-4 py-2 font-semibold">Autotrac ID</th>
-                  <th className="text-center px-4 py-2 font-semibold">Macro</th>
-                  <th className="text-left px-4 py-2 font-semibold">Data/Hora</th>
-                  <th className="text-left px-4 py-2 font-semibold">Dados Brutos</th>
+                  <th className="text-left px-4 py-2 font-semibold text-sm">Nome</th>
+                  <th className="text-left px-4 py-2 font-semibold text-sm">Placa</th>
+                  <th className="text-left px-4 py-2 font-semibold text-sm">Código</th>
+                  <th className="text-center px-4 py-2 font-semibold text-sm">Macro</th>
+                  <th className="text-left px-4 py-2 font-semibold text-sm">Data/Hora</th>
+                  <th className="text-left px-4 py-2 font-semibold text-sm">JSON</th>
                 </tr>
               </thead>
               <tbody>
