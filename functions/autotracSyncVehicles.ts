@@ -6,6 +6,7 @@ const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
 
 const ACCOUNT_CODE = 10849;
+const PAGE_SIZE = 10;
 
 function getAuthHeaders() {
   return {
@@ -13,6 +14,17 @@ function getAuthHeaders() {
     'Ocp-Apim-Subscription-Key': API_KEY,
     'Content-Type': 'application/json'
   };
+}
+
+// Busca uma única página de veículos da Autotrac
+async function fetchPage(offset) {
+  const res = await fetch(`${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=${PAGE_SIZE}&offset=${offset}`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ao buscar veículos offset=${offset}`);
+  const data = await res.json();
+  const page = Array.isArray(data) ? data : (data.Data || data.data || data.vehicles || []);
+  return { page, isLastPage: data.IsLastPage === true || page.length < PAGE_SIZE };
 }
 
 Deno.serve(async (req) => {
@@ -28,33 +40,11 @@ Deno.serve(async (req) => {
       // Automação agendada sem usuário - OK
     }
 
-    // Buscar TODOS os veículos da Autotrac paginando (API retorna 10 por página)
-    const PAGE_SIZE = 10;
-    const vehicles = [];
-    let offset = 0;
+    // Ler o offset salvo (para continuar de onde parou, ou iniciar do zero)
+    const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    const startOffset = body.offset ?? 0;
 
-    while (true) {
-      const res = await fetch(`${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=${PAGE_SIZE}&offset=${offset}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Falha ao buscar veículos: ${res.status} - ${text}`);
-      }
-
-      const data = await res.json();
-      const page = Array.isArray(data) ? data : (data.Data || data.data || data.vehicles || []);
-      vehicles.push(...page);
-
-      if (data.IsLastPage === true || page.length < PAGE_SIZE) break;
-      offset += PAGE_SIZE;
-      if (offset >= 3000) break; // segurança
-
-      await new Promise(r => setTimeout(r, 500));
-    }
-
-    // Buscar veículos já cadastrados no sistema
+    // Buscar veículos já cadastrados para deduplicação
     const veiculosExistentes = await base44.asServiceRole.entities.Veiculo.list('-created_date', 5000);
     const existentesMap = {};
     for (const v of veiculosExistentes) {
@@ -63,19 +53,22 @@ Deno.serve(async (req) => {
 
     let criados = 0;
     let atualizados = 0;
+    let offset = startOffset;
+    let totalProcessados = 0;
 
-    // Processar em lotes para evitar timeout
-    const BATCH = 20;
-    for (let i = 0; i < vehicles.length; i += BATCH) {
-      const lote = vehicles.slice(i, i + BATCH);
+    // Processar até 10 páginas por execução (100 veículos) para não dar timeout
+    const MAX_PAGES_PER_RUN = 10;
 
-      await Promise.all(lote.map(async (vehicle) => {
+    for (let p = 0; p < MAX_PAGES_PER_RUN; p++) {
+      const { page, isLastPage } = await fetchPage(offset);
+
+      for (const vehicle of page) {
         const autotracId = String(vehicle.Code || vehicle.code || '');
+        if (!autotracId) continue;
+
         const nomeVeiculo = vehicle.Name || vehicle.name || `Veículo ${autotracId}`;
         const placa = vehicle.LicensePlate || vehicle.licensePlate || vehicle.plate || '';
         const numeroFrota = vehicle.Address || vehicle.address || vehicle.TripName || '';
-
-        if (!autotracId) return;
 
         if (existentesMap[autotracId]) {
           await base44.asServiceRole.entities.Veiculo.update(existentesMap[autotracId].id, {
@@ -86,25 +79,40 @@ Deno.serve(async (req) => {
         } else {
           await base44.asServiceRole.entities.Veiculo.create({
             nome_veiculo: nomeVeiculo,
-            placa: placa,
+            placa,
             numero_frota: numeroFrota,
             autotrac_id: autotracId,
             ativo: true
           });
           criados++;
         }
-      }));
-
-      // Pequeno delay entre lotes
-      if (i + BATCH < vehicles.length) {
-        await new Promise(r => setTimeout(r, 200));
       }
+
+      totalProcessados += page.length;
+      offset += PAGE_SIZE;
+
+      if (isLastPage) {
+        // Concluído!
+        return Response.json({
+          success: true,
+          concluido: true,
+          message: `Sincronização concluída. ${criados} criados, ${atualizados} atualizados.`,
+          total_processados: totalProcessados,
+          criados,
+          atualizados
+        });
+      }
+
+      await new Promise(r => setTimeout(r, 300));
     }
 
+    // Ainda há páginas, retornar próximo offset para continuar
     return Response.json({
       success: true,
-      message: `Sincronização de veículos concluída. ${criados} criados, ${atualizados} atualizados.`,
-      total_autotrac: vehicles.length,
+      concluido: false,
+      message: `Parcial: ${totalProcessados} veículos processados. Continue com offset=${offset}.`,
+      next_offset: offset,
+      total_processados: totalProcessados,
       criados,
       atualizados
     });
