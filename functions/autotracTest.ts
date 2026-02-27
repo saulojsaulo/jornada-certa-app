@@ -67,8 +67,9 @@ Deno.serve(async (req) => {
     const text3 = await res3.text();
     results.push({ variant: `GET /v1/accounts/${ACCOUNT}/vehicles (ACCOUNT env)`, status: res3.status, body: text3.substring(0, 500) });
 
-    // Variação 4: GET /v2/accounts/10849/vehicles (testar v2)
-    const url4 = `${BASE_URL}/v2/accounts/${accountCode}/vehicles`;
+    // Variação 4: Usar Number 268532276 (Cocal Cereais)
+    const numberCocal = 268532276;
+    const url4 = `${BASE_URL}/v1/accounts/${numberCocal}/vehicles`;
     const res4 = await fetch(url4, {
       headers: {
         'Authorization': `Basic ${credB64}`,
@@ -76,7 +77,19 @@ Deno.serve(async (req) => {
       }
     });
     const text4 = await res4.text();
-    results.push({ variant: 'v2 endpoint', status: res4.status, body: text4.substring(0, 500) });
+    results.push({ variant: `GET /v1/accounts/${numberCocal}/vehicles (Number)`, status: res4.status, body: text4.substring(0, 800) });
+
+    // Variação 5: AdministrativeUnitCode 2037 (Cocal Cereais)
+    const adminCode = 2037;
+    const url5 = `${BASE_URL}/v1/accounts/${adminCode}/vehicles`;
+    const res5 = await fetch(url5, {
+      headers: {
+        'Authorization': `Basic ${credB64}`,
+        'Ocp-Apim-Subscription-Key': API_KEY,
+      }
+    });
+    const text5 = await res5.text();
+    results.push({ variant: `GET /v1/accounts/${adminCode}/vehicles (AdministrativeUnitCode)`, status: res5.status, body: text5.substring(0, 800) });
 
     // Info sobre os env vars (sem revelar senhas)
     results.push({ 
