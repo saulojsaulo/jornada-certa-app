@@ -6,100 +6,89 @@ const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
 const ACCOUNT = Deno.env.get("AUTOTRAC_ACCOUNT");
 
-function getAuthHeaders() {
-  const credentials = btoa(`${USER}:${PASS}`);
-  return {
-    'Authorization': `Basic ${credentials}`,
-    'x-api-key': API_KEY,
-    'Ocp-Apim-Subscription-Key': API_KEY,
-    'Content-Type': 'application/json'
-  };
-}
-
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
     const results = [];
+    const credB64 = btoa(`${USER}:${PASS}`);
+    const accountCode = 10849;
 
-    // Buscar lista de contas para descobrir o Code correto
-    const accountsRes = await fetch(`${BASE_URL}/v1/accounts`, {
+    // Auth estilo 1: sem btoa (igual ao /v1/accounts que funcionou)
+    const res1 = await fetch(`${BASE_URL}/v1/accounts/${accountCode}/vehicles`, {
       headers: {
         'Authorization': `Basic ${USER}:${PASS}`,
         'Ocp-Apim-Subscription-Key': API_KEY,
         'Content-Type': 'application/json'
       }
     });
-    const accountsText = await accountsRes.text();
-    results.push({ endpoint: '/v1/accounts', status: accountsRes.status, body: accountsText.substring(0, 1000) });
+    const text1 = await res1.text();
+    results.push({ variant: 'SEM btoa (igual accounts que funcionou)', status: res1.status, body: text1.substring(0, 800) });
 
-    const credB64 = btoa(`${USER}:${PASS}`);
-
-    // Testar account code 10849 (Cocal Cereais)
-    const accountCode = 10849;
-
-    // Variação 1: GET /v1/accounts/10849/vehicles com Basic Auth btoa
-    const url1 = `${BASE_URL}/v1/accounts/${accountCode}/vehicles`;
-    const res1 = await fetch(url1, {
+    // Auth estilo 2: com btoa
+    const res2 = await fetch(`${BASE_URL}/v1/accounts/${accountCode}/vehicles`, {
       headers: {
         'Authorization': `Basic ${credB64}`,
         'Ocp-Apim-Subscription-Key': API_KEY,
       }
     });
-    const text1 = await res1.text();
-    results.push({ variant: `GET /v1/accounts/${accountCode}/vehicles - Basic btoa`, status: res1.status, body: text1.substring(0, 500) });
-
-    // Variação 2: GET /v1/accounts/10849/vehicles sem Authorization
-    const res2 = await fetch(url1, {
-      headers: { 'Ocp-Apim-Subscription-Key': API_KEY }
-    });
     const text2 = await res2.text();
-    results.push({ variant: 'Without Authorization header', status: res2.status, body: text2.substring(0, 500) });
+    results.push({ variant: 'COM btoa', status: res2.status, body: text2.substring(0, 800) });
 
-    // Variação 3: Usar ACCOUNT env var diretamente
-    const url3 = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles`;
-    const res3 = await fetch(url3, {
+    // Testar /v1/accounts/10849/units (pode ser diferente de vehicles)
+    const res3 = await fetch(`${BASE_URL}/v1/accounts/${accountCode}/units`, {
       headers: {
-        'Authorization': `Basic ${credB64}`,
+        'Authorization': `Basic ${USER}:${PASS}`,
         'Ocp-Apim-Subscription-Key': API_KEY,
       }
     });
     const text3 = await res3.text();
-    results.push({ variant: `GET /v1/accounts/${ACCOUNT}/vehicles (ACCOUNT env)`, status: res3.status, body: text3.substring(0, 500) });
+    results.push({ variant: 'GET /v1/accounts/10849/units', status: res3.status, body: text3.substring(0, 800) });
 
-    // Variação 4: Usar Number 268532276 (Cocal Cereais)
-    const numberCocal = 268532276;
-    const url4 = `${BASE_URL}/v1/accounts/${numberCocal}/vehicles`;
-    const res4 = await fetch(url4, {
+    // Testar /v1/units direto
+    const res4 = await fetch(`${BASE_URL}/v1/units`, {
       headers: {
-        'Authorization': `Basic ${credB64}`,
+        'Authorization': `Basic ${USER}:${PASS}`,
         'Ocp-Apim-Subscription-Key': API_KEY,
       }
     });
     const text4 = await res4.text();
-    results.push({ variant: `GET /v1/accounts/${numberCocal}/vehicles (Number)`, status: res4.status, body: text4.substring(0, 800) });
+    results.push({ variant: 'GET /v1/units (direto)', status: res4.status, body: text4.substring(0, 800) });
 
-    // Variação 5: AdministrativeUnitCode 2037 (Cocal Cereais)
-    const adminCode = 2037;
-    const url5 = `${BASE_URL}/v1/accounts/${adminCode}/vehicles`;
-    const res5 = await fetch(url5, {
+    // Testar /v1/vehicles direto
+    const res5 = await fetch(`${BASE_URL}/v1/vehicles`, {
       headers: {
-        'Authorization': `Basic ${credB64}`,
+        'Authorization': `Basic ${USER}:${PASS}`,
         'Ocp-Apim-Subscription-Key': API_KEY,
       }
     });
     const text5 = await res5.text();
-    results.push({ variant: `GET /v1/accounts/${adminCode}/vehicles (AdministrativeUnitCode)`, status: res5.status, body: text5.substring(0, 800) });
+    results.push({ variant: 'GET /v1/vehicles (direto)', status: res5.status, body: text5.substring(0, 800) });
 
-    // Info sobre os env vars (sem revelar senhas)
-    results.push({ 
-      info: 'env_vars', 
-      BASE_URL, 
-      ACCOUNT, 
-      USER, 
-      API_KEY_length: API_KEY?.length,
-      PASS_length: PASS?.length
+    // Testar /v1/accounts/10849 (info da conta)
+    const res6 = await fetch(`${BASE_URL}/v1/accounts/${accountCode}`, {
+      headers: {
+        'Authorization': `Basic ${USER}:${PASS}`,
+        'Ocp-Apim-Subscription-Key': API_KEY,
+      }
     });
+    const text6 = await res6.text();
+    results.push({ variant: 'GET /v1/accounts/10849 (info da conta)', status: res6.status, body: text6.substring(0, 800) });
+
+    // Testar /v1/accounts/10849/messages (em vez de vehicles)
+    const now = new Date();
+    const yesterday = new Date(now - 86400000);
+    const dateStr = yesterday.toISOString().split('T')[0];
+    const res7 = await fetch(`${BASE_URL}/v1/accounts/${accountCode}/messages?startDate=${dateStr}&endDate=${dateStr}`, {
+      headers: {
+        'Authorization': `Basic ${USER}:${PASS}`,
+        'Ocp-Apim-Subscription-Key': API_KEY,
+      }
+    });
+    const text7 = await res7.text();
+    results.push({ variant: `GET /v1/accounts/10849/messages?date=${dateStr}`, status: res7.status, body: text7.substring(0, 800) });
+
+    results.push({ info: 'env', BASE_URL, USER, ACCOUNT, API_KEY_len: API_KEY?.length, PASS_len: PASS?.length });
 
     return Response.json({ results });
 
