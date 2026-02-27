@@ -67,14 +67,12 @@ Deno.serve(async (req) => {
 
     // Buscar veículos já cadastrados no banco
     const localVehicles = await base44.entities.Veiculo.list();
-    console.log(`Local vehicles: ${localVehicles.length}`);
     const vehicleMap = {};
     localVehicles.forEach(v => {
       if (v.autotrac_id) {
-        vehicleMap[parseInt(v.autotrac_id)] = v.id;
+        vehicleMap[String(v.autotrac_id)] = v.id;
       }
     });
-    console.log(`Vehicle map size: ${Object.keys(vehicleMap).length}`);
 
     // Buscar macros já existentes para evitar duplicação
     const existingMacros = await base44.entities.MacroEvento.list();
