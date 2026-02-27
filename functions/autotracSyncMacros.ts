@@ -40,9 +40,20 @@ Deno.serve(async (req) => {
     // Aceitar offset de veículos para processar em lotes (via automação ou chamada manual)
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
     const veiculoOffset = body.veiculoOffset ?? 0;
+    const strategy = body.strategy || 'linear'; // 'linear' (manual/UI) ou 'smart' (automação)
 
     // Buscar TODOS os veículos com autotrac_id
-    const veiculos = await base44.asServiceRole.entities.Veiculo.list('-created_date', 5000);
+    let veiculos = await base44.asServiceRole.entities.Veiculo.list('-created_date', 5000);
+    
+    // Se estratégia for 'smart', ordenar pelos que não foram sincronizados há mais tempo (null primeiro, depois datas antigas)
+    if (strategy === 'smart') {
+        veiculos.sort((a, b) => {
+            if (!a.last_sync_macros) return -1;
+            if (!b.last_sync_macros) return 1;
+            return a.last_sync_macros.localeCompare(b.last_sync_macros);
+        });
+    }
+
     const veiculosComId = veiculos.filter(v => v.autotrac_id && v.ativo !== false);
 
     if (veiculosComId.length === 0) {
@@ -50,9 +61,21 @@ Deno.serve(async (req) => {
     }
 
     // Processar fatia de veículos
-    const lote = veiculosComId.slice(veiculoOffset, veiculoOffset + MAX_VEICULOS_POR_RODADA);
-    const proxOffset = veiculoOffset + MAX_VEICULOS_POR_RODADA;
-    const temMais = proxOffset < veiculosComId.length;
+    let lote;
+    let proxOffset;
+    let temMais;
+
+    if (strategy === 'smart') {
+        // Na estratégia smart, pegamos sempre os primeiros (mais antigos)
+        lote = veiculosComId.slice(0, MAX_VEICULOS_POR_RODADA);
+        proxOffset = 0; // Irrelevante para smart
+        temMais = veiculosComId.length > MAX_VEICULOS_POR_RODADA; // Sempre tem mais se a lista for maior que o lote, mas o job roda em ciclo
+    } else {
+        // Estratégia linear (respeita offset para varredura sequencial completa)
+        lote = veiculosComId.slice(veiculoOffset, veiculoOffset + MAX_VEICULOS_POR_RODADA);
+        proxOffset = veiculoOffset + MAX_VEICULOS_POR_RODADA;
+        temMais = proxOffset < veiculosComId.length;
+    }
 
     // Janela de tempo: últimas 48h (API guarda 7 dias, mas 48h é suficiente para continuidade)
     const agora = new Date();
@@ -155,6 +178,11 @@ Deno.serve(async (req) => {
           await base44.asServiceRole.entities.MacroEvento.bulkCreate(macrosParaInserir);
           totalImportadas += macrosParaInserir.length;
         }
+
+        // Atualizar timestamp da última sincronização do veículo
+        await base44.asServiceRole.entities.Veiculo.update(veiculo.id, { 
+            last_sync_macros: new Date().toISOString() 
+        });
 
         // Delay entre veículos para respeitar rate limit
         await new Promise(r => setTimeout(r, 1200));

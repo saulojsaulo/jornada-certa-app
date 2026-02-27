@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Truck, RefreshCw, Clock, TrendingUp, UserSearch, Zap, Loader2 } from 'lucide-react';
+import { Truck, RefreshCw, Clock, TrendingUp, UserSearch, Database, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
@@ -32,6 +33,8 @@ export default function Jornada() {
   const lastImport = importLogs[0] || null;
 
   const [varreduraLoading, setVarreduraLoading] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncStatus, setSyncStatus] = useState("");
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['veiculos'] });
@@ -40,10 +43,16 @@ export default function Jornada() {
 
   const handleVarreduraCompleta = async () => {
     setVarreduraLoading(true);
-    const toastId = toast.loading('Iniciando varredura completa...');
+    setSyncProgress(0);
+    setSyncStatus("Iniciando...");
+    
+    const toastId = toast.loading('Iniciando sincronização completa...');
+    
     try {
       // Passo 1: Sincronizar veículos
+      setSyncStatus("Atualizando cadastro de veículos...");
       toast.loading('Sincronizando veículos...', { id: toastId });
+      
       let vOffset = 0;
       let vRodadas = 0;
       while (vRodadas < 50) {
@@ -55,33 +64,56 @@ export default function Jornada() {
         if (data.concluido) break;
       }
       
+      setSyncProgress(10); // 10% concluído após veículos
+
       // Passo 2: Sincronizar macros
-      toast.loading('Sincronizando macros (isso pode levar alguns minutos)...', { id: toastId });
+      setSyncStatus("Baixando mensagens de cada veículo...");
+      toast.loading('Sincronizando macros...', { id: toastId });
+      
       let mOffset = 0;
       let mRodadas = 0;
-      while (mRodadas < 50) {
-        const res = await base44.functions.invoke('autotracSyncMacros', { veiculoOffset: mOffset });
+      
+      while (mRodadas < 100) { // Limite de segurança aumentado
+        // Usar strategy='linear' para garantir varredura sequencial na UI
+        const res = await base44.functions.invoke('autotracSyncMacros', { 
+            veiculoOffset: mOffset,
+            strategy: 'linear'
+        });
         const data = res.data;
         if (!data.success) throw new Error(data.error || 'Erro na sincronização de macros');
+        
         mOffset = data.proximo_offset;
         mRodadas++;
         
-        // Atualiza mensagem com progresso
+        // Atualiza progresso visual
         if (data.veiculos_total) {
-          toast.loading(`Sincronizando macros: ${Math.min(mOffset || data.veiculos_total, data.veiculos_total)} de ${data.veiculos_total} veículos...`, { id: toastId });
+          const processed = Math.min(mOffset || data.veiculos_total, data.veiculos_total);
+          const percent = 10 + Math.floor((processed / data.veiculos_total) * 90);
+          setSyncProgress(percent);
+          setSyncStatus(`Processando veículos: ${processed} de ${data.veiculos_total}`);
+          toast.loading(`Sincronizando macros: ${processed}/${data.veiculos_total} veículos`, { id: toastId });
         }
         
         if (data.concluido) break;
       }
 
-      toast.success('Varredura completa concluída com sucesso!', { id: toastId });
+      setSyncProgress(100);
+      setSyncStatus("Concluído!");
+      toast.success('Sincronização completa finalizada!', { id: toastId });
+      
       queryClient.invalidateQueries({ queryKey: ['veiculos'] });
       queryClient.invalidateQueries({ queryKey: ['macros'] });
       refetchImportLogs();
+
     } catch (err) {
-      toast.error('Erro ao executar varredura: ' + err.message, { id: toastId });
+      toast.error('Erro na sincronização: ' + err.message, { id: toastId });
+      setSyncStatus("Erro na execução");
     } finally {
       setVarreduraLoading(false);
+      setTimeout(() => {
+        setSyncProgress(0);
+        setSyncStatus("");
+      }, 5000);
     }
   };
 
@@ -118,19 +150,29 @@ export default function Jornada() {
                 </span>
               </div>
 
-              {/* Varredura Completa */}
-              <Button
-                onClick={handleVarreduraCompleta}
-                disabled={varreduraLoading}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-              >
-                {varreduraLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Zap className="w-4 h-4" />
+              {/* Sincronização e Progresso */}
+              <div className="flex flex-col items-end gap-1">
+                <Button
+                    onClick={handleVarreduraCompleta}
+                    disabled={varreduraLoading}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-sm"
+                >
+                    {varreduraLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                    <Database className="w-4 h-4" />
+                    )}
+                    {varreduraLoading ? 'Sincronizando...' : 'Sincronizar Banco'}
+                </Button>
+                {varreduraLoading && (
+                    <div className="w-40 space-y-1">
+                        <Progress value={syncProgress} className="h-1.5" />
+                        <p className="text-[10px] text-right text-slate-500 font-medium truncate">
+                            {syncStatus}
+                        </p>
+                    </div>
                 )}
-                {varreduraLoading ? 'Sincronizando...' : 'Varredura Completa'}
-              </Button>
+              </div>
 
               {/* Atualizar */}
               <Button
