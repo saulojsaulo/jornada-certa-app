@@ -49,9 +49,9 @@ function isWithinLastDays(messageTimeStr, days = 30) {
   try {
     const msgDate = new Date(messageTimeStr);
     const now = new Date();
-    const diffMs = now - msgDate;
+    const diffMs = Math.abs(now - msgDate);
     const diffDays = days * 24 * 60 * 60 * 1000;
-    return diffMs >= 0 && diffMs <= diffDays;
+    return diffMs <= diffDays;
   } catch {
     return false;
   }
