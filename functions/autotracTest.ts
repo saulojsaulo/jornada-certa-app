@@ -19,28 +19,34 @@ Deno.serve(async (req) => {
   try {
     const results = [];
 
-    // Testar paginação de veículos com limit/offset
-    const url1 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=100&offset=0`;
-    const res1 = await fetch(url1, { headers: getAuthHeaders() });
-    const data1 = await res1.json();
-    const page1 = Array.isArray(data1) ? data1 : (data1.Data || data1.data || []);
-    results.push({ test: 'vehicles?limit=100&offset=0', status: res1.status, count: page1.length, isLastPage: data1.IsLastPage, raw_keys: Object.keys(data1) });
+    // Buscar todas as páginas de veículos
+    let offset = 0;
+    const pageSize = 10;
+    let totalVehicles = [];
+    let page = 0;
 
-    // Testar com offset=10
-    const url2 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=100&offset=10`;
-    const res2 = await fetch(url2, { headers: getAuthHeaders() });
-    const data2 = await res2.json();
-    const page2 = Array.isArray(data2) ? data2 : (data2.Data || data2.data || []);
-    results.push({ test: 'vehicles?limit=100&offset=10', status: res2.status, count: page2.length, isLastPage: data2.IsLastPage });
+    while (true) {
+      const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?limit=${pageSize}&offset=${offset}`;
+      const res = await fetch(url, { headers: getAuthHeaders() });
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : (data.Data || data.data || []);
 
-    // Testar sem limit (default)
-    const url3 = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles`;
-    const res3 = await fetch(url3, { headers: getAuthHeaders() });
-    const data3 = await res3.json();
-    const page3 = Array.isArray(data3) ? data3 : (data3.Data || data3.data || []);
-    results.push({ test: 'vehicles (no params)', status: res3.status, count: page3.length, isLastPage: data3.IsLastPage, total: data3.Total || data3.total });
+      totalVehicles.push(...items);
+      results.push({ page, offset, count: items.length, isLastPage: data.IsLastPage });
 
-    return Response.json({ results });
+      page++;
+      offset += pageSize;
+
+      // Parar se IsLastPage === true ou sem itens ou muitas páginas (segurança)
+      if (data.IsLastPage === true || items.length === 0 || page >= 40) break;
+    }
+
+    return Response.json({ 
+      total_vehicles: totalVehicles.length,
+      pages_fetched: page,
+      results,
+      sample_vehicles: totalVehicles.slice(0, 3).map(v => ({ Code: v.Code, Name: v.Name }))
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
