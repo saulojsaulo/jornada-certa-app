@@ -5,7 +5,7 @@ const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
 const ACCOUNT_CODE = 10849;
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 500;
 
 function getHeaders() {
   return {
