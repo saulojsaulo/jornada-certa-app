@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
 
     for (const veiculo of veiculosComId) {
       try {
-        const url = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles/${veiculo.autotrac_id}/returnmessages`;
+        const url = `${BASE_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles/${veiculo.autotrac_id}/returnmessages`;
         const msgRes = await fetch(url, { headers: getAuthHeaders() });
 
         if (!msgRes.ok) {
