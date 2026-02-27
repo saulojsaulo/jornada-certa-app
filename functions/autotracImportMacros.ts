@@ -44,14 +44,14 @@ async function getVehicleMessages(vehicleCode) {
   return data.Data || [];
 }
 
-function isWithinLast48Hours(messageTimeStr) {
+function isWithinLastDays(messageTimeStr, days = 30) {
   if (!messageTimeStr) return false;
   try {
     const msgDate = new Date(messageTimeStr);
     const now = new Date();
     const diffMs = now - msgDate;
-    const diff48h = 48 * 60 * 60 * 1000;
-    return diffMs >= 0 && diffMs <= diff48h;
+    const diffDays = days * 24 * 60 * 60 * 1000;
+    return diffMs >= 0 && diffMs <= diffDays;
   } catch {
     return false;
   }
