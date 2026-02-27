@@ -68,8 +68,15 @@ Deno.serve(async (req) => {
     console.log(`[IMPORT] Total de veículos na Autotrac: ${autotracVehicles.length}`);
 
     // Buscar veículos já cadastrados no banco
-    const localVehicles = await base44.entities.Veiculo.list();
-    console.log(`[IMPORT] Local vehicles found: ${localVehicles.length}`);
+    let localVehicles;
+    try {
+      localVehicles = await base44.entities.Veiculo.list();
+      console.log(`[IMPORT] Local vehicles found: ${localVehicles.length}`);
+    } catch (e) {
+      console.log(`[IMPORT] Error fetching vehicles: ${e.message}`);
+      throw e;
+    }
+    
     const vehicleMap = {};
     localVehicles.forEach(v => {
       if (v.autotrac_id) {
