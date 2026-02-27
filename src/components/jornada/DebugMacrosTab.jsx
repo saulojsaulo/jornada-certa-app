@@ -81,21 +81,22 @@ export default function DebugMacrosTab() {
               <tbody>
                 {macros.map((macro, idx) => (
                   <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                    <td className="px-4 py-2 font-medium">{macro.veiculo_nome}</td>
-                    <td className="px-4 py-2 text-slate-600">{macro.autotrac_id}</td>
+                    <td className="px-4 py-2 font-medium text-sm">{macro.veiculo_nome}</td>
+                    <td className="px-4 py-2 text-slate-600 text-sm">{macro.placa}</td>
+                    <td className="px-4 py-2 text-slate-600 text-sm">{macro.veiculo_code}</td>
                     <td className="px-4 py-2 text-center">
-                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded font-semibold">
+                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded font-semibold text-sm">
                         {macro.numero_macro}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-slate-600">
+                    <td className="px-4 py-2 text-slate-600 text-sm">
                       {macro.data_criacao ? format(new Date(macro.data_criacao), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR }) : 'N/A'}
                     </td>
                     <td className="px-4 py-2">
                       <details className="cursor-pointer">
-                        <summary className="text-blue-600 hover:text-blue-700">Ver JSON</summary>
+                        <summary className="text-blue-600 hover:text-blue-700 text-xs">JSON</summary>
                         <pre className="mt-2 bg-slate-900 text-slate-100 p-2 rounded text-xs overflow-auto max-h-48">
-                          {JSON.stringify(macro.raw, null, 2)}
+                          {macro.raw}
                         </pre>
                       </details>
                     </td>
