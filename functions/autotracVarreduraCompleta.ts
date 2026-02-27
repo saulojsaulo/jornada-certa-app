@@ -116,6 +116,8 @@ Deno.serve(async (req) => {
         });
         resultado.veiculos.criados++;
       }
+      // Delay para evitar rate limit do Base44 SDK ao processar muitos veículos
+      await new Promise(r => setTimeout(r, 50));
     }
 
     // ===== ETAPA 2: SINCRONIZAR MACROS =====
