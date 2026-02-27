@@ -22,6 +22,17 @@ Deno.serve(async (req) => {
     
     const results = [];
 
+    // Buscar lista de contas para descobrir o Code correto
+    const accountsRes = await fetch(`${BASE_URL}/v1/accounts`, {
+      headers: {
+        'Authorization': `Basic ${USER}:${PASS}`,
+        'Ocp-Apim-Subscription-Key': API_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+    const accountsText = await accountsRes.text();
+    results.push({ endpoint: '/v1/accounts', status: accountsRes.status, body: accountsText.substring(0, 1000) });
+
     // Variação 1: Basic Auth com apikey no header Ocp-Apim-Subscription-Key
     const credB64 = btoa(`${USER}:${PASS}`);
     const url1 = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles`;
