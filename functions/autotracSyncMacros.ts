@@ -48,8 +48,8 @@ Deno.serve(async (req) => {
       // Automação agendada sem usuário - OK
     }
 
-    // Buscar TODOS os veículos cadastrados no sistema
-    const veiculos = await listAll(base44.asServiceRole.entities.Veiculo);
+    // Buscar TODOS os veículos cadastrados no sistema (até 5000)
+    const veiculos = await base44.asServiceRole.entities.Veiculo.list('-created_date', 5000);
     const veiculosComId = veiculos.filter(v => v.autotrac_id && v.ativo !== false);
 
     if (veiculosComId.length === 0) {
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     const agora = new Date();
     const limite48h = new Date(agora.getTime() - 48 * 60 * 60 * 1000);
 
-    const macrosExistentes = await listAll(base44.asServiceRole.entities.MacroEvento);
+    const macrosExistentes = await base44.asServiceRole.entities.MacroEvento.list('-created_date', 5000);
     const macrosIndex = new Set();
     for (const m of macrosExistentes) {
       if (m.data_criacao && new Date(m.data_criacao) >= limite48h) {
