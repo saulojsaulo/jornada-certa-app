@@ -173,8 +173,20 @@ export default function AutotracDirectTab() {
   const handleSyncFromAutotrac = async () => {
     setSyncInProgress(true);
     try {
-      const toastId = toast.loading('Buscando macros de todas as 229 veículos (últimas 48h)...');
+      // Primeiro: Sincronizar veículos
+      const toastId = toast.loading('Sincronizando 229 veículos com Autotrac...');
       
+      const syncVehicles = await base44.functions.invoke('autotracSyncVehiclesQuick', {});
+      
+      if (!syncVehicles.data.success) {
+        toast.error('Erro ao sincronizar veículos', { id: toastId });
+        setSyncInProgress(false);
+        return;
+      }
+
+      toast.loading(`Sincronizados ${syncVehicles.data.total_vehicles} veículos. Buscando macros...`, { id: toastId });
+
+      // Segundo: Buscar macros
       const result = await base44.functions.invoke('autotracDebugAllMacros', {});
       
       if (result.data.success) {
