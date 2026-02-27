@@ -107,7 +107,12 @@ Deno.serve(async (req) => {
     let vehicleIndex = 0;
     for (const vehicle of autotracVehicles) {
       vehicleIndex++;
-      const vehicleCode = String(vehicle.VehicleCode);
+      if (vehicleIndex <= 3) {
+        console.log(`[IMPORT] Vehicle ${vehicleIndex} properties: ${Object.keys(vehicle).join(', ')}`);
+        console.log(`[IMPORT] Vehicle ${vehicleIndex} data:`, JSON.stringify(vehicle));
+      }
+      
+      const vehicleCode = String(vehicle.VehicleCode || vehicle.Code);
       const veiculoId = vehicleMap[vehicleCode];
       
       if (vehicleIndex <= 5) {
