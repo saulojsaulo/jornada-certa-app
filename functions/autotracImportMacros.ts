@@ -146,8 +146,8 @@ Deno.serve(async (req) => {
         // Criar registros no banco
         const macrosToCreate = [];
         for (const msg of validMessages) {
-          const data_criacao = msg.MessageTime;
-          const data_jornada = new Date(data_criacao).toISOString().split('T')[0];
+          const data_criacao = new Date(msg.MessageTime).toISOString();
+          const data_jornada = new Date(msg.MessageTime).toISOString().split('T')[0];
           const key = `${veiculoId}-${msg.MacroNumber}-${data_jornada}`;
           
           if (!existingKeys.has(key)) {
