@@ -21,7 +21,7 @@ export default function AutotracDirectTab() {
   // Buscar veículos
   const { data: veiculos = [], isLoading: loadingVeiculos } = useQuery({
     queryKey: ['veiculos'],
-    queryFn: () => base44.entities.Veiculo.list(),
+    queryFn: () => base44.entities.Veiculo.list(undefined, 500), // Buscar até 500 veículos
   });
 
   // Buscar motoristas
