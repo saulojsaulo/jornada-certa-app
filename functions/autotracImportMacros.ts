@@ -18,24 +18,12 @@ function getHeaders() {
 }
 
 async function getAllVehicles() {
-  let allVehicles = [];
-  let offset = 0;
-  const limit = 500;
+  const url = `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?_limit=500`;
+  const res = await fetch(url, { headers: getHeaders() });
+  if (!res.ok) return [];
   
-  while (true) {
-    const url = `${PROD_URL}/v1/accounts/${ACCOUNT_CODE}/vehicles?offset=${offset}&_limit=${limit}`;
-    const res = await fetch(url, { headers: getHeaders() });
-    if (!res.ok) break;
-    
-    const data = await res.json();
-    const vehicles = data.Data || [];
-    if (vehicles.length === 0) break;
-    
-    allVehicles = allVehicles.concat(vehicles);
-    offset += limit;
-  }
-  
-  return allVehicles;
+  const data = await res.json();
+  return data.Data || [];
 }
 
 async function getVehicleMessages(vehicleCode) {
