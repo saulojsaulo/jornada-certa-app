@@ -125,10 +125,11 @@ Deno.serve(async (req) => {
       }
       
       if (!veiculoId) {
+        if (vehicleIndex <= 3) console.log(`[IMPORT] Vehicle ${vehicleIndex} ${vehicleCode}: NOT in local DB, skipping`);
         continue; // Pular se veículo não existir no banco
       }
 
-      console.log(`[IMPORT] Processing vehicle ${vehicleCode}`);
+      console.log(`[IMPORT] Processing vehicle ${vehicleCode} (local ID: ${veiculoId})`);
 
       try {
         const messages = await getVehicleMessages(parseInt(vehicleCode));
