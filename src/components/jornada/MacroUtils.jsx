@@ -171,10 +171,10 @@ export function calcularHorasExtras(macros) {
   return Math.max(0, liquida - 480); // 480 = 8 horas
 }
 
-// Calcular tempo disponível (8h - jornada atual)
+// Calcular tempo disponível (12h - jornada atual)
 export function calcularTempoDisponivel(macros) {
   const liquida = calcularJornadaLiquida(macros);
-  return Math.max(0, 480 - liquida); // 480 = 8 horas
+  return Math.max(0, 720 - liquida); // 720 = 12 horas
 }
 
 // Calcular interjornada (intervalo entre macro 2 do dia anterior e macro 1 do dia atual)
