@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
   // Usar uma data recente com hora atual
   const now = new Date();
-  const from = new Date(now - 8 * 60 * 60 * 1000); // últimas 8h
+  const from = new Date(now - 7 * 24 * 60 * 60 * 1000); // últimos 7 dias
   const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
   const sd = encodeURIComponent(fmt(from));
   const ed = encodeURIComponent(fmt(now));
