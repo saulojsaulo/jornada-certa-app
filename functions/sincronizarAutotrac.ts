@@ -78,8 +78,9 @@ Deno.serve(async (req) => {
       try {
         // 2. Buscar contas ativas da companhia (_limit conforme documentação Autotrac)
         const accounts = await autotracGet(`${BASE_URL}/accounts?_limit=500`, headers);
+        console.log('[Autotrac] Resposta bruta /accounts:', JSON.stringify(accounts).substring(0, 500));
         const accountList = Array.isArray(accounts) ? accounts : (accounts.data || accounts.items || [accounts]);
-        console.log('[Autotrac] Contas retornadas:', JSON.stringify(accountList.map(a => ({ Code: a.Code, Number: a.Number, Name: a.Name }))));
+        console.log('[Autotrac] Total contas:', accountList.length, '| AUTOTRAC_ACCOUNT configurado:', accountNumber);
 
         // Buscar veículos cadastrados no sistema para mapear identificadores -> veiculo
         const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id });
