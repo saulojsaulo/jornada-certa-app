@@ -69,6 +69,8 @@ export default function AdminEmpresas() {
       contato_email: empresa.contato_email || '',
       plano_assinatura: empresa.plano_assinatura || 'free',
       ativa: empresa.ativa ?? true,
+      provedora_rastreamento: empresa.provedora_rastreamento || null,
+      api_config: empresa.api_config || {},
     });
     setEditingEmpresa(empresa);
     setDialogOpen(true);
