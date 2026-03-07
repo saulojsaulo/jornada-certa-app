@@ -78,9 +78,8 @@ Deno.serve(async (req) => {
         const accounts = await autotracGet(`${BASE_URL}/accounts`, headers);
         const accountList = Array.isArray(accounts) ? accounts : (accounts.data || accounts.items || [accounts]);
 
-        // Buscar veículos cadastrados no sistema para mapear código Autotrac -> veiculo_id
+        // Buscar veículos cadastrados no sistema para mapear identificadores -> veiculo
         const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id });
-        // Mapa: placa normalizada -> veículo do sistema
         const veiculoMapPlaca = {};
         const veiculoMapFrota = {};
         for (const v of veiculosSistema) {
@@ -88,8 +87,15 @@ Deno.serve(async (req) => {
           if (v.numero_frota) veiculoMapFrota[v.numero_frota.toUpperCase().trim()] = v;
         }
 
+        // Número de conta configurado na empresa (campo autotrac_account guarda o Number)
+        const accountNumber = cfg.autotrac_account || Deno.env.get('AUTOTRAC_ACCOUNT');
+
         for (const account of accountList) {
-          const accountCode = account.code || account.id;
+          // A API exige o campo "Code" (ID interno) nas URLs — não o "Number"
+          // Se o usuário configurou um número de conta específico, filtra apenas essa conta
+          if (accountNumber && String(account.Number) !== String(accountNumber)) continue;
+
+          const accountCode = account.Code; // <-- campo mágico para as URLs
           if (!accountCode) continue;
 
           // 3. Buscar veículos ativos da conta
