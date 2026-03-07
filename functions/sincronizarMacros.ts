@@ -147,10 +147,15 @@ Deno.serve(async (req) => {
         );
 
         for (const msg of mensagens) {
-          const numeroMacro = Number(msg.Macro || msg.MacroNumber || msg.macro || 0);
-          const dataCriacao = msg.DateTime || msg.Date || msg.dateTime || msg.date;
+          const rawMacro = msg.MacroNumber ?? msg.Macro ?? msg.macro;
+          // Aceitar apenas valores puramente numéricos inteiros
+          if (rawMacro === null || rawMacro === undefined) continue;
+          if (typeof rawMacro === 'string' && !MACROS_REGEX.test(rawMacro.trim())) continue;
+          const numeroMacro = Number(rawMacro);
+          if (!Number.isInteger(numeroMacro) || !MACROS_VALIDAS.has(numeroMacro)) continue;
 
-          if (!MACROS_VALIDAS.has(numeroMacro) || !dataCriacao) continue;
+          const dataCriacao = msg.MessageTime || msg.DateTime || msg.Date || msg.dateTime || msg.date;
+          if (!dataCriacao) continue;
 
           const dataEvento = new Date(dataCriacao);
           if (isNaN(dataEvento.getTime())) continue;
