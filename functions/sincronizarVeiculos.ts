@@ -87,38 +87,32 @@ Deno.serve(async (req) => {
 
         // 3. Buscar todos os veículos da conta de uma vez
         const veiculosRaw = await autotracGet(`${BASE_URL}/accounts/${accountCode}/vehicles?_limit=500`, headers);
-        const pageData = Array.isArray(veiculosRaw) ? veiculosRaw : (veiculosRaw.Data || []);
+        const veiculosApi = Array.isArray(veiculosRaw) ? veiculosRaw : (veiculosRaw.Data || []);
 
-        for (true; true; ) { // bloco único — não é loop real, break logo abaixo
-          for (const veiApi of pageData) {
-            const vehicleCode = String(veiApi.Code || '');
-            if (!vehicleCode) continue;
+        for (const veiApi of veiculosApi) {
+          const vehicleCode = String(veiApi.Code || '');
+          if (!vehicleCode) continue;
 
-            const placa = (veiApi.LicensePlate || '').toUpperCase().trim();
-            const frota = vehicleCode; // usa o Code como identificador de frota
-            const nome  = (veiApi.Name || placa || frota).trim();
+          const placa = (veiApi.LicensePlate || '').toUpperCase().trim();
+          const frota = vehicleCode;
+          const nome  = (veiApi.Name || placa || frota).trim();
 
-            if (mapPlaca[placa] || mapFrota[frota]) {
-              existentes++;
-              continue;
-            }
-
-            // Criar veículo novo
-            const novo = await db.entities.Veiculo.create({
-              nome_veiculo: nome,
-              placa: placa || undefined,
-              numero_frota: frota,
-              ativo: true,
-              company_id: empresa.id,
-            });
-
-            if (placa) mapPlaca[placa] = novo;
-            mapFrota[frota] = novo;
-            criados++;
+          if (mapPlaca[placa] || mapFrota[frota]) {
+            existentes++;
+            continue;
           }
 
-          if (pageData.length < 100) break;
-          page++;
+          const novo = await db.entities.Veiculo.create({
+            nome_veiculo: nome,
+            placa: placa || undefined,
+            numero_frota: frota,
+            ativo: true,
+            company_id: empresa.id,
+          });
+
+          if (placa) mapPlaca[placa] = novo;
+          mapFrota[frota] = novo;
+          criados++;
         }
       }
 
