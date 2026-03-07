@@ -69,7 +69,9 @@ Deno.serve(async (req) => {
       let hasMore = true;
 
       while (hasMore) {
-        const url = `${baseUrl}/macros?account=${encodeURIComponent(account)}&page=${page}&pageSize=${pageSize}`;
+        // Endpoint padrão da Autotrac para busca de macros/eventos
+        // Ajuste o path conforme a documentação da sua conta Autotrac
+        const url = `${baseUrl}/api/v1/macros?account=${encodeURIComponent(account)}&page=${page}&pageSize=${pageSize}`;
 
         const response = await fetch(url, {
           headers: {
