@@ -229,7 +229,7 @@ export default function AdminEmpresas() {
 
       {/* Dialog Criar/Editar */}
       <Dialog open={dialogOpen} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingEmpresa ? 'Editar Empresa' : 'Nova Empresa'}</DialogTitle>
           </DialogHeader>
