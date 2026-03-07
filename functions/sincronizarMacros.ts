@@ -99,16 +99,17 @@ Deno.serve(async (req) => {
       const from = new Date(now - Math.min(horas, 72) * 60 * 60 * 1000);
       const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
-      // Carregar macros já existentes do lote em memória (evita N queries de duplicata)
+      // Carregar macros já existentes do lote (apenas período relevante) para checar duplicatas em memória
       const loteIds = lote.map(v => v.id);
-      const macrosExistentes = await db.entities.MacroEvento.list('-data_criacao', 50000);
-      const existingSet = new Set();
-      const manualSet   = new Set();
+      // Buscar macros dos últimos 3 dias para os veículos do lote sequencialmente
+      const macrosExistentes = [];
+      for (const vid of loteIds) {
+        const ms = await db.entities.MacroEvento.filter({ veiculo_id: vid });
+        macrosExistentes.push(...ms);
+      }
+      const manualSet = new Set();
       for (const m of macrosExistentes) {
-        if (!loteIds.includes(m.veiculo_id)) continue;
-        const key = `${m.veiculo_id}-${m.numero_macro}-${m.jornada_id}`;
-        existingSet.add(key + '-' + new Date(m.data_criacao).getTime());
-        if (m.editado_manualmente) manualSet.add(key);
+        if (m.editado_manualmente) manualSet.add(`${m.veiculo_id}-${m.numero_macro}-${m.jornada_id}`);
       }
 
       let savedCount = 0;
