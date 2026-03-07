@@ -185,6 +185,9 @@ Deno.serve(async (req) => {
         await db.entities.MacroEvento.bulkCreate(novosEventos);
       }
 
+      // Contar total de mensagens recebidas da API (diagnóstico)
+      const totalMensagensApi = mensagensPorVeiculo.reduce((acc, { mensagens }) => acc + mensagens.length, 0);
+
       results.push({
         empresa: empresa.nome,
         saved: savedCount,
@@ -192,7 +195,9 @@ Deno.serve(async (req) => {
         total_veiculos: veiculosSistema.length,
         proximo_offset: proximo,
         janela_offset: janelaOff,
-        proxima_janela_offset: proximo ? null : proximaJanelaOff, // só avança janela quando acabam os veículos
+        proxima_janela_offset: proximo ? null : proximaJanelaOff,
+        debug_mensagens_api: totalMensagensApi, // total retornado pela API nesta janela
+        debug_janela: `${fmt(from)} -> ${fmt(end)}`,
       });
 
     } catch (e) {
