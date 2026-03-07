@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
             if (!vehicleCode) return { veiculo, mensagens: [] };
             try {
               const r = await autotracGet(
-                `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
+                `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(end))}&_limit=500`,
                 headers
               );
               return { veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) };
