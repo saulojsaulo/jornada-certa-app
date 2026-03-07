@@ -65,33 +65,23 @@ Deno.serve(async (req) => {
   
   const v = veiculos.find(v => v.numero_frota);
 
-  // Testar múltiplas janelas para descobrir qual o formato correto de data da API
-  const fmtLocal = (d) => {
-    // Horário de Brasília (UTC-3)
-    const local = new Date(d.getTime() - 3 * 60 * 60 * 1000);
-    return local.toISOString().slice(0, 19).replace('T', ' ');
-  };
+  // Testar janela de 2h apenas (API é muito lenta com janelas maiores)
+  const from2h = new Date(now - 2 * 60 * 60 * 1000);
 
-  const from24hUTC = new Date(now - 24 * 60 * 60 * 1000);
-  const from24hLocal = new Date(now - 24 * 60 * 60 * 1000);
+  const r = await autotracGet(
+    `${BASE_URL}/accounts/${accountCode}/vehicles/${v.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmt(from2h))}&endDate=${encodeURIComponent(fmt(now))}&_limit=50`,
+    headers
+  );
 
-  const [r1, r2] = await Promise.all([
-    // Teste 1: datas em UTC
-    autotracGet(
-      `${BASE_URL}/accounts/${accountCode}/vehicles/${v.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmt(from24hUTC))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`,
-      headers
-    ),
-    // Teste 2: datas em horário local (Brasília, UTC-3)
-    autotracGet(
-      `${BASE_URL}/accounts/${accountCode}/vehicles/${v.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmtLocal(from24hLocal))}&endDate=${encodeURIComponent(fmtLocal(now))}&_limit=10`,
-      headers
-    ),
-  ]);
+  // Verificar quantas macros existem no banco para este veículo
+  const macrosDb = await db.entities.MacroEvento.filter({ veiculo_id: v.id });
 
   return Response.json({
     accountCode,
-    veiculo: { numero_frota: v.numero_frota, nome: v.nome_veiculo },
-    teste_utc: { periodo: `${fmt(from24hUTC)} -> ${fmt(now)}`, result: r1 },
-    teste_brasilia: { periodo: `${fmtLocal(from24hLocal)} -> ${fmtLocal(now)}`, result: r2 },
+    now_utc: fmt(now),
+    veiculo: { id: v.id, numero_frota: v.numero_frota, nome: v.nome_veiculo },
+    api_result: r,
+    total_macros_no_banco: macrosDb.length,
+    ultimas_3_macros: macrosDb.slice(-3),
   });
 });
