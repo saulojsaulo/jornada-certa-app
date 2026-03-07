@@ -191,6 +191,8 @@ Deno.serve(async (req) => {
         processados: lote.length,
         total_veiculos: veiculosSistema.length,
         proximo_offset: proximo,
+        janela_offset: janelaOff,
+        proxima_janela_offset: proximo ? null : proximaJanelaOff, // só avança janela quando acabam os veículos
       });
 
     } catch (e) {
