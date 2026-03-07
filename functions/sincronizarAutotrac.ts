@@ -10,6 +10,11 @@ function autotracHeaders(usuario, senha, apiKey) {
     'Authorization': `Basic ${btoa(`${usuario}:${senha}`)}`,
     'x-api-key': apiKey,
     'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'User-Agent': 'PostmanRuntime/7.37.0',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Cache-Control': 'no-cache',
   };
 }
 
