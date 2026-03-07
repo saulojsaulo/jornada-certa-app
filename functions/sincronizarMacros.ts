@@ -16,7 +16,7 @@ function autotracHeaders(usuario, senha, apiKey) {
 
 async function autotracGet(url, headers) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 25000);
   let res;
   try {
     res = await fetch(url, { headers, signal: controller.signal });
@@ -42,8 +42,12 @@ Deno.serve(async (req) => {
 
   // Parâmetro opcional: offset de veículos para processar em lotes via automação
   const body = await req.json().catch(() => ({}));
-  const offset = Number(body.offset || 0);
-  const horas  = Number(body.horas  || 24); // janela de busca em horas (max 72)
+  const offset    = Number(body.offset || 0);
+  const horas     = Number(body.horas  || 24); // janela total desejada
+  // A API Autotrac é muito lenta com janelas > 1h, por isso usamos janela de 1h por chamada
+  // e o frontend/automação deve chamar em sequência passando janela_offset
+  const JANELA_H  = 1; // horas por fatia de API
+  const janelaOff = Number(body.janela_offset || 0); // quantas horas atrás começa esta fatia
 
   const db = base44.asServiceRole;
 
@@ -94,10 +98,13 @@ Deno.serve(async (req) => {
         if (v.placa)        mapPlaca[v.placa.toUpperCase().trim()] = v;
       }
 
-      // 3. Janela de busca
+      // 3. Janela de busca: fatia de JANELA_H horas
       const now  = new Date();
-      const from = new Date(now - Math.min(horas, 72) * 60 * 60 * 1000);
+      const end  = new Date(now - janelaOff * 60 * 60 * 1000);
+      const from = new Date(end - JANELA_H * 60 * 60 * 1000);
       const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+      const totalHoras = Math.min(horas, 24);
+      const proximaJanelaOff = janelaOff + JANELA_H < totalHoras ? janelaOff + JANELA_H : null;
 
       // Buscar TODOS os MacroEventos da empresa de uma só vez (para checar duplicatas em memória)
       const dataFromStr = from.toISOString().split('T')[0];
@@ -111,7 +118,7 @@ Deno.serve(async (req) => {
             if (!vehicleCode) return { veiculo, mensagens: [] };
             try {
               const r = await autotracGet(
-                `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
+                `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(end))}&_limit=500`,
                 headers
               );
               return { veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) };
@@ -139,8 +146,8 @@ Deno.serve(async (req) => {
         );
 
         for (const msg of mensagens) {
-          const numeroMacro = Number(msg.MacroNumber || msg.Macro || msg.macro || 0);
-          const dataCriacao = msg.MessageTime || msg.DateTime || msg.Date || msg.dateTime || msg.date;
+          const numeroMacro = Number(msg.Macro || msg.MacroNumber || msg.macro || 0);
+          const dataCriacao = msg.DateTime || msg.Date || msg.dateTime || msg.date;
 
           if (!MACROS_VALIDAS.has(numeroMacro) || !dataCriacao) continue;
 
@@ -178,12 +185,24 @@ Deno.serve(async (req) => {
         await db.entities.MacroEvento.bulkCreate(novosEventos);
       }
 
+      // Contar total de mensagens recebidas da API (diagnóstico)
+      const totalMensagensApi = mensagensPorVeiculo.reduce((acc, { mensagens }) => acc + mensagens.length, 0);
+      // Amostra de mensagem para diagnóstico
+      const amostra = mensagensPorVeiculo.find(m => m.mensagens.length > 0)?.mensagens?.[0];
+
       results.push({
         empresa: empresa.nome,
         saved: savedCount,
         processados: lote.length,
         total_veiculos: veiculosSistema.length,
         proximo_offset: proximo,
+        janela_offset: janelaOff,
+        proxima_janela_offset: proximo ? null : proximaJanelaOff,
+        debug_mensagens_api: totalMensagensApi,
+        debug_janela: `${fmt(from)} -> ${fmt(end)}`,
+        debug_amostra_msg: amostra || null,
+        debug_dataFromStr: dataFromStr,
+        debug_macros_banco: macrosEmpresa.length,
       });
 
     } catch (e) {
