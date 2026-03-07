@@ -101,22 +101,25 @@ Deno.serve(async (req) => {
 
       let savedCount = 0;
 
-      for (const veiculo of lote) {
-        // vehicleCode = numero_frota (que armazenamos como o Code da Autotrac)
-        const vehicleCode = veiculo.numero_frota;
-        if (!vehicleCode) continue;
+      // Buscar mensagens de todos os veículos do lote em paralelo
+      const resultadosLote = await Promise.all(
+        lote.map(async (veiculo) => {
+          const vehicleCode = veiculo.numero_frota;
+          if (!vehicleCode) return { veiculo, mensagens: [] };
+          try {
+            const mRes = await autotracGet(
+              `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
+              headers
+            );
+            const mensagens = Array.isArray(mRes) ? mRes : (mRes.Data || mRes.data || []);
+            return { veiculo, mensagens };
+          } catch {
+            return { veiculo, mensagens: [] };
+          }
+        })
+      );
 
-        let mensagens = [];
-        try {
-          const mRes = await autotracGet(
-            `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
-            headers
-          );
-          mensagens = Array.isArray(mRes) ? mRes : (mRes.Data || mRes.data || []);
-        } catch {
-          continue;
-        }
-
+      for (const { veiculo, mensagens } of resultadosLote) {
         for (const msg of mensagens) {
           const numeroMacro = Number(msg.Macro || msg.MacroNumber || msg.macro || 0);
           const dataCriacao = msg.DateTime || msg.Date || msg.dateTime || msg.date;
