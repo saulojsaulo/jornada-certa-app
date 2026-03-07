@@ -22,14 +22,18 @@ Deno.serve(async (req) => {
 
   const results = {};
 
-  // Testar variações do endpoint de veículos
+  // Testar endpoint de mensagens por conta (sem precisar iterar por veículo)
+  const now  = new Date();
+  const from = new Date(now - 3 * 60 * 60 * 1000); // últimas 3h
+  const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+
   const endpoints = [
-    `/accounts/${accountCode}/vehicles`,
-    `/accounts/${accountCode}/vehicles?_limit=500`,
-    `/accounts/${accountCode}/vehicles?status=active`,
-    `/accounts/${accountCode}/vehicles?active=true`,
-    `/accounts/${accountCode}/vehicles?_limit=500&status=active`,
-    `/vehicles?account=${accountCode}&_limit=50`,
+    `/accounts/${accountCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=50`,
+    `/accounts/${accountCode}/messages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=50`,
+    `/returnmessages?account=${accountCode}&startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=50`,
+    `/accounts/${accountCode}/vehicles?_limit=100&_page=1`,
+    `/accounts/${accountCode}/vehicles?_limit=100&_page=2`,
+    `/accounts/${accountCode}/vehicles?_limit=100&_offset=0`,
   ];
 
   const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
