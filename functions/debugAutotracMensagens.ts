@@ -59,24 +59,25 @@ Deno.serve(async (req) => {
     headers
   );
 
-  // 3. Testar endpoint por veículo (pegar o primeiro veículo)
+  // 3. Testar endpoint por veículo (pegar primeiros 5 veículos e buscar 72h)
   const db = base44.asServiceRole;
-  const veiculos = await db.entities.Veiculo.list('-created_date', 1);
-  const primeiroVeiculo = veiculos[0];
-  let veicRes = null;
-  if (primeiroVeiculo?.numero_frota) {
-    veicRes = await autotracGet(
-      `${BASE_URL}/accounts/${accountCode}/vehicles/${primeiroVeiculo.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`,
-      headers
-    );
-  }
+  const veiculos = await db.entities.Veiculo.list('-created_date', 5);
+  
+  const from72 = new Date(now - 72 * 60 * 60 * 1000);
+  
+  const veicResults = await Promise.all(
+    veiculos.filter(v => v.numero_frota).map(async (v) => {
+      const r = await autotracGet(
+        `${BASE_URL}/accounts/${accountCode}/vehicles/${v.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmt(from72))}&endDate=${encodeURIComponent(fmt(now))}&_limit=20`,
+        headers
+      );
+      return { numero_frota: v.numero_frota, nome: v.nome_veiculo, result: r };
+    })
+  );
 
   return Response.json({
     accountCode,
-    bulk_endpoint: bulkRes,
-    veiculo_endpoint: {
-      numero_frota: primeiroVeiculo?.numero_frota,
-      result: veicRes,
-    }
+    periodo: { from: fmt(from72), to: fmt(now) },
+    veiculos_testados: veicResults,
   });
 });
