@@ -98,10 +98,13 @@ Deno.serve(async (req) => {
         if (v.placa)        mapPlaca[v.placa.toUpperCase().trim()] = v;
       }
 
-      // 3. Janela de busca
+      // 3. Janela de busca: fatia de JANELA_H horas
       const now  = new Date();
-      const from = new Date(now - Math.min(horas, 72) * 60 * 60 * 1000);
+      const end  = new Date(now - janelaOff * 60 * 60 * 1000);
+      const from = new Date(end - JANELA_H * 60 * 60 * 1000);
       const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+      const totalHoras = Math.min(horas, 24);
+      const proximaJanelaOff = janelaOff + JANELA_H < totalHoras ? janelaOff + JANELA_H : null;
 
       // Buscar TODOS os MacroEventos da empresa de uma só vez (para checar duplicatas em memória)
       const dataFromStr = from.toISOString().split('T')[0];
