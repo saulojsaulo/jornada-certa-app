@@ -111,21 +111,33 @@ export default function AdminEmpresas() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {[
-            { label: 'Total de Empresas', value: empresas.length, icon: Building2, color: 'text-emerald-600' },
-            { label: 'Empresas Ativas', value: empresas.filter(e => e.ativa !== false).length, icon: CheckCircle, color: 'text-green-600' },
-            { label: 'Planos Premium', value: empresas.filter(e => e.plano_assinatura === 'premium').length, icon: Star, color: 'text-amber-600' },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <Card key={label}>
-              <CardContent className="pt-6 flex items-center gap-4">
-                <Icon className={`w-8 h-8 ${color}`} />
-                <div>
-                  <div className="text-2xl font-bold text-slate-800">{value}</div>
-                  <div className="text-sm text-slate-500">{label}</div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <Card>
+            <CardContent className="pt-6 flex items-center gap-4">
+              <Building2 className="w-8 h-8 text-emerald-600" />
+              <div>
+                <div className="text-2xl font-bold text-slate-800">{empresas.length}</div>
+                <div className="text-sm text-slate-500">Total de Empresas</div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 flex items-center gap-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+              <div>
+                <div className="text-2xl font-bold text-slate-800">{empresas.filter(e => e.ativa !== false).length}</div>
+                <div className="text-sm text-slate-500">Empresas Ativas</div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 flex items-center gap-4">
+              <Star className="w-8 h-8 text-amber-600" />
+              <div>
+                <div className="text-2xl font-bold text-slate-800">{empresas.filter(e => e.plano_assinatura === 'premium').length}</div>
+                <div className="text-sm text-slate-500">Planos Premium</div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Lista de Empresas */}
