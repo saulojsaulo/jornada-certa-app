@@ -109,7 +109,8 @@ Deno.serve(async (req) => {
           }
 
           for (const veiApi of veiculosApi) {
-            const vehicleCode = veiApi.code || veiApi.id;
+            // Também usa o campo "Code" do veículo nas URLs (mesmo padrão da conta)
+          const vehicleCode = veiApi.Code || veiApi.code || veiApi.id;
             if (!vehicleCode) continue;
 
             // Encontrar o veículo correspondente no sistema pelo nome/placa/frota
