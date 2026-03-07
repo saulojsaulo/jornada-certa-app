@@ -132,9 +132,9 @@ Deno.serve(async (req) => {
           const vehicleCode = veiApi.Code || veiApi.code;
           if (!vehicleCode) continue;
 
-          const placa = (veiApi.Plate  || veiApi.plate  || veiApi.placa  || '').toUpperCase().trim();
-          const frota = (veiApi.Fleet  || veiApi.fleet  || veiApi.frota  || String(vehicleCode)).toUpperCase().trim();
-          const nome  = veiApi.Name   || veiApi.name   || veiApi.description || placa || frota || String(vehicleCode);
+          const placa = (veiApi.LicensePlate || veiApi.Plate || veiApi.plate || veiApi.placa || '').toUpperCase().trim();
+          const frota = (veiApi.Fleet || veiApi.fleet || veiApi.frota || String(vehicleCode)).toUpperCase().trim();
+          const nome  = veiApi.Name || veiApi.name || placa || frota || String(vehicleCode);
           let veiculo = veiculoMapPlaca[placa] || veiculoMapFrota[frota];
 
           // Criar veículo automaticamente se não existir no sistema
