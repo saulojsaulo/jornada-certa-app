@@ -2,7 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 const MACROS_VALIDAS = new Set([1, 2, 3, 4, 5, 6, 9, 10]);
-const LOTE_SIZE = 30; // veículos processados por execução
+const LOTE_SIZE = 80; // veículos processados por execução
 
 function autotracHeaders(usuario, senha, apiKey) {
   return {
