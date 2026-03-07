@@ -12,6 +12,7 @@ import { ptBR } from 'date-fns/locale';
 import ImportXLSX from './ImportXLSX';
 import StatsCards from './StatsCards';
 import VehicleGrid from './VehicleGrid';
+import SincronizarAutotrac from './SincronizarAutotrac';
 
 export default function ControleTab({ onImportLogUpdate }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
