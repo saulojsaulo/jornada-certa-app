@@ -53,6 +53,7 @@ import Jornada from './pages/Jornada';
 import LimpezaDuplicatas from './pages/LimpezaDuplicatas';
 import AdminEmpresas from './pages/AdminEmpresas';
 import AdminUsuarios from './pages/AdminUsuarios';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
@@ -67,4 +68,5 @@ export const PAGES = {
 export const pagesConfig = {
     mainPage: "Jornada",
     Pages: PAGES,
+    Layout: __Layout,
 };
