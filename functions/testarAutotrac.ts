@@ -35,12 +35,10 @@ Deno.serve(async (req) => {
   const v = veiculos[0];
   const vehicleCode = v?.numero_frota || '704792';
 
-  // Testar com os primeiros 3 veículos para achar algum com dados
-  const veiculosCodes = veiculos.slice(0, 3).map(v => v.numero_frota).filter(Boolean);
-
-  const endpoints = veiculosCodes.map(code =>
-    `/accounts/${accountCode}/vehicles/${code}/returnmessages?startDate=${sd}&endDate=${ed}&_limit=5`
-  );
+  // Comparar veículos da API vs banco
+  const endpoints = [
+    `/accounts/${accountCode}/vehicles?_limit=10`,
+  ];
 
   const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 
