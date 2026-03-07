@@ -114,8 +114,8 @@ Deno.serve(async (req) => {
             if (!vehicleCode) continue;
 
             // Encontrar o veículo correspondente no sistema pelo nome/placa/frota
-            const placa = (veiApi.plate || veiApi.placa || '').toUpperCase().trim();
-            const frota = (veiApi.fleetNumber || veiApi.frota || veiApi.fleet || String(vehicleCode)).toUpperCase().trim();
+            const placa = (veiApi.Plate || veiApi.plate || veiApi.placa || '').toUpperCase().trim();
+            const frota = (veiApi.FleetNumber || veiApi.fleetNumber || veiApi.frota || veiApi.fleet || String(vehicleCode)).toUpperCase().trim();
             const veiculo = veiculoMapPlaca[placa] || veiculoMapFrota[frota];
 
             if (!veiculo) {
