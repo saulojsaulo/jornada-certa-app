@@ -134,9 +134,22 @@ Deno.serve(async (req) => {
 
           const placa = (veiApi.Plate  || veiApi.plate  || veiApi.placa  || '').toUpperCase().trim();
           const frota = (veiApi.Fleet  || veiApi.fleet  || veiApi.frota  || String(vehicleCode)).toUpperCase().trim();
-          const veiculo = veiculoMapPlaca[placa] || veiculoMapFrota[frota];
+          const nome  = veiApi.Name   || veiApi.name   || veiApi.description || placa || frota || String(vehicleCode);
+          let veiculo = veiculoMapPlaca[placa] || veiculoMapFrota[frota];
 
-          if (!veiculo) { skippedCount++; continue; }
+          // Criar veículo automaticamente se não existir no sistema
+          if (!veiculo) {
+            veiculo = await db.entities.Veiculo.create({
+              nome_veiculo: nome,
+              placa: placa || undefined,
+              numero_frota: frota || undefined,
+              ativo: true,
+              company_id: empresa.id,
+            });
+            if (placa)  veiculoMapPlaca[placa]  = veiculo;
+            if (frota)  veiculoMapFrota[frota]  = veiculo;
+            empresaLog.steps.push(`Veículo criado automaticamente: ${nome} (placa=${placa}, frota=${frota})`);
+          }
 
           // 4. Buscar returnmessages (macros) do veículo
           let mensagens = [];
