@@ -20,7 +20,7 @@ const PLANO_COLORS = {
   premium: 'bg-amber-100 text-amber-700',
 };
 
-const EMPTY_FORM = { nome: '', contato_email: '', plano_assinatura: 'free', ativa: true };
+const EMPTY_FORM = { nome: '', contato_email: '', plano_assinatura: 'free', ativa: true, provedora_rastreamento: null, api_config: {} };
 
 export default function AdminEmpresas() {
   const queryClient = useQueryClient();
