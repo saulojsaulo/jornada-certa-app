@@ -85,13 +85,11 @@ Deno.serve(async (req) => {
       for (const account of contas) {
         const accountCode = account.Code;
 
-        // 3. Buscar todos os veículos com paginação
-        let page = 1;
-        while (true) {
-          const pageRaw = await autotracGet(`${BASE_URL}/accounts/${accountCode}/vehicles?_limit=100&_page=${page}`, headers);
-          const pageData = Array.isArray(pageRaw) ? pageRaw : (pageRaw.Data || []);
-          if (!pageData.length) break;
+        // 3. Buscar todos os veículos da conta de uma vez
+        const veiculosRaw = await autotracGet(`${BASE_URL}/accounts/${accountCode}/vehicles?_limit=500`, headers);
+        const pageData = Array.isArray(veiculosRaw) ? veiculosRaw : (veiculosRaw.Data || []);
 
+        for (true; true; ) { // bloco único — não é loop real, break logo abaixo
           for (const veiApi of pageData) {
             const vehicleCode = String(veiApi.Code || '');
             if (!vehicleCode) continue;
