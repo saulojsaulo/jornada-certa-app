@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     try {
       // 2. Buscar todas as contas da companhia
       const accountsRaw = await autotracGet(`${BASE_URL}/accounts?_limit=500`, headers);
-      const accountList = Array.isArray(accountsRaw) ? accountsRaw : [];
+      const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || accountsRaw.data || accountsRaw.items || []);
       empresaLog.steps.push(`/accounts retornou ${accountList.length} contas`);
       empresaLog.accountsSample = accountList.slice(0, 3).map(a => ({ Code: a.Code, Number: a.Number, Name: a.Name }));
 
