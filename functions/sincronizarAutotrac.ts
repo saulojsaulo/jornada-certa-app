@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
           // 3. Buscar veículos ativos da conta
           let veiculosApi = [];
           try {
-            const vRes = await autotracGet(`${BASE_URL}/accounts/${accountCode}/vehicles`, headers);
+            const vRes = await autotracGet(`${BASE_URL}/accounts/${accountCode}/vehicles?_limit=500`, headers);
             veiculosApi = Array.isArray(vRes) ? vRes : (vRes.data || vRes.items || []);
           } catch (e) {
             results.push({ empresa: empresa.nome, account: accountCode, error: `Erro ao buscar veículos: ${e.message}` });
