@@ -20,27 +20,42 @@ export default function SincronizarAutotrac({ onSyncComplete }) {
 
       const criados = veicResult?.criados || 0;
 
-      // Passo 2: sincronizar macros em lotes
-      setInfo(`Veículos: ${criados} novos. Buscando macros...`);
+      // Passo 2: sincronizar macros — itera por janela de tempo (1h por vez) e por lote de veículos
+      const HORAS_TOTAL = 24;
+      setInfo(`Veículos: ${criados} novos. Buscando macros das últimas ${HORAS_TOTAL}h...`);
 
-      let offset = 0;
       let totalSaved = 0;
-      let totalProcessados = 0;
+      let janelaOffset = 0; // começa da hora mais recente
 
-      while (true) {
-        const macRes = await base44.functions.invoke('sincronizarMacros', { offset, horas: 24 });
-        const macResult = macRes.data?.results?.[0];
+      while (janelaOffset !== null && janelaOffset < HORAS_TOTAL) {
+        // Para cada janela de 1h, iterar todos os lotes de veículos
+        let offset = 0;
+        let totalVeiculos = 0;
 
-        if (macResult?.error) throw new Error(macResult.error);
+        while (true) {
+          const macRes = await base44.functions.invoke('sincronizarMacros', {
+            offset,
+            horas: HORAS_TOTAL,
+            janela_offset: janelaOffset,
+          });
+          const macResult = macRes.data?.results?.[0];
 
-        totalSaved += macResult?.saved || 0;
-        totalProcessados += macResult?.processados || 0;
-        const total = macResult?.total_veiculos || 0;
+          if (macResult?.error) throw new Error(macResult.error);
 
-        setInfo(`Macros: ${totalProcessados}/${total} veículos processados, ${totalSaved} eventos salvos...`);
+          totalSaved += macResult?.saved || 0;
+          totalVeiculos = macResult?.total_veiculos || 0;
 
-        if (!macResult?.proximo_offset) break;
-        offset = macResult.proximo_offset;
+          const horaInicio = HORAS_TOTAL - janelaOffset - 1;
+          const horaFim = HORAS_TOTAL - janelaOffset;
+          setInfo(`Janela ${horaInicio}-${horaFim}h atrás: ${macResult?.processados}/${totalVeiculos} veículos, ${totalSaved} macros salvas...`);
+
+          if (!macResult?.proximo_offset) {
+            // Avança para próxima janela de tempo
+            janelaOffset = macResult?.proxima_janela_offset ?? null;
+            break;
+          }
+          offset = macResult.proximo_offset;
+        }
       }
 
       setStatus('done');
