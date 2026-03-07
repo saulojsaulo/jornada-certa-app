@@ -35,18 +35,12 @@ Deno.serve(async (req) => {
   const v = veiculos[0];
   const vehicleCode = v?.numero_frota || '704792';
 
-  const endpoints = [
-    // Testar mensagens por veículo (returnmessages)
-    `/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${sd}&endDate=${ed}&_limit=10`,
-    // Testar macros diretamente
-    `/accounts/${accountCode}/vehicles/${vehicleCode}/macros?startDate=${sd}&endDate=${ed}&_limit=10`,
-    // Testar events
-    `/accounts/${accountCode}/vehicles/${vehicleCode}/events?startDate=${sd}&endDate=${ed}&_limit=10`,
-    // Testar messages (sem "return")
-    `/accounts/${accountCode}/vehicles/${vehicleCode}/messages?startDate=${sd}&endDate=${ed}&_limit=10`,
-    // Testar positions
-    `/accounts/${accountCode}/vehicles/${vehicleCode}/positions?startDate=${sd}&endDate=${ed}&_limit=10`,
-  ];
+  // Testar com os primeiros 3 veículos para achar algum com dados
+  const veiculosCodes = veiculos.slice(0, 3).map(v => v.numero_frota).filter(Boolean);
+
+  const endpoints = veiculosCodes.map(code =>
+    `/accounts/${accountCode}/vehicles/${code}/returnmessages?startDate=${sd}&endDate=${ed}&_limit=5`
+  );
 
   const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 
