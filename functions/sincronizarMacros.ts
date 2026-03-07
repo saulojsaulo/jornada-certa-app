@@ -16,7 +16,7 @@ function autotracHeaders(usuario, senha, apiKey) {
 
 async function autotracGet(url, headers) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 25000);
   let res;
   try {
     res = await fetch(url, { headers, signal: controller.signal });
