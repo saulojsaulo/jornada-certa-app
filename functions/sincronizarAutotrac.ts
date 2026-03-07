@@ -6,10 +6,12 @@ const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 const MACROS_VALIDAS = new Set([1, 2, 3, 4, 5, 6, 9, 10]);
 
 function autotracHeaders(usuario, senha, apiKey) {
+  // Autenticação conforme documentação Autotrac:
+  // Authorization: Basic usuario@companhia:senha (sem btoa sobre o par — a palavra "Basic" precede as credenciais raw)
+  // Ocp-Apim-Subscription-Key: chave gerada pelo Home Office
   return {
-    'Authorization': `Basic ${btoa(`${usuario}:${senha}`)}`,
-    'x-api-key': apiKey,
-    'Accept': 'application/json',
+    'Authorization': `Basic ${usuario}:${senha}`,
+    'Ocp-Apim-Subscription-Key': apiKey,
     'Content-Type': 'application/json',
     'User-Agent': 'PostmanRuntime/7.37.0',
     'Accept-Encoding': 'gzip, deflate, br',
