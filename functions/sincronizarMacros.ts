@@ -101,31 +101,37 @@ Deno.serve(async (req) => {
 
       // Buscar TODOS os MacroEventos da empresa de uma só vez (para checar duplicatas em memória)
       const dataFromStr = from.toISOString().split('T')[0];
-      const macrosEmpresa = await db.entities.MacroEvento.filter({ company_id: empresa.id, data_jornada: dataFromStr });
 
-      // Indexar por veiculo_id para lookup rápido
+      // Buscar mensagens de TODOS os veículos do lote de uma vez e MacroEventos em paralelo
+      const [macrosEmpresa, todasMensagens] = await Promise.all([
+        db.entities.MacroEvento.filter({ company_id: empresa.id, data_jornada: dataFromStr }),
+        autotracGet(
+          `${BASE_URL}/accounts/${accountCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5000`,
+          headers
+        ).then(r => Array.isArray(r) ? r : (r.Data || r.data || [])).catch(() => []),
+      ]);
+
+      // Indexar mensagens por vehicleCode (numero_frota)
+      const mensagensPorFrota = {};
+      for (const msg of todasMensagens) {
+        const code = String(msg.VehicleCode || msg.vehicleCode || msg.Vehicle || msg.vehicle || '').trim();
+        if (!code) continue;
+        if (!mensagensPorFrota[code]) mensagensPorFrota[code] = [];
+        mensagensPorFrota[code].push(msg);
+      }
+
+      // Montar estrutura de mensagens por veículo do lote
+      const mensagensPorVeiculo = lote.map(veiculo => ({
+        veiculo,
+        mensagens: veiculo.numero_frota ? (mensagensPorFrota[String(veiculo.numero_frota).trim()] || []) : [],
+      }));
+
+      // Indexar MacroEventos por veiculo_id para lookup rápido
       const macrosPorVeiculo = {};
       for (const m of macrosEmpresa) {
         if (!macrosPorVeiculo[m.veiculo_id]) macrosPorVeiculo[m.veiculo_id] = [];
         macrosPorVeiculo[m.veiculo_id].push(m);
       }
-
-      // Buscar mensagens Autotrac para o lote em paralelo
-      const mensagensPorVeiculo = await Promise.all(
-        lote.map(async (veiculo) => {
-          const vehicleCode = veiculo.numero_frota;
-          if (!vehicleCode) return { veiculo, mensagens: [] };
-          try {
-            const r = await autotracGet(
-              `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
-              headers
-            );
-            return { veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) };
-          } catch {
-            return { veiculo, mensagens: [] };
-          }
-        })
-      );
 
       let savedCount = 0;
       const novosEventos = [];
