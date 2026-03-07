@@ -51,7 +51,7 @@ export default function AdminUsuarios() {
   );
 
   const handleUpdateUser = (userId, field, value) => {
-    base44.asServiceRole?.entities?.User?.update(userId, { [field]: value })
+    base44.entities.User.update(userId, { [field]: value })
       .then(() => queryClient.invalidateQueries({ queryKey: ['usuarios'] }))
       .catch(console.error);
   };
