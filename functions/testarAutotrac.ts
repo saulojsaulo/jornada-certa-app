@@ -22,10 +22,30 @@ Deno.serve(async (req) => {
 
   const results = {};
 
+  // Usar uma data recente com hora atual
+  const now = new Date();
+  const from = new Date(now - 8 * 60 * 60 * 1000); // últimas 8h
+  const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+  const sd = encodeURIComponent(fmt(from));
+  const ed = encodeURIComponent(fmt(now));
+
+  // Pegar um veículo real do banco para testar
+  const db = base44.asServiceRole;
+  const veiculos = await db.entities.Veiculo.filter({ company_id: 'xKgA8wRjO4mN5tKPDnRy' });
+  const v = veiculos[0];
+  const vehicleCode = v?.numero_frota || '704792';
+
   const endpoints = [
-    `/accounts/${accountCode}/vehicles?_limit=500`,
-    `/accounts/${accountCode}/vehicles?_limit=1000`,
-    `/accounts/${accountCode}/vehicles?_limit=300`,
+    // Testar mensagens por veículo (returnmessages)
+    `/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${sd}&endDate=${ed}&_limit=10`,
+    // Testar macros diretamente
+    `/accounts/${accountCode}/vehicles/${vehicleCode}/macros?startDate=${sd}&endDate=${ed}&_limit=10`,
+    // Testar events
+    `/accounts/${accountCode}/vehicles/${vehicleCode}/events?startDate=${sd}&endDate=${ed}&_limit=10`,
+    // Testar messages (sem "return")
+    `/accounts/${accountCode}/vehicles/${vehicleCode}/messages?startDate=${sd}&endDate=${ed}&_limit=10`,
+    // Testar positions
+    `/accounts/${accountCode}/vehicles/${vehicleCode}/positions?startDate=${sd}&endDate=${ed}&_limit=10`,
   ];
 
   const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
