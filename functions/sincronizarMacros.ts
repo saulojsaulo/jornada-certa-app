@@ -99,12 +99,14 @@ Deno.serve(async (req) => {
       const from = new Date(now - Math.min(horas, 72) * 60 * 60 * 1000);
       const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
-      // Buscar mensagens Autotrac em paralelo para todo o lote (sem busca de duplicatas por veículo)
+      // Datas da janela de busca (para filtrar duplicatas só nesse período)
+      const dataFromStr = from.toISOString().split('T')[0];
+
       const loteResultados = await Promise.all(
         lote.map(async (veiculo) => {
           const vehicleCode = veiculo.numero_frota;
           const [macrosDb, mensagensApi] = await Promise.all([
-            db.entities.MacroEvento.filter({ veiculo_id: veiculo.id }),
+            db.entities.MacroEvento.filter({ veiculo_id: veiculo.id, data_jornada: dataFromStr }),
             vehicleCode
               ? autotracGet(
                   `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
