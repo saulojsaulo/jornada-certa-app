@@ -61,19 +61,10 @@ export default function Jornada() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 mx-auto">
-            <TabsTrigger value="controle" className="gap-2">
-              <Truck className="w-4 h-4" />
-              Controle
-            </TabsTrigger>
-            <TabsTrigger value="ranking" className="gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Ranking
-            </TabsTrigger>
-            <TabsTrigger value="filtro" className="gap-2">
-              <UserSearch className="w-4 h-4" />
-              Filtro de Motorista
-            </TabsTrigger>
+          <TabsList className="hidden">
+            <TabsTrigger value="controle" />
+            <TabsTrigger value="ranking" />
+            <TabsTrigger value="filtro" />
           </TabsList>
 
           <TabsContent value="controle">
