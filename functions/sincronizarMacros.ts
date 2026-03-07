@@ -42,8 +42,12 @@ Deno.serve(async (req) => {
 
   // Parâmetro opcional: offset de veículos para processar em lotes via automação
   const body = await req.json().catch(() => ({}));
-  const offset = Number(body.offset || 0);
-  const horas  = Number(body.horas  || 24); // janela de busca em horas (max 72)
+  const offset    = Number(body.offset || 0);
+  const horas     = Number(body.horas  || 24); // janela total desejada
+  // A API Autotrac é muito lenta com janelas > 1h, por isso usamos janela de 1h por chamada
+  // e o frontend/automação deve chamar em sequência passando janela_offset
+  const JANELA_H  = 1; // horas por fatia de API
+  const janelaOff = Number(body.janela_offset || 0); // quantas horas atrás começa esta fatia
 
   const db = base44.asServiceRole;
 
