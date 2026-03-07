@@ -210,8 +210,14 @@ export default function AdminEmpresas() {
                         </Button>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                      <p className="text-xs text-slate-400 font-mono break-all">ID: {empresa.id}</p>
+                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <p className="text-xs text-slate-400 font-mono truncate">ID: {empresa.id}</p>
+                      {empresa.provedora_rastreamento && (
+                        <Badge className="bg-emerald-50 text-emerald-700 text-xs gap-1">
+                          <Wifi className="w-3 h-3" />
+                          {empresa.provedora_rastreamento}
+                        </Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
