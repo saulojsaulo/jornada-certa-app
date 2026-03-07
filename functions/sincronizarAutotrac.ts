@@ -140,8 +140,9 @@ Deno.serve(async (req) => {
             for (const msg of mensagens) {
               // Extrair número de macro e data do retorno da Autotrac
               // Ajuste os campos conforme o contrato real da API (ex: msg.macro, msg.macroNumber, msg.type)
-              const numeroMacro = Number(msg.macro || msg.macroNumber || msg.macroCode || msg.type || 0);
-              const dataCriacao = msg.dateTime || msg.date || msg.timestamp || msg.dataHora;
+              // Campos com PascalCase (padrão Autotrac) e fallbacks lowercase
+              const numeroMacro = Number(msg.Macro || msg.MacroNumber || msg.MacroCode || msg.macro || msg.macroNumber || msg.type || 0);
+              const dataCriacao = msg.DateTime || msg.Date || msg.Timestamp || msg.dateTime || msg.date || msg.dataHora;
 
               if (!MACROS_VALIDAS.has(numeroMacro) || !dataCriacao) continue;
 
