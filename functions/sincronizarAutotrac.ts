@@ -118,8 +118,17 @@ Deno.serve(async (req) => {
         empresaLog.steps.push(`Processando conta Code=${accountCode} Number=${account.Number} Name=${account.Name}`);
 
         // 3. Buscar veículos ativos da conta
-        const veiculosRaw = await autotracGet(`${BASE_URL}/accounts/${accountCode}/vehicles`, headers);
-        const veiculosApi = Array.isArray(veiculosRaw) ? veiculosRaw : (veiculosRaw.Data || veiculosRaw.data || veiculosRaw.items || []);
+        // Buscar todos os veículos com paginação (_page/_limit ou _offset/_limit)
+        let veiculosApi = [];
+        let page = 1;
+        while (true) {
+          const pageRaw = await autotracGet(`${BASE_URL}/accounts/${accountCode}/vehicles?_limit=100&_page=${page}`, headers);
+          const pageData = Array.isArray(pageRaw) ? pageRaw : (pageRaw.Data || pageRaw.data || pageRaw.items || []);
+          if (!pageData.length) break;
+          veiculosApi = veiculosApi.concat(pageData);
+          if (pageData.length < 100) break; // última página
+          page++;
+        }
         empresaLog.steps.push(`Veículos na Autotrac (conta ${accountCode}): ${veiculosApi.length}`);
         empresaLog.vehiclesSample = veiculosApi.slice(0, 3);
 
