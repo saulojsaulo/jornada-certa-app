@@ -62,5 +62,25 @@ Deno.serve(async (req) => {
     }
   }
 
-  return Response.json({ results });
+  // Comparar
+  let veiculosApi = [];
+  try {
+    const raw = JSON.parse(Object.values(results)[0]?.sample ? JSON.stringify(Object.values(results)[0].sample) : '{}');
+    veiculosApi = raw.Data || [];
+  } catch {}
+
+  const codesApi = new Set(veiculosApi.map(v => String(v.Code)));
+  const codesBanco = veiculos.map(v => v.numero_frota).filter(Boolean);
+  const noBancoMasNaoNaApi = codesBanco.filter(c => !codesApi.has(c));
+  const naApiMasNaoNoBanco = [...codesApi].filter(c => !codesBanco.includes(c)).slice(0, 10);
+
+  return Response.json({
+    total_api: veiculosApi.length,
+    total_banco: veiculos.length,
+    sample_api_codes: [...codesApi].slice(0, 5),
+    sample_banco_codes: codesBanco.slice(0, 5),
+    no_banco_mas_nao_na_api: noBancoMasNaoNaApi.slice(0, 10),
+    na_api_mas_nao_no_banco: naApiMasNaoNoBanco,
+    results
+  });
 });
