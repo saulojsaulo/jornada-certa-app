@@ -156,7 +156,10 @@ export default function ControleTab({ onImportLogUpdate }) {
     <div className="space-y-6">
       {/* Controles */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={onImportLogUpdate} />
+        <div className="flex flex-wrap gap-2">
+          <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={onImportLogUpdate} />
+          <SincronizarAutotrac onSyncComplete={handleImportComplete} />
+        </div>
         
         <Popover>
           <PopoverTrigger asChild>
