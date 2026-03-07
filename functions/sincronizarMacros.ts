@@ -99,39 +99,32 @@ Deno.serve(async (req) => {
       const from = new Date(now - Math.min(horas, 72) * 60 * 60 * 1000);
       const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
-      // Carregar macros já existentes do lote (apenas período relevante) para checar duplicatas em memória
-      const loteIds = lote.map(v => v.id);
-      // Buscar macros dos últimos 3 dias para os veículos do lote sequencialmente
-      const macrosExistentes = [];
-      for (const vid of loteIds) {
-        const ms = await db.entities.MacroEvento.filter({ veiculo_id: vid });
-        macrosExistentes.push(...ms);
-      }
-      const manualSet = new Set();
-      for (const m of macrosExistentes) {
-        if (m.editado_manualmente) manualSet.add(`${m.veiculo_id}-${m.numero_macro}-${m.jornada_id}`);
-      }
+      // Buscar macros existentes + mensagens Autotrac em paralelo para cada veículo do lote
+      const loteResultados = await Promise.all(
+        lote.map(async (veiculo) => {
+          const vehicleCode = veiculo.numero_frota;
+          const [macrosDb, mensagensApi] = await Promise.all([
+            db.entities.MacroEvento.filter({ veiculo_id: veiculo.id }),
+            vehicleCode
+              ? autotracGet(
+                  `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
+                  headers
+                ).then(r => Array.isArray(r) ? r : (r.Data || r.data || [])).catch(() => [])
+              : Promise.resolve([]),
+          ]);
+          return { veiculo, macrosDb, mensagensApi };
+        })
+      );
 
       let savedCount = 0;
       const novosEventos = [];
 
-      // Buscar mensagens sequencialmente (sem paralelo) para não estourar timeout
-      for (const veiculo of lote) {
-        const vehicleCode = veiculo.numero_frota;
-        if (!vehicleCode) continue;
+      for (const { veiculo, macrosDb, mensagensApi } of loteResultados) {
+        const manualKeys = new Set(
+          macrosDb.filter(m => m.editado_manualmente).map(m => `${m.numero_macro}-${m.jornada_id}`)
+        );
 
-        let mensagens = [];
-        try {
-          const mRes = await autotracGet(
-            `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
-            headers
-          );
-          mensagens = Array.isArray(mRes) ? mRes : (mRes.Data || mRes.data || []);
-        } catch {
-          continue;
-        }
-
-        for (const msg of mensagens) {
+        for (const msg of mensagensApi) {
           const numeroMacro = Number(msg.Macro || msg.MacroNumber || msg.macro || 0);
           const dataCriacao = msg.DateTime || msg.Date || msg.dateTime || msg.date;
 
@@ -142,17 +135,15 @@ Deno.serve(async (req) => {
 
           const dataStr   = dataEvento.toISOString().split('T')[0];
           const jornadaId = `${veiculo.id}-${dataStr}`;
-          const key       = `${veiculo.id}-${numeroMacro}-${jornadaId}`;
 
-          if (manualSet.has(key)) continue;
+          if (manualKeys.has(`${numeroMacro}-${jornadaId}`)) continue;
 
-          // Tolerância de 2 min
           const TOL_MS = 2 * 60 * 1000;
-          let duplicata = false;
-          for (const m of macrosExistentes) {
-            if (m.veiculo_id !== veiculo.id || m.numero_macro !== numeroMacro || m.jornada_id !== jornadaId) continue;
-            if (Math.abs(new Date(m.data_criacao) - dataEvento) < TOL_MS) { duplicata = true; break; }
-          }
+          const duplicata = macrosDb.some(m =>
+            m.numero_macro === numeroMacro &&
+            m.jornada_id === jornadaId &&
+            Math.abs(new Date(m.data_criacao) - dataEvento) < TOL_MS
+          );
           if (duplicata) continue;
 
           novosEventos.push({
@@ -169,7 +160,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Salvar todos de uma vez com bulkCreate
       if (novosEventos.length) {
         await db.entities.MacroEvento.bulkCreate(novosEventos);
       }
