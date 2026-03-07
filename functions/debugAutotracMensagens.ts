@@ -63,21 +63,19 @@ Deno.serve(async (req) => {
   const db = base44.asServiceRole;
   const veiculos = await db.entities.Veiculo.list('-created_date', 5);
   
+  // Testar apenas 1 veículo com janela de 72h
+  const v = veiculos.find(v => v.numero_frota);
   const from72 = new Date(now - 72 * 60 * 60 * 1000);
   
-  const veicResults = await Promise.all(
-    veiculos.filter(v => v.numero_frota).map(async (v) => {
-      const r = await autotracGet(
-        `${BASE_URL}/accounts/${accountCode}/vehicles/${v.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmt(from72))}&endDate=${encodeURIComponent(fmt(now))}&_limit=20`,
-        headers
-      );
-      return { numero_frota: v.numero_frota, nome: v.nome_veiculo, result: r };
-    })
+  const r = await autotracGet(
+    `${BASE_URL}/accounts/${accountCode}/vehicles/${v.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmt(from72))}&endDate=${encodeURIComponent(fmt(now))}&_limit=50`,
+    headers
   );
 
   return Response.json({
     accountCode,
     periodo: { from: fmt(from72), to: fmt(now) },
-    veiculos_testados: veicResults,
+    veiculo: { numero_frota: v.numero_frota, nome: v.nome_veiculo },
+    result: r,
   });
 });
