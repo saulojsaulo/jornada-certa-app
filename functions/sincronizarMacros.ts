@@ -99,12 +99,17 @@ Deno.serve(async (req) => {
       const from = new Date(now - Math.min(horas, 72) * 60 * 60 * 1000);
       const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
-      // Buscar macros existentes + mensagens Autotrac em paralelo para cada veículo do lote
+      // Buscar macros existentes (apenas datas relevantes) + mensagens Autotrac em paralelo
+      const datasRelevantes = [];
+      for (let d = new Date(from); d <= now; d = new Date(d.getTime() + 86400000)) {
+        datasRelevantes.push(d.toISOString().split('T')[0]);
+      }
+
       const loteResultados = await Promise.all(
         lote.map(async (veiculo) => {
           const vehicleCode = veiculo.numero_frota;
           const [macrosDb, mensagensApi] = await Promise.all([
-            db.entities.MacroEvento.filter({ veiculo_id: veiculo.id }),
+            db.entities.MacroEvento.filter({ veiculo_id: veiculo.id, data_jornada: datasRelevantes[0] }),
             vehicleCode
               ? autotracGet(
                   `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
