@@ -76,8 +76,8 @@ Deno.serve(async (req) => {
       let errorMsg = null;
 
       try {
-        // 2. Buscar contas ativas da companhia
-        const accounts = await autotracGet(`${BASE_URL}/accounts`, headers);
+        // 2. Buscar contas ativas da companhia (_limit conforme documentação Autotrac)
+        const accounts = await autotracGet(`${BASE_URL}/accounts?_limit=500`, headers);
         const accountList = Array.isArray(accounts) ? accounts : (accounts.data || accounts.items || [accounts]);
 
         // Buscar veículos cadastrados no sistema para mapear identificadores -> veiculo
