@@ -251,6 +251,14 @@ export default function AdminEmpresas() {
               <Switch checked={form.ativa} onCheckedChange={v => setForm(f => ({ ...f, ativa: v }))} />
               <Label>Empresa ativa</Label>
             </div>
+
+            <ApiRastreamentoForm
+              provedora={form.provedora_rastreamento}
+              onChangeProvedora={v => setForm(f => ({ ...f, provedora_rastreamento: v }))}
+              apiConfig={form.api_config}
+              onChangeApiConfig={v => setForm(f => ({ ...f, api_config: v }))}
+            />
+
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={closeDialog}>Cancelar</Button>
               <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
