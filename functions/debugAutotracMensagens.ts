@@ -63,19 +63,35 @@ Deno.serve(async (req) => {
   const db = base44.asServiceRole;
   const veiculos = await db.entities.Veiculo.list('-created_date', 5);
   
-  // Testar apenas 1 veículo com janela de 1h
   const v = veiculos.find(v => v.numero_frota);
-  const from1h = new Date(now - 1 * 60 * 60 * 1000);
-  
-  const r = await autotracGet(
-    `${BASE_URL}/accounts/${accountCode}/vehicles/${v.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmt(from1h))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`,
-    headers
-  );
+
+  // Testar múltiplas janelas para descobrir qual o formato correto de data da API
+  const fmtLocal = (d) => {
+    // Horário de Brasília (UTC-3)
+    const local = new Date(d.getTime() - 3 * 60 * 60 * 1000);
+    return local.toISOString().slice(0, 19).replace('T', ' ');
+  };
+
+  const from24hUTC = new Date(now - 24 * 60 * 60 * 1000);
+  const from24hLocal = new Date(now - 24 * 60 * 60 * 1000);
+
+  const [r1, r2] = await Promise.all([
+    // Teste 1: datas em UTC
+    autotracGet(
+      `${BASE_URL}/accounts/${accountCode}/vehicles/${v.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmt(from24hUTC))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`,
+      headers
+    ),
+    // Teste 2: datas em horário local (Brasília, UTC-3)
+    autotracGet(
+      `${BASE_URL}/accounts/${accountCode}/vehicles/${v.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmtLocal(from24hLocal))}&endDate=${encodeURIComponent(fmtLocal(now))}&_limit=10`,
+      headers
+    ),
+  ]);
 
   return Response.json({
     accountCode,
-    periodo: { from: fmt(from1h), to: fmt(now) },
     veiculo: { numero_frota: v.numero_frota, nome: v.nome_veiculo },
-    result: r,
+    teste_utc: { periodo: `${fmt(from24hUTC)} -> ${fmt(now)}`, result: r1 },
+    teste_brasilia: { periodo: `${fmtLocal(from24hLocal)} -> ${fmtLocal(now)}`, result: r2 },
   });
 });
