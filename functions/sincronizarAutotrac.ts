@@ -2,12 +2,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 
-// Números de macro válidos que o sistema reconhece
+// Números de macro válidos que o sistema reconhece (1-6, 9, 10)
 const MACROS_VALIDAS = new Set([1, 2, 3, 4, 5, 6, 9, 10]);
 
 function autotracHeaders(usuario, senha, apiKey) {
-  // Autenticação conforme documentação Autotrac:
-  // Authorization: Basic usuario@companhia:senha (sem btoa sobre o par — a palavra "Basic" precede as credenciais raw)
+  // Conforme documentação Autotrac:
+  // Authorization: Basic usuario@companhia:senha (credenciais raw, sem btoa)
   // Ocp-Apim-Subscription-Key: chave gerada pelo Home Office
   return {
     'Authorization': `Basic ${usuario}:${senha}`,
@@ -22,202 +22,178 @@ function autotracHeaders(usuario, senha, apiKey) {
 
 async function autotracGet(url, headers) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  let res;
   try {
-    const res = await fetch(url, { headers, signal: controller.signal });
+    res = await fetch(url, { headers, signal: controller.signal });
     clearTimeout(timeout);
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`GET ${url} → ${res.status}: ${txt.substring(0, 300)}`);
-    }
-    return res.json();
   } catch (e) {
     clearTimeout(timeout);
-    if (e.name === 'AbortError') throw new Error(`Timeout (15s) em GET ${url} — verifique se o IP do servidor está liberado no Home Office Autotrac`);
+    if (e.name === 'AbortError') {
+      throw new Error(`Timeout(15s): ${url} — cadastre o IP do servidor no Home Office Autotrac`);
+    }
     throw e;
   }
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`${res.status} ${res.statusText}: ${txt.substring(0, 300)}`);
+  }
+  return res.json();
 }
 
 Deno.serve(async (req) => {
+  const base44 = createClientFromRequest(req);
+
+  // Aceita chamada autenticada (admin) ou via automação agendada
   try {
-    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+  } catch {
+    // Chamada via automação — sem token de usuário, usa service role
+  }
 
-    // Aceita chamada autenticada (admin) ou via automação agendada (sem token)
+  const db = base44.asServiceRole;
+  const log = []; // log de diagnóstico retornado no response
+
+  // 1. Buscar empresas com Autotrac ativa
+  const empresas = await db.entities.Empresa.filter({ provedora_rastreamento: 'autotrac', ativa: true });
+
+  if (!empresas || empresas.length === 0) {
+    return Response.json({ message: 'Nenhuma empresa com Autotrac configurada.', synced: 0 });
+  }
+
+  const results = [];
+
+  for (const empresa of empresas) {
+    const cfg = empresa.api_config || {};
+    const usuario     = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
+    const senha       = cfg.autotrac_senha   || Deno.env.get('AUTOTRAC_PASS');
+    const apiKey      = cfg.autotrac_api_key || Deno.env.get('AUTOTRAC_API_KEY');
+    const accountNum  = String(cfg.autotrac_account || Deno.env.get('AUTOTRAC_ACCOUNT') || '');
+
+    if (!usuario || !senha || !apiKey) {
+      results.push({ empresa: empresa.nome, error: 'Credenciais incompletas.' });
+      continue;
+    }
+
+    const headers = autotracHeaders(usuario, senha, apiKey);
+    const empresaLog = { empresa: empresa.nome, usuario, accountNum, steps: [] };
+
+    let savedCount = 0;
+    let skippedCount = 0;
+
     try {
-      const user = await base44.auth.me();
-      if (user?.role !== 'admin') {
-        return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
-      }
-    } catch {
-      // Chamada via automação — sem usuário autenticado, continua como service role
-    }
+      // 2. Buscar todas as contas da companhia
+      const accountsRaw = await autotracGet(`${BASE_URL}/accounts?_limit=500`, headers);
+      const accountList = Array.isArray(accountsRaw) ? accountsRaw : [];
+      empresaLog.steps.push(`/accounts retornou ${accountList.length} contas`);
+      empresaLog.accountsSample = accountList.slice(0, 3).map(a => ({ Code: a.Code, Number: a.Number, Name: a.Name }));
 
-    const db = base44.asServiceRole;
+      // Filtrar pelo Number configurado (se informado) e capturar o Code interno
+      const contasFiltradas = accountNum
+        ? accountList.filter(a => String(a.Number) === accountNum)
+        : accountList;
 
-    // 1. Buscar todas as empresas com Autotrac ativa
-    const empresas = await db.entities.Empresa.filter({
-      provedora_rastreamento: 'autotrac',
-      ativa: true,
-    });
+      empresaLog.steps.push(`Contas após filtro pelo Number "${accountNum}": ${contasFiltradas.length}`);
 
-    if (!empresas || empresas.length === 0) {
-      return Response.json({ message: 'Nenhuma empresa com Autotrac configurada.', synced: 0 });
-    }
-
-    const results = [];
-
-    for (const empresa of empresas) {
-      const cfg = empresa.api_config || {};
-
-      // Credenciais: prioriza api_config da empresa, fallback para secrets globais
-      const usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
-      const senha   = cfg.autotrac_senha   || Deno.env.get('AUTOTRAC_PASS');
-      const apiKey  = cfg.autotrac_api_key || Deno.env.get('AUTOTRAC_API_KEY');
-
-      if (!usuario || !senha || !apiKey) {
-        results.push({ empresa: empresa.nome, error: 'Credenciais incompletas (usuário, senha ou api_key).' });
+      if (contasFiltradas.length === 0) {
+        results.push({ empresa: empresa.nome, warning: `Nenhuma conta encontrada com Number="${accountNum}"`, log: empresaLog });
         continue;
       }
 
-      const headers = autotracHeaders(usuario, senha, apiKey);
-      let savedCount = 0;
-      let skippedCount = 0;
-      let errorMsg = null;
+      // Mapa de veículos do sistema
+      const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id });
+      const veiculoMapPlaca = {};
+      const veiculoMapFrota = {};
+      for (const v of veiculosSistema) {
+        if (v.placa)        veiculoMapPlaca[v.placa.toUpperCase().trim()] = v;
+        if (v.numero_frota) veiculoMapFrota[v.numero_frota.toUpperCase().trim()] = v;
+      }
+      empresaLog.steps.push(`Veículos no sistema: ${veiculosSistema.length}`);
 
-      try {
-        // 2. Buscar contas ativas da companhia (_limit conforme documentação Autotrac)
-        // Número de conta configurado na empresa (campo autotrac_account guarda o Number)
-        const accountNumber = cfg.autotrac_account || Deno.env.get('AUTOTRAC_ACCOUNT');
+      for (const account of contasFiltradas) {
+        const accountCode = account.Code; // campo interno usado nas URLs
+        empresaLog.steps.push(`Processando conta Code=${accountCode} Number=${account.Number} Name=${account.Name}`);
 
-        const accounts = await autotracGet(`${BASE_URL}/accounts?_limit=500`, headers);
-        console.log('[Autotrac] Resposta bruta /accounts:', JSON.stringify(accounts).substring(0, 500));
-        const accountList = Array.isArray(accounts) ? accounts : (accounts.data || accounts.items || [accounts]);
-        console.log('[Autotrac] Total contas:', accountList.length, '| AUTOTRAC_ACCOUNT configurado:', accountNumber);
+        // 3. Buscar veículos ativos da conta
+        const veiculosRaw = await autotracGet(`${BASE_URL}/accounts/${accountCode}/vehicles?_limit=500`, headers);
+        const veiculosApi = Array.isArray(veiculosRaw) ? veiculosRaw : [];
+        empresaLog.steps.push(`Veículos na Autotrac (conta ${accountCode}): ${veiculosApi.length}`);
+        empresaLog.vehiclesSample = veiculosApi.slice(0, 3);
 
-        // Buscar veículos cadastrados no sistema para mapear identificadores -> veiculo
-        const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id });
-        const veiculoMapPlaca = {};
-        const veiculoMapFrota = {};
-        for (const v of veiculosSistema) {
-          if (v.placa) veiculoMapPlaca[v.placa.toUpperCase().trim()] = v;
-          if (v.numero_frota) veiculoMapFrota[v.numero_frota.toUpperCase().trim()] = v;
-        }
+        // Janela de busca: últimas 72h (máximo permitido pela API)
+        const now  = new Date();
+        const from = new Date(now - 72 * 60 * 60 * 1000);
+        const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
-        for (const account of accountList) {
-          // A API exige o campo "Code" (ID interno) nas URLs — não o "Number"
-          // Se o usuário configurou um número de conta específico, filtra apenas essa conta
-          if (accountNumber && String(account.Number) !== String(accountNumber)) continue;
+        for (const veiApi of veiculosApi) {
+          const vehicleCode = veiApi.Code || veiApi.code;
+          if (!vehicleCode) continue;
 
-          const accountCode = account.Code; // <-- campo mágico para as URLs
-          if (!accountCode) continue;
+          const placa = (veiApi.Plate  || veiApi.plate  || veiApi.placa  || '').toUpperCase().trim();
+          const frota = (veiApi.Fleet  || veiApi.fleet  || veiApi.frota  || String(vehicleCode)).toUpperCase().trim();
+          const veiculo = veiculoMapPlaca[placa] || veiculoMapFrota[frota];
 
-          // 3. Buscar veículos ativos da conta
-          let veiculosApi = [];
+          if (!veiculo) { skippedCount++; continue; }
+
+          // 4. Buscar returnmessages (macros) do veículo
+          let mensagens = [];
           try {
-            const vRes = await autotracGet(`${BASE_URL}/accounts/${accountCode}/vehicles?_limit=500`, headers);
-            veiculosApi = Array.isArray(vRes) ? vRes : (vRes.data || vRes.items || []);
-          } catch (e) {
-            results.push({ empresa: empresa.nome, account: accountCode, error: `Erro ao buscar veículos: ${e.message}` });
-            continue;
+            const mRes = await autotracGet(
+              `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
+              headers
+            );
+            mensagens = Array.isArray(mRes) ? mRes : [];
+          } catch {
+            continue; // falha num veículo não interrompe os demais
           }
 
-          for (const veiApi of veiculosApi) {
-            // Também usa o campo "Code" do veículo nas URLs (mesmo padrão da conta)
-          const vehicleCode = veiApi.Code || veiApi.code || veiApi.id;
-            if (!vehicleCode) continue;
+          for (const msg of mensagens) {
+            const numeroMacro = Number(msg.Macro || msg.MacroNumber || msg.macro || msg.macroNumber || 0);
+            const dataCriacao = msg.DateTime || msg.Date || msg.dateTime || msg.date;
 
-            // Encontrar o veículo correspondente no sistema pelo nome/placa/frota
-            const placa = (veiApi.Plate || veiApi.plate || veiApi.placa || '').toUpperCase().trim();
-            const frota = (veiApi.FleetNumber || veiApi.fleetNumber || veiApi.frota || veiApi.fleet || String(vehicleCode)).toUpperCase().trim();
-            const veiculo = veiculoMapPlaca[placa] || veiculoMapFrota[frota];
+            if (!MACROS_VALIDAS.has(numeroMacro) || !dataCriacao) continue;
 
-            if (!veiculo) {
-              // Veículo da Autotrac não está cadastrado no sistema — pular
-              skippedCount++;
-              continue;
-            }
+            const dataEvento = new Date(dataCriacao);
+            if (isNaN(dataEvento.getTime())) continue;
 
-            // 4. Buscar returnmessages (contêm os macros) do veículo
-            let mensagens = [];
-            try {
-              // Busca últimas 72h de mensagens (limite máximo da API)
-              const now = new Date();
-              const from = new Date(now - 72 * 60 * 60 * 1000);
-              const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-              const mRes = await autotracGet(
-                `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
-                headers
-              );
-              mensagens = Array.isArray(mRes) ? mRes : (mRes.data || mRes.items || []);
-            } catch (e) {
-              // Não crítico — continua para o próximo veículo
-              continue;
-            }
+            const dataStr  = dataEvento.toISOString().split('T')[0];
+            const jornadaId = `${veiculo.id}-${dataStr}`;
 
-            for (const msg of mensagens) {
-              // Extrair número de macro e data do retorno da Autotrac
-              // Ajuste os campos conforme o contrato real da API (ex: msg.macro, msg.macroNumber, msg.type)
-              // Campos com PascalCase (padrão Autotrac) e fallbacks lowercase
-              const numeroMacro = Number(msg.Macro || msg.MacroNumber || msg.MacroCode || msg.macro || msg.macroNumber || msg.type || 0);
-              const dataCriacao = msg.DateTime || msg.Date || msg.Timestamp || msg.dateTime || msg.date || msg.dataHora;
+            const existing = await db.entities.MacroEvento.filter({
+              veiculo_id: veiculo.id,
+              numero_macro: numeroMacro,
+              jornada_id: jornadaId,
+            });
 
-              if (!MACROS_VALIDAS.has(numeroMacro) || !dataCriacao) continue;
+            const TOL_MS = 2 * 60 * 1000;
+            if (existing.some(e => Math.abs(new Date(e.data_criacao) - dataEvento) < TOL_MS)) continue;
+            if (existing.some(e => e.editado_manualmente)) continue;
 
-              const dataEvento = new Date(dataCriacao);
-              if (isNaN(dataEvento.getTime())) continue;
+            await db.entities.MacroEvento.create({
+              veiculo_id: veiculo.id,
+              numero_macro: numeroMacro,
+              data_criacao: dataEvento.toISOString(),
+              jornada_id: jornadaId,
+              data_jornada: dataStr,
+              excluido: false,
+              editado_manualmente: false,
+              company_id: empresa.id,
+            });
 
-              const dataStr = dataEvento.toISOString().split('T')[0];
-              const jornadaId = `${veiculo.id}-${dataStr}`;
-
-              // Verificar duplicata: mesmo veiculo + macro + jornada_id
-              const existing = await db.entities.MacroEvento.filter({
-                veiculo_id: veiculo.id,
-                numero_macro: numeroMacro,
-                jornada_id: jornadaId,
-              });
-
-              // Tolerância de 2 minutos para considerar o mesmo evento
-              const TOL_MS = 2 * 60 * 1000;
-              const jaExiste = existing.some(e => Math.abs(new Date(e.data_criacao) - dataEvento) < TOL_MS);
-              if (jaExiste) continue;
-
-              // Não sobrescrever registros editados manualmente
-              if (existing.some(e => e.editado_manualmente)) continue;
-
-              await db.entities.MacroEvento.create({
-                veiculo_id: veiculo.id,
-                numero_macro: numeroMacro,
-                data_criacao: dataEvento.toISOString(),
-                jornada_id: jornadaId,
-                data_jornada: dataStr,
-                excluido: false,
-                editado_manualmente: false,
-                company_id: empresa.id,
-              });
-
-              savedCount++;
-            }
+            savedCount++;
           }
         }
-      } catch (e) {
-        errorMsg = e.message;
       }
 
-      results.push({
-        empresa: empresa.nome,
-        saved: savedCount,
-        skipped_vehicles: skippedCount,
-        ...(errorMsg ? { error: errorMsg } : {}),
-      });
+      results.push({ empresa: empresa.nome, saved: savedCount, skipped_vehicles: skippedCount, log: empresaLog });
+
+    } catch (e) {
+      results.push({ empresa: empresa.nome, error: e.message, log: empresaLog });
     }
-
-    return Response.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      results,
-    });
-
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
   }
+
+  return Response.json({ success: true, timestamp: new Date().toISOString(), results });
 });
