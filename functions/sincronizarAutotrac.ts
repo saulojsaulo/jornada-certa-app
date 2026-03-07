@@ -21,12 +21,21 @@ function autotracHeaders(usuario, senha, apiKey) {
 }
 
 async function autotracGet(url, headers) {
-  const res = await fetch(url, { headers });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`GET ${url} → ${res.status}: ${txt.substring(0, 200)}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+  try {
+    const res = await fetch(url, { headers, signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`GET ${url} → ${res.status}: ${txt.substring(0, 300)}`);
+    }
+    return res.json();
+  } catch (e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') throw new Error(`Timeout (15s) em GET ${url} — verifique se o IP do servidor está liberado no Home Office Autotrac`);
+    throw e;
   }
-  return res.json();
 }
 
 Deno.serve(async (req) => {
