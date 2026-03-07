@@ -129,8 +129,12 @@ Deno.serve(async (req) => {
             // 4. Buscar returnmessages (contêm os macros) do veículo
             let mensagens = [];
             try {
+              // Busca últimas 72h de mensagens (limite máximo da API)
+              const now = new Date();
+              const from = new Date(now - 72 * 60 * 60 * 1000);
+              const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
               const mRes = await autotracGet(
-                `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages`,
+                `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
                 headers
               );
               mensagens = Array.isArray(mRes) ? mRes : (mRes.data || mRes.items || []);
