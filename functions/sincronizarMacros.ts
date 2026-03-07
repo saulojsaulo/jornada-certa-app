@@ -99,34 +99,44 @@ Deno.serve(async (req) => {
       const from = new Date(now - Math.min(horas, 72) * 60 * 60 * 1000);
       const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
-      // Datas da janela de busca (para filtrar duplicatas só nesse período)
+      // Buscar TODOS os MacroEventos da empresa de uma só vez (para checar duplicatas em memória)
       const dataFromStr = from.toISOString().split('T')[0];
+      const macrosEmpresa = await db.entities.MacroEvento.filter({ company_id: empresa.id, data_jornada: dataFromStr });
 
-      const loteResultados = await Promise.all(
+      // Indexar por veiculo_id para lookup rápido
+      const macrosPorVeiculo = {};
+      for (const m of macrosEmpresa) {
+        if (!macrosPorVeiculo[m.veiculo_id]) macrosPorVeiculo[m.veiculo_id] = [];
+        macrosPorVeiculo[m.veiculo_id].push(m);
+      }
+
+      // Buscar mensagens Autotrac para o lote em paralelo
+      const mensagensPorVeiculo = await Promise.all(
         lote.map(async (veiculo) => {
           const vehicleCode = veiculo.numero_frota;
-          const [macrosDb, mensagensApi] = await Promise.all([
-            db.entities.MacroEvento.filter({ veiculo_id: veiculo.id, data_jornada: dataFromStr }),
-            vehicleCode
-              ? autotracGet(
-                  `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
-                  headers
-                ).then(r => Array.isArray(r) ? r : (r.Data || r.data || [])).catch(() => [])
-              : Promise.resolve([]),
-          ]);
-          return { veiculo, macrosDb, mensagensApi };
+          if (!vehicleCode) return { veiculo, mensagens: [] };
+          try {
+            const r = await autotracGet(
+              `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
+              headers
+            );
+            return { veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) };
+          } catch {
+            return { veiculo, mensagens: [] };
+          }
         })
       );
 
       let savedCount = 0;
       const novosEventos = [];
 
-      for (const { veiculo, macrosDb, mensagensApi } of loteResultados) {
+      for (const { veiculo, mensagens } of mensagensPorVeiculo) {
+        const macrosDb = macrosPorVeiculo[veiculo.id] || [];
         const manualKeys = new Set(
           macrosDb.filter(m => m.editado_manualmente).map(m => `${m.numero_macro}-${m.jornada_id}`)
         );
 
-        for (const msg of mensagensApi) {
+        for (const msg of mensagens) {
           const numeroMacro = Number(msg.Macro || msg.MacroNumber || msg.macro || 0);
           const dataCriacao = msg.DateTime || msg.Date || msg.dateTime || msg.date;
 
