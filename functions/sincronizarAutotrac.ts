@@ -77,6 +77,9 @@ Deno.serve(async (req) => {
 
       try {
         // 2. Buscar contas ativas da companhia (_limit conforme documentação Autotrac)
+        // Número de conta configurado na empresa (campo autotrac_account guarda o Number)
+        const accountNumber = cfg.autotrac_account || Deno.env.get('AUTOTRAC_ACCOUNT');
+
         const accounts = await autotracGet(`${BASE_URL}/accounts?_limit=500`, headers);
         console.log('[Autotrac] Resposta bruta /accounts:', JSON.stringify(accounts).substring(0, 500));
         const accountList = Array.isArray(accounts) ? accounts : (accounts.data || accounts.items || [accounts]);
@@ -90,9 +93,6 @@ Deno.serve(async (req) => {
           if (v.placa) veiculoMapPlaca[v.placa.toUpperCase().trim()] = v;
           if (v.numero_frota) veiculoMapFrota[v.numero_frota.toUpperCase().trim()] = v;
         }
-
-        // Número de conta configurado na empresa (campo autotrac_account guarda o Number)
-        const accountNumber = cfg.autotrac_account || Deno.env.get('AUTOTRAC_ACCOUNT');
 
         for (const account of accountList) {
           // A API exige o campo "Code" (ID interno) nas URLs — não o "Number"
