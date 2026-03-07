@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
   // Pegar um veículo real do banco para testar
   const db = base44.asServiceRole;
-  const veiculos = await db.entities.Veiculo.filter({ company_id: 'xKgA8wRjO4mN5tKPDnRy' });
+  const veiculos = await db.entities.Veiculo.list('-created_date', 10);
   const v = veiculos[0];
   const vehicleCode = v?.numero_frota || '704792';
 
