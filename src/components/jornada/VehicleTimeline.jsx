@@ -473,7 +473,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
               ...segmentInfo
             });
           }}
-          onMouseLeave={() => setTooltip(null)}
+          onMouseLeave={() => { setTooltip(null); setSyncCursor(null); }}
         >
           {/* Segmentos de status */}
           {(() => {
