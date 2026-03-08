@@ -69,10 +69,10 @@ Deno.serve(async (req) => {
     const accountCode = contas[0].Code;
     
     // Buscar todos os veículos da empresa
-    const veiculos = await base44.entities.Veiculo.filter({ company_id: companyId });
+    const veiculos = await db.entities.Veiculo.filter({ company_id: empresa.id });
     
     // Buscar todos os motoristas da empresa
-    const motoristas = await base44.entities.Motorista.filter({ company_id: companyId });
+    const motoristas = await db.entities.Motorista.filter({ company_id: empresa.id });
     const motoristaPorCPF = {};
     motoristas.forEach(m => {
       if (m.cpf) motoristaPorCPF[m.cpf] = m;
