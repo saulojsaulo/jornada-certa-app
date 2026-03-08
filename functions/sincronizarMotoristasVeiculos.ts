@@ -6,11 +6,11 @@ const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
 const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 
-async function fetchAutotrac(url) {
+async function fetchAutotrac(url, usuario, senha, apiKey) {
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Basic ${USER}:${PASS}`,
-      'Ocp-Apim-Subscription-Key': API_KEY,
+      'Authorization': `Basic ${usuario}:${senha}`,
+      'Ocp-Apim-Subscription-Key': apiKey,
       'Content-Type': 'application/json',
       'User-Agent': 'PostmanRuntime/7.37.0',
       'Cache-Control': 'no-cache',
