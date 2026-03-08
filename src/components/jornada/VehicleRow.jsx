@@ -148,14 +148,6 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
             </div>
           </div>
 
-          {/* Total do Dia */}
-          <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-1 md:hidden">Total</div>
-            <div className="font-sans font-bold text-sm text-slate-700">
-              {minutesToHHMM(jornadaLiquida)}
-            </div>
-          </div>
-
           {/* Alertas */}
           <div className="col-span-1 flex items-center justify-end gap-2">
             {/* Alerta Refeição */}
