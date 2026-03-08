@@ -591,6 +591,14 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
             ));
           })()}
 
+          {/* Cursor de sync */}
+          {syncCursor !== null && (
+            <div
+              className="absolute top-0 h-full w-0.5 bg-slate-700 opacity-70 pointer-events-none z-20"
+              style={{ left: `${syncCursor}%` }}
+            />
+          )}
+
           {/* Marcadores de tempo - régua de horas */}
           <div className="absolute inset-0 pointer-events-none">
             {/* Linhas de hora em hora do relógio */}
