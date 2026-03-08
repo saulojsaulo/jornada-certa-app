@@ -46,10 +46,10 @@ Deno.serve(async (req) => {
     
     const empresa = empresas[0];
     const cfg = empresa?.api_config || {};
-    const usuario = cfg?.autotrac_usuario || USER;
-    const senha = cfg?.autotrac_senha || PASS;
-    const apiKey = cfg?.autotrac_api_key || API_KEY;
-    const accountNum = String(cfg?.autotrac_account || ACCOUNT || '');
+    const usuario = cfg.autotrac_usuario || USER;
+    const senha = cfg.autotrac_senha || PASS;
+    const apiKey = cfg.autotrac_api_key || API_KEY;
+    const accountNum = String(cfg.autotrac_account || ACCOUNT || '');
 
     if (!usuario || !senha || !apiKey) {
       return Response.json({ error: 'Credenciais incompletas' }, { status: 400 });
