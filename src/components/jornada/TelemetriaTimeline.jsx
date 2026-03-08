@@ -16,10 +16,11 @@ function toMinutes(ts) {
  *  - vehicleCode: numero_frota do veículo
  *  - companyId: id da empresa
  *  - data: string "YYYY-MM-DD"
+ *  - macro1Time: ISO datetime do início da jornada (Macro 1)
  *  - cursorX: número 0-100 (percentual) enviado pelo pai (sync scrubbing)
  *  - onCursorChange: callback (pct) para notificar o pai
  */
-export default function TelemetriaTimeline({ vehicleCode, companyId, data, cursorX, onCursorChange }) {
+export default function TelemetriaTimeline({ vehicleCode, companyId, data, macro1Time, cursorX, onCursorChange }) {
   const [loading, setLoading] = useState(false);
   const [points, setPoints] = useState([]);
   const [distanciaKm, setDistanciaKm] = useState(null);
