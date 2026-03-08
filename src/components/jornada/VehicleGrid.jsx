@@ -277,6 +277,8 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
       {/* Cabeçalho com filtros */}
       <GridHeader
         columns={columns}
+        colSpans={colSpans}
+        onAdjustSpan={adjustSpan}
         onFilterChange={handleColumnFilter}
         filters={columnFilters}
         onSort={handleSort}
