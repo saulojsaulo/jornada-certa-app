@@ -217,24 +217,29 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, curso
       </div>
 
       {/* Legenda */}
-      <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+      <div className="flex items-center gap-4 mt-1.5 text-[10px] text-slate-500 flex-wrap">
         <div className="flex items-center gap-1">
-          <div className="w-3 h-2 bg-emerald-100 border border-emerald-200 rounded-sm" />
-          <span>Ignição ligada</span>
+          <div className="w-3 h-2 rounded-sm border border-slate-300 bg-white" />
+          <span>Parado</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-2 bg-emerald-500 rounded-sm opacity-80" />
-          <span>≤ 40 km/h</span>
+          <div className="w-3 h-2 rounded-sm" style={{ backgroundColor: '#fef08a', border: '1px solid #eab308' }} />
+          <span>Parado - Marcha Lenta</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-2 bg-amber-400 rounded-sm opacity-80" />
-          <span>41–80 km/h</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-2 bg-red-400 rounded-sm opacity-80" />
-          <span>&gt; 80 km/h</span>
+          <div className="w-3 h-2 rounded-sm bg-emerald-600 opacity-90" />
+          <span>Em Movimento</span>
         </div>
       </div>
+
+      {/* Distância percorrida */}
+      {distanciaKm !== null && distanciaKm >= 0 && (
+        <div className="mt-2 text-[11px] text-slate-500 bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-100">
+          Hoje até o momento, esse veículo/motorista deslocou-se por{' '}
+          <span className="font-semibold text-slate-700">{distanciaKm} km</span>{' '}
+          <span className="text-slate-400">(período entre o início da jornada até a última posição do rastreador)</span>
+        </div>
+      )}
     </div>
   );
 }
