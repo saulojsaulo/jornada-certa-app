@@ -789,7 +789,10 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
                           onClick={e => e.stopPropagation()}
                         >
                           <MapPin className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{macro.endereco || `${macro.latitude?.toFixed(5)}, ${macro.longitude?.toFixed(5)}`}</span>
+                          {(macro.endereco || cidades[macro.id]) && (
+                            <span className="truncate font-medium text-slate-500">{macro.endereco || cidades[macro.id]}</span>
+                          )}
+                          <span className="shrink-0 text-blue-400">— Visualizar no Mapa</span>
                         </a>
                       )}
                     </div>
