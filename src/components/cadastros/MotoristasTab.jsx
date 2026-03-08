@@ -18,6 +18,7 @@ export default function MotoristasTab() {
     telefone: '',
     ativo: true
   });
+  const [isSubstituindo, setIsSubstituindo] = useState(false);
 
   const queryClient = useQueryClient();
 
