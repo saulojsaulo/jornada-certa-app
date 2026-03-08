@@ -9,7 +9,7 @@ import {
 
 export default function GridHeader({ columns, onFilterChange, filters, onSort, sortBy, sortOrder }) {
   return (
-    <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider bg-slate-50 rounded-lg border border-slate-200 mb-2">
+    <div className="hidden md:grid gap-2 px-3 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider bg-slate-50 rounded-lg border border-slate-200 mb-2" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
       {columns.map((column) => (
         <div
           key={column.key}
