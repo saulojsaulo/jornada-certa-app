@@ -22,6 +22,7 @@ function toMinutes(ts) {
 export default function TelemetriaTimeline({ vehicleCode, companyId, data, cursorX, onCursorChange }) {
   const [loading, setLoading] = useState(false);
   const [points, setPoints] = useState([]);
+  const [distanciaKm, setDistanciaKm] = useState(null);
   const [error, setError] = useState(null);
   const [localCursor, setLocalCursor] = useState(null);
   const barRef = useRef(null);
