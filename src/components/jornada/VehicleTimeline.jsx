@@ -17,6 +17,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+async function fetchCidade(lat, lon) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`, {
+      headers: { 'User-Agent': 'JornadaFrota/1.0' }
+    });
+    const data = await res.json();
+    const addr = data.address || {};
+    return addr.city || addr.town || addr.village || addr.county || addr.state || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataReferencia }) {
   const [updatingIds, setUpdatingIds] = useState(new Set());
   const [editingMacro, setEditingMacro] = useState(null);
@@ -25,6 +38,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
   const [createForm, setCreateForm] = useState({ numero_macro: 1, data: '', hora: '' });
   const [showPreviousJourney, setShowPreviousJourney] = useState(false);
   const [tooltip, setTooltip] = useState(null);
+  const [cidades, setCidades] = useState({});
 
   // Usar macros já filtradas (não filtrar novamente)
   const macrosDoDia = useMemo(() => {
