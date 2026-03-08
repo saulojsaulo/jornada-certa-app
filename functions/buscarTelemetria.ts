@@ -149,8 +149,9 @@ Deno.serve(async (req) => {
 
   const sampled = samplePoints(pontos, 400);
 
-  // Calcular distância total percorrida usando o campo Odometer (mais preciso)
-  // Odometer está em km na API Autotrac (não em metros)
+  // Calcular distância total percorrida usando o campo Odometer
+  // Odometer vem como inteiro e deve ser dividido por 100 para obter km
+  // Usar: odômetro da última posição - odômetro da Macro 1
   let distanciaKm = 0;
   const fromTime = from.getTime();
   const toTime = to.getTime();
@@ -164,9 +165,9 @@ Deno.serve(async (req) => {
     .sort((a, b) => new Date(a.PositionTime || a.ReceivedTime) - new Date(b.PositionTime || b.ReceivedTime));
 
   if (pontosComOdometro.length >= 2) {
-    const primeiro = pontosComOdometro[0].Odometer;
-    const ultimo = pontosComOdometro[pontosComOdometro.length - 1].Odometer;
-    distanciaKm = Math.round(ultimo - primeiro);
+    const primeiroOdometro = pontosComOdometro[0].Odometer / 100; // Macro 1
+    const ultimoOdometro = pontosComOdometro[pontosComOdometro.length - 1].Odometer / 100; // Última posição
+    distanciaKm = Math.round((ultimoOdometro - primeiroOdometro) * 100) / 100;
   }
 
   return Response.json({
