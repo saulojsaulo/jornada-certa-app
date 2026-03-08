@@ -101,7 +101,8 @@ export default function MotoristasTab() {
       queryClient.invalidateQueries(['motoristas']);
       alert(`Motoristas substituídos com sucesso! ${result.data.motoristasSubstituidos} inseridos.`);
     } catch (error) {
-      alert(`Erro: ${error.message}`);
+      console.error('Erro ao substituir motoristas:', error);
+      alert(`Erro: ${error.response?.data?.error || error.message || 'Erro desconhecido ao conectar com a API Autotrac'}`);
     } finally {
       setIsSubstituindo(false);
     }
