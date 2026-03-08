@@ -16,6 +16,8 @@ async function fetchAutotrac(url) {
   });
   
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[AUTOTRAC] ${response.status} - ${errorText.substring(0, 200)}`);
     throw new Error(`Autotrac API error: ${response.status}`);
   }
   
