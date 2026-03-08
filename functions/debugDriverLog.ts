@@ -46,17 +46,23 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const vehicleCode = body.vehicleCode || '1'; // passar via payload no teste
 
-  // Testar dois endpoints: aapi3 e wapi, por veículo
-  const urlAapi = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`;
-  const urlWapi = `${BASE_URL_WAPI}/accounts/${accountCode}/vehicles/${vehicleCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`;
-  const urlWapiSemAccount = `${BASE_URL_WAPI}/vehicles/${vehicleCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`;
+  // Testar variações do nome do endpoint
+  const candidatos = [
+    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/drivervehiclelogs`,
+    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/loginlogout`,
+    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/driverlogin`,
+    `${BASE_URL}/drivervehiclelog?vehicleCode=${vehicleCode}&startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}`,
+    `${BASE_URL}/accounts/${accountCode}/drivervehiclelog?vehicleCode=${vehicleCode}&startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}`,
+  ];
 
-  const [r1, r2, r3] = await Promise.all([urlAapi, urlWapi, urlWapiSemAccount].map(async (url) => {
+  const resultados = [];
+  for (const url of candidatos) {
     const res = await fetch(url, { headers });
     const t = await res.text();
-    let d; try { d = JSON.parse(t); } catch { d = t.substring(0, 200); }
-    return { url, status: res.status, data: d };
-  }));
+    let d; try { d = JSON.parse(t); } catch { d = t.substring(0, 100); }
+    resultados.push({ url, status: res.status, data: res.status === 200 ? d : undefined });
+    if (res.status === 200) break; // parar ao encontrar o correto
+  }
 
-  return Response.json({ accountCode, vehicleCode, r1, r2, r3 });
+  return Response.json({ accountCode, vehicleCode, resultados });
 });
