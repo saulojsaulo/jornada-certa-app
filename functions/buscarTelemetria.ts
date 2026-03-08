@@ -119,43 +119,23 @@ Deno.serve(async (req) => {
   const from = new Date(`${data}T00:00:00.000Z`);
   const to = new Date(`${data}T23:59:59.000Z`);
 
-  // Buscar todas as mensagens do dia (incluindo posições GPS, não só macros)
-  // MsgSubType 1001 = macro, outros = posições GPS com velocidade
-  const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(to))}&_limit=5000`;
+  // Endpoint /positions retorna dados GPS contínuos com Velocity e VehicleIgnition
+  const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/positions?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(to))}&_limit=5000`;
 
   const raw = await autotracGet(url, headers);
   const mensagens = Array.isArray(raw) ? raw : (raw.Data || raw.data || []);
 
-  // Extrair velocidade do campo Landmark (ex: "3.26 Km ESE de CIDADE, 0.00 Km/h")
-  function extractSpeedFromLandmark(landmark) {
-    if (!landmark) return null;
-    const match = landmark.match(/([\d.]+)\s*Km\/h/i);
-    return match ? parseFloat(match[1]) : null;
-  }
-
-  // Ignição: campo Ignition == 1 = ligada, 2 = desligada (baseado nos dados reais)
-  function parseIgnition(val) {
-    if (val === 1) return true;
-    if (val === 2) return false;
-    return Boolean(val);
-  }
-
-  // Processar mensagens: extrair posição/velocidade/ignição
+  // Processar posições: Velocity em km/h, VehicleIgnition 1=ligada
   const pontos = mensagens
-    .filter(m => {
-      const time = m.MessageTime || m.PositionTime || m.DateTime || m.Date;
-      return time && (m.Latitude || m.latitude) && (m.Longitude || m.longitude);
-    })
+    .filter(m => m.PositionTime || m.ReceivedTime)
     .map(m => {
-      const time = m.MessageTime || m.PositionTime || m.DateTime || m.Date;
-      const speedFromLandmark = extractSpeedFromLandmark(m.Landmark || m.landmark);
-      const speed = speedFromLandmark ?? 0;
-      const ignitionField = m.Ignition ?? m.ignition ?? m.IgnitionOn;
-      const ignition = ignitionField !== undefined ? parseIgnition(ignitionField) : speed > 0;
+      const time = m.PositionTime || m.ReceivedTime;
+      const speed = Math.round(Number(m.Velocity ?? 0));
+      const ignition = m.VehicleIgnition === 1;
 
       return {
         time: new Date(time).getTime(),
-        speed: Math.round(speed),
+        speed,
         ignition,
       };
     })
