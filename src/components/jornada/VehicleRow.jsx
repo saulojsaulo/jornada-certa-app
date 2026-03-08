@@ -43,7 +43,13 @@ function formatDataHora(isoString) {
   });
 }
 
-export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao }) {
+const DEFAULT_SPANS = {
+  gestor: 1, frota: 1, motorista: 2, status: 1,
+  ultimaPosicao: 2, dataHoraPosicao: 2, jornada: 1, disponivel: 1, hextra: 1, alertas: 1
+};
+
+export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colSpans }) {
+  const spans = colSpans || DEFAULT_SPANS;
   const [expanded, setExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
