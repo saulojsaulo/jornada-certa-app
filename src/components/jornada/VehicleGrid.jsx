@@ -169,12 +169,11 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
   }).filter(g => g !== '—'))].sort();
   const statuses = [...new Set(processedVehicles.map(v => v.status))].sort();
 
-  // 13 colunas: Gestor(1) Frota(1) Motorista(2) Status(1) UltPos(2) DataHora(2) Jornada(1) Disp(1) HExtra(1) Total(1) Alertas(1)
+  // 12 colunas (sem "Total")
   const columns = [
     {
       key: 'gestor',
       label: 'Gestor',
-      span: 'col-span-1',
       filterable: true,
       draggable: true,
       sortable: true,
@@ -183,7 +182,6 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'frota',
       label: 'Frota',
-      span: 'col-span-1',
       draggable: true,
       filterable: false,
       sortable: true
@@ -191,7 +189,6 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'motorista',
       label: 'Motorista',
-      span: 'col-span-2',
       draggable: true,
       filterable: false,
       sortable: true
@@ -199,7 +196,6 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'status',
       label: 'Status',
-      span: 'col-span-1',
       filterable: true,
       draggable: true,
       sortable: true,
@@ -208,21 +204,18 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'ultimaPosicao',
       label: 'Última Posição',
-      span: 'col-span-2',
       filterable: false,
       sortable: false
     },
     {
       key: 'dataHoraPosicao',
       label: 'Data/Hora',
-      span: 'col-span-2',
       filterable: false,
       sortable: false
     },
     {
       key: 'jornada',
       label: 'Jornada',
-      span: 'col-span-1',
       align: 'text-center',
       filterable: false,
       sortable: true
@@ -230,7 +223,6 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'disponivel',
       label: 'Disponível',
-      span: 'col-span-1',
       align: 'text-center',
       filterable: false,
       sortable: true
@@ -238,15 +230,6 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'hextra',
       label: 'H. Extra',
-      span: 'col-span-1',
-      align: 'text-center',
-      filterable: false,
-      sortable: true
-    },
-    {
-      key: 'total',
-      label: 'Total',
-      span: 'col-span-1',
       align: 'text-center',
       filterable: false,
       sortable: true
@@ -254,7 +237,6 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'alertas',
       label: 'Alertas',
-      span: 'col-span-1',
       align: 'text-right',
       filterable: false,
       sortable: true
