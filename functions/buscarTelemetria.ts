@@ -169,6 +169,5 @@ Deno.serve(async (req) => {
     total_raw: mensagens.length,
     total_pontos: pontos.length,
     total_sampled: sampled.length,
-    debug_amostra: mensagens.slice(0, 3),
   });
 });
