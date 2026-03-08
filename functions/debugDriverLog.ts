@@ -46,14 +46,17 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const vehicleCode = body.vehicleCode || '1'; // passar via payload no teste
 
-  const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`;
+  // Testar dois endpoints: aapi3 e wapi, por veículo
+  const urlAapi = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`;
+  const urlWapi = `${BASE_URL_WAPI}/accounts/${accountCode}/vehicles/${vehicleCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`;
+  const urlWapiSemAccount = `${BASE_URL_WAPI}/vehicles/${vehicleCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`;
 
-  const res = await fetch(url, { headers });
-  const status = res.status;
-  const resBody = await res.text();
+  const [r1, r2, r3] = await Promise.all([urlAapi, urlWapi, urlWapiSemAccount].map(async (url) => {
+    const res = await fetch(url, { headers });
+    const t = await res.text();
+    let d; try { d = JSON.parse(t); } catch { d = t.substring(0, 200); }
+    return { url, status: res.status, data: d };
+  }));
 
-  let parsed;
-  try { parsed = JSON.parse(resBody); } catch { parsed = resBody.substring(0, 500); }
-
-  return Response.json({ url, status, accountCode, data: parsed });
+  return Response.json({ accountCode, vehicleCode, r1, r2, r3 });
 });
