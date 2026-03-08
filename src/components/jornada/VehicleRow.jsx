@@ -44,8 +44,8 @@ function formatDataHora(isoString) {
 }
 
 const DEFAULT_WIDTHS = {
-  gestor: 100, frota: 60, motorista: 160, status: 110,
-  ultimaPosicao: 200, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 90
+  gestor: 90, frota: 70, motorista: 160, status: 100,
+  ultimaPosicao: 180, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 80
 };
 
 export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colWidths }) {
@@ -79,29 +79,29 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
         className="p-1 cursor-pointer hover:bg-white/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="grid grid-cols-1 md:gap-1 items-center" style={{ gridTemplateColumns: Object.entries(widths).map(([, w]) => `${w}px`).join(' ') }}>
+        <div className="grid grid-cols-1 md:gap-1 items-center overflow-hidden" style={{ gridTemplateColumns: Object.entries(widths).map(([, w]) => `${w}px`).join(' ') }}>
           {/* Gestor */}
-          <div className="col-span-1">
+          <div className="overflow-hidden px-2 py-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Gestor</div>
-            <span className="text-sm font-medium text-slate-700">{getGestorDisplay(veiculo)}</span>
+            <span className="text-sm font-medium text-slate-700 truncate block">{getGestorDisplay(veiculo)}</span>
           </div>
 
           {/* Frota */}
-          <div className="col-span-1">
+          <div className="overflow-hidden px-2 py-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Frota</div>
-            <span className="font-bold text-slate-800 text-base">{extractFleetNumber(veiculo.nome_veiculo)}</span>
+            <span className="font-bold text-slate-800 text-base truncate block">{extractFleetNumber(veiculo.nome_veiculo)}</span>
           </div>
 
           {/* Motorista */}
-          <div className="col-span-1 overflow-hidden">
+          <div className="overflow-hidden px-2 py-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Motorista</div>
-            <span className="text-xs text-slate-700 truncate block whitespace-nowrap overflow-hidden">
+            <span className="text-xs text-slate-700 truncate block whitespace-nowrap">
               {getMotoristaDisplay(veiculo)}
             </span>
           </div>
 
           {/* Status */}
-          <div className="col-span-1 overflow-hidden">
+          <div className="overflow-hidden px-2 py-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Status</div>
             <Badge className={`${statusConfig.color} font-medium text-[10px] whitespace-nowrap px-1.5 py-0.5`}>
               {status}
@@ -109,23 +109,23 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           </div>
 
           {/* Última Posição */}
-          <div className="col-span-2 overflow-hidden">
+          <div className="overflow-hidden px-2 py-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Última Posição</div>
-            <span className="text-xs text-slate-600 truncate block whitespace-nowrap overflow-hidden" title={ultimaPosicao?.address || ''}>
+            <span className="text-xs text-slate-600 truncate block whitespace-nowrap" title={ultimaPosicao?.address || ''}>
               {ultimaPosicao?.address || <span className="text-slate-300">—</span>}
             </span>
           </div>
 
           {/* Data/Hora */}
-          <div className="col-span-2 overflow-hidden">
+          <div className="overflow-hidden px-2 py-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Data/Hora</div>
-            <span className="text-xs text-slate-500 whitespace-nowrap block overflow-hidden">
+            <span className="text-xs text-slate-500 whitespace-nowrap block">
               {formatDataHora(ultimaPosicao?.time)}
             </span>
           </div>
 
           {/* Jornada em Tempo Real */}
-          <div className="col-span-1 text-center">
+          <div className="overflow-hidden px-2 py-1 text-center">
             <div className="text-xs text-slate-500 mb-1 md:hidden">Jornada</div>
             <div className={`font-sans font-bold text-sm ${jornadaLiquida > 480 ? 'text-amber-600' : 'text-slate-700'}`}>
               {minutesToHHMM(jornadaLiquida)}
@@ -133,7 +133,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           </div>
 
           {/* Tempo Disponível */}
-          <div className="col-span-1 text-center">
+          <div className="overflow-hidden px-2 py-1 text-center">
             <div className="text-xs text-slate-500 mb-1 md:hidden">Disponível</div>
             <div className={`font-sans font-bold text-sm ${tempoDisponivel < 60 ? 'text-red-600' : 'text-emerald-600'}`}>
               {minutesToHHMM(tempoDisponivel)}
@@ -141,7 +141,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           </div>
 
           {/* Horas Extras */}
-          <div className="col-span-1 text-center">
+          <div className="overflow-hidden px-2 py-1 text-center">
             <div className="text-xs text-slate-500 mb-1 md:hidden">H. Extra</div>
             <div className={`font-sans font-bold text-sm ${horasExtras > 0 ? 'text-red-600' : 'text-slate-400'}`}>
               {minutesToHHMM(horasExtras)}
@@ -149,7 +149,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           </div>
 
           {/* Alertas */}
-          <div className="col-span-1 flex items-center justify-end gap-2">
+          <div className="overflow-hidden px-2 py-1 flex items-center justify-end gap-2">
             {/* Alerta Refeição */}
             {alertaRefeicao && (
               <motion.div
