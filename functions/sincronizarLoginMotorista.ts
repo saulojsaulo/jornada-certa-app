@@ -39,7 +39,6 @@ function normalizarCPF(cpf) {
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  // Permite chamada por automação (sem usuário) ou por admin
   try {
     const user = await base44.auth.me();
     if (user && user.role !== 'admin') {
@@ -52,9 +51,9 @@ Deno.serve(async (req) => {
   const empresas = await db.entities.Empresa.filter({ provedora_rastreamento: 'autotrac', ativa: true });
   if (!empresas?.length) return Response.json({ message: 'Nenhuma empresa Autotrac configurada.' });
 
-  // Janela de busca: últimas 2h para garantir que não perca eventos
+  // Janela de busca: últimas 48h para garantir captura do login mais recente
   const now  = new Date();
-  const from = new Date(now - 2 * 60 * 60 * 1000);
+  const from = new Date(now - 48 * 60 * 60 * 1000);
   const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
   const results = [];
@@ -92,64 +91,50 @@ Deno.serve(async (req) => {
         db.entities.Motorista.filter({ company_id: empresa.id }),
       ]);
 
-      // Mapa CPF -> motorista
+      // Mapa CPF normalizado -> motorista
       const mapCPF = {};
       for (const m of motoristasSistema) {
         const cpfNorm = normalizarCPF(m.cpf);
         if (cpfNorm) mapCPF[cpfNorm] = m;
       }
 
-      // Mapa placa -> veiculo e frota -> veiculo
-      const mapPlaca = {};
-      const mapFrota = {};
-      for (const v of veiculosSistema) {
-        if (v.placa)        mapPlaca[v.placa.toUpperCase().trim()] = v;
-        if (v.numero_frota) mapFrota[v.numero_frota.toUpperCase().trim()] = v;
-      }
-
-      // 3. Buscar logs de login/logout da janela
-      const logsRaw = await autotracGet(
-        `${BASE_URL}/accounts/${accountCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=500`,
-        headers
+      // 3. Para cada veículo, buscar o log mais recente de login/logout
+      // Path correto: /accounts/{accountCode}/vehicles/{vehicleCode}/driverlogs
+      const logsResults = await Promise.all(
+        veiculosSistema.map(async (veiculo) => {
+          const vehicleCode = veiculo.numero_frota;
+          if (!vehicleCode) return { veiculo, logs: [] };
+          try {
+            const raw = await autotracGet(
+              `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/driverlogs?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`,
+              headers
+            );
+            const logs = Array.isArray(raw) ? raw : (raw.Data || []);
+            return { veiculo, logs };
+          } catch {
+            return { veiculo, logs: [] };
+          }
+        })
       );
-      const logs = Array.isArray(logsRaw) ? logsRaw : (logsRaw.Data || []);
-
-      if (!logs.length) {
-        results.push({ empresa: empresa.nome, atualizados: 0, logs_recebidos: 0 });
-        continue;
-      }
-
-      // 4. Para cada veículo, pegar o evento mais recente e decidir o motorista atual
-      // Agrupamos os logs por veículo (pela placa ou nome)
-      const logsPorVeiculo = {};
-      for (const log of logs) {
-        const chave = (log.VehicleLicensePlate || log.VehicleName || '').toUpperCase().trim();
-        if (!chave) continue;
-        if (!logsPorVeiculo[chave]) logsPorVeiculo[chave] = [];
-        logsPorVeiculo[chave].push(log);
-      }
 
       let atualizados = 0;
       const updates = [];
 
-      for (const [chave, eventos] of Object.entries(logsPorVeiculo)) {
-        // Identificar o veículo no sistema
-        const veiculo = mapPlaca[chave] || mapFrota[chave];
-        if (!veiculo) continue;
+      for (const { veiculo, logs } of logsResults) {
+        if (!logs.length) continue;
 
-        // Ordenar por data mais recente
-        eventos.sort((a, b) => {
-          const ta = new Date(a.LoginTime || a.LogoutTime || 0).getTime();
-          const tb = new Date(b.LoginTime || b.LogoutTime || 0).getTime();
-          return tb - ta;
-        });
+        // Ordenar pelo LoginTime mais recente
+        logs.sort((a, b) => new Date(b.LoginTime || 0) - new Date(a.LoginTime || 0));
 
-        // O evento mais recente determina o estado atual
-        const ultimo = eventos[0];
-        const temLoginRecente = ultimo.LoginTime && (!ultimo.LogoutTime || new Date(ultimo.LoginTime) >= new Date(ultimo.LogoutTime));
+        const ultimo = logs[0];
 
-        if (temLoginRecente) {
-          // Motorista logado: vincular pelo CPF
+        // Determinar se há motorista logado agora:
+        // Se o logout não existe ou é no futuro/igual ao login, considera logado
+        const loginTime  = ultimo.LoginTime  ? new Date(ultimo.LoginTime)  : null;
+        const logoutTime = ultimo.LogoutTime ? new Date(ultimo.LogoutTime) : null;
+        const estaLogado = loginTime && (!logoutTime || logoutTime <= now);
+
+        if (estaLogado) {
           const cpfNorm = normalizarCPF(ultimo.DriverCPF);
           const motorista = cpfNorm ? mapCPF[cpfNorm] : null;
           const novoMotoristaId = motorista ? motorista.id : null;
@@ -159,7 +144,7 @@ Deno.serve(async (req) => {
             atualizados++;
           }
         } else {
-          // Logout: limpar motorista do veículo
+          // Logout detectado: limpar motorista
           if (veiculo.motorista_id) {
             updates.push(db.entities.Veiculo.update(veiculo.id, { motorista_id: null }));
             atualizados++;
@@ -172,8 +157,7 @@ Deno.serve(async (req) => {
       results.push({
         empresa: empresa.nome,
         atualizados,
-        logs_recebidos: logs.length,
-        veiculos_com_log: Object.keys(logsPorVeiculo).length,
+        veiculos_processados: veiculosSistema.length,
         debug_janela: `${fmt(from)} -> ${fmt(now)}`,
       });
 
