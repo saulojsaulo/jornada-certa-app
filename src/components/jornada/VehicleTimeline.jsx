@@ -40,6 +40,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
   const [showPreviousJourney, setShowPreviousJourney] = useState(false);
   const [tooltip, setTooltip] = useState(null);
   const [cidades, setCidades] = useState({});
+  const [syncCursor, setSyncCursor] = useState(null);
 
   // Buscar cidade via reverse geocoding para macros com lat/lon mas sem endereço
   useEffect(() => {
