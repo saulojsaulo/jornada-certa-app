@@ -172,7 +172,9 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
             <VehicleTimeline 
               macros={macrosHoje} 
               todasMacrosVeiculo={todasMacros}
-              dataReferencia={macrosHoje[0]?.data_jornada} 
+              dataReferencia={macrosHoje[0]?.data_jornada}
+              vehicleCode={veiculo.numero_frota}
+              companyId={veiculo.company_id}
             />
           )}
       </AnimatePresence>
