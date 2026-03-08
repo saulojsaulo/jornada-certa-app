@@ -194,6 +194,10 @@ Deno.serve(async (req) => {
             if (existing.some(e => Math.abs(new Date(e.data_criacao) - dataEvento) < TOL_MS)) continue;
             if (existing.some(e => e.editado_manualmente)) continue;
 
+            const lat = msg.Latitude ?? msg.latitude ?? msg.Lat ?? msg.lat ?? null;
+            const lon = msg.Longitude ?? msg.longitude ?? msg.Long ?? msg.lon ?? msg.Lng ?? msg.lng ?? null;
+            const endereco = msg.Address ?? msg.address ?? msg.City ?? msg.city ?? msg.Location ?? msg.location ?? null;
+
             await db.entities.MacroEvento.create({
               veiculo_id: veiculo.id,
               numero_macro: numeroMacro,
@@ -203,6 +207,9 @@ Deno.serve(async (req) => {
               excluido: false,
               editado_manualmente: false,
               company_id: empresa.id,
+              ...(lat !== null && { latitude: Number(lat) }),
+              ...(lon !== null && { longitude: Number(lon) }),
+              ...(endereco ? { endereco: String(endereco) } : {}),
             });
 
             savedCount++;
