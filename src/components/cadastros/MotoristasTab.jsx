@@ -114,10 +114,20 @@ export default function MotoristasTab() {
           <h2 className="text-xl font-semibold text-slate-800">Motoristas</h2>
           <p className="text-sm text-slate-600">Total: {motoristas.length}</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Motorista
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleSubstituirPorLogados}
+            disabled={isSubstituindo}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isSubstituindo ? 'animate-spin' : ''}`} />
+            Substituir por Logados
+          </Button>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Motorista
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-3">
