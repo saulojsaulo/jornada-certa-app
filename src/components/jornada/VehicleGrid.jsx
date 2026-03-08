@@ -15,10 +15,10 @@ import {
   verificarAlertasInterjornada
 } from './MacroUtils';
 
-// Spans iniciais por coluna (sem "total"): total = 12 colunas
-const DEFAULT_SPANS = {
-  gestor: 1, frota: 1, motorista: 2, status: 1,
-  ultimaPosicao: 2, dataHoraPosicao: 2, jornada: 1, disponivel: 1, hextra: 1, alertas: 1
+// Larguras iniciais em px por coluna
+const DEFAULT_WIDTHS = {
+  gestor: 90, frota: 70, motorista: 160, status: 100,
+  ultimaPosicao: 180, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 80
 };
 
 export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo }) {
