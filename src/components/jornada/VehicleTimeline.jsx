@@ -754,6 +754,19 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
         </div>
       </div>
 
+      {/* Telemetria paralela */}
+      {vehicleCode && (
+        <div className="mb-6 mt-1 bg-white rounded-lg p-3 shadow-sm border border-slate-100">
+          <TelemetriaTimeline
+            vehicleCode={vehicleCode}
+            companyId={companyId}
+            data={dataReferencia || new Date().toISOString().split('T')[0]}
+            cursorX={syncCursor}
+            onCursorChange={setSyncCursor}
+          />
+        </div>
+      )}
+
       {/* Timeline de eventos */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between mb-2">
