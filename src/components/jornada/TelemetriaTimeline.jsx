@@ -185,7 +185,7 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, curso
           >
             <div className="bg-slate-800 text-white text-[10px] rounded-lg px-2 py-1.5 shadow-lg whitespace-nowrap">
               <div className="font-semibold">
-                {new Date(cursorPoint.time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}
+                {new Date(cursorPoint.time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <TrendingUp className="w-2.5 h-2.5 text-amber-300" />
