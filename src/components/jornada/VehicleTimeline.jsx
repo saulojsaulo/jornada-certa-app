@@ -377,11 +377,12 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
         </div>
 
         <div 
-          className="relative h-10 bg-slate-100 rounded-lg overflow-visible border border-slate-200"
+          className="relative h-10 bg-slate-100 rounded-lg overflow-visible border border-slate-200 cursor-crosshair"
           onMouseMove={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const percent = (x / rect.width) * 100;
+            setSyncCursor(percent);
             const minutes = Math.floor((percent / 100) * 1440);
             const hours = Math.floor(minutes / 60);
             const mins = minutes % 60;
