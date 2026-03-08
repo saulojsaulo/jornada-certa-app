@@ -46,22 +46,19 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const vehicleCode = body.vehicleCode || '1'; // passar via payload no teste
 
-  // Testar variações do nome do endpoint
+  // Testar paths corretos conforme documentação oficial
   const candidatos = [
-    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/drivervehiclelogs`,
-    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/loginlogout`,
-    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/driverlogin`,
-    `${BASE_URL}/drivervehiclelog?vehicleCode=${vehicleCode}&startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}`,
-    `${BASE_URL}/accounts/${accountCode}/drivervehiclelog?vehicleCode=${vehicleCode}&startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}`,
+    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/driverlogs?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`,
+    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/driverlog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`,
   ];
 
   const resultados = [];
   for (const url of candidatos) {
     const res = await fetch(url, { headers });
     const t = await res.text();
-    let d; try { d = JSON.parse(t); } catch { d = t.substring(0, 100); }
-    resultados.push({ url, status: res.status, data: res.status === 200 ? d : undefined });
-    if (res.status === 200) break; // parar ao encontrar o correto
+    let d; try { d = JSON.parse(t); } catch { d = t.substring(0, 300); }
+    resultados.push({ url, status: res.status, data: d });
+    if (res.status === 200) break;
   }
 
   return Response.json({ accountCode, vehicleCode, resultados });
