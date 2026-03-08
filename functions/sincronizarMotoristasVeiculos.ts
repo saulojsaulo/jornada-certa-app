@@ -51,15 +51,10 @@ Deno.serve(async (req) => {
     // Para cada veículo, buscar driverlogs
     for (const veiculo of veiculos) {
       try {
-        // Buscar driverlogs dos últimos 30 dias
-        const now = new Date();
-        const startDate = new Date(now);
-        startDate.setDate(startDate.getDate() - 30);
+        // Buscar driverlogs sem filtro de data (API pode estar rejeitando datas)
+        const driverLogsUrl = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles/${veiculo.numero_frota}/driverlogs`;
+        console.log(`[SYNC] Buscando driverlogs: ${driverLogsUrl}`);
         
-        const dateFrom = startDate.toISOString();
-        const dateTo = now.toISOString();
-        
-        const driverLogsUrl = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles/${veiculo.numero_frota}/driverlogs?_dateTimeFrom=${encodeURIComponent(dateFrom)}&_dateTimeTo=${encodeURIComponent(dateTo)}&_offset=0&_limit=100`;
         const driverLogsData = await fetchAutotrac(driverLogsUrl);
         
         if (!driverLogsData.Data || driverLogsData.Data.length === 0) {
