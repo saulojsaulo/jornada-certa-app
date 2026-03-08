@@ -38,13 +38,14 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, macro
       vehicleCode,
       data,
       company_id: companyId,
+      macro1Time: macro1Time || null,
     }).then(res => {
       setPoints(res.data?.points || []);
       setDistanciaKm(res.data?.distanciaKm ?? null);
     }).catch(e => {
       setError(e.message || 'Erro ao buscar telemetria');
     }).finally(() => setLoading(false));
-  }, [vehicleCode, data, companyId]);
+  }, [vehicleCode, data, companyId, macro1Time]);
 
   const handleMouseMove = useCallback((e) => {
     if (!barRef.current) return;
