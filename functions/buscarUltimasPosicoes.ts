@@ -64,36 +64,40 @@ Deno.serve(async (req) => {
     return Response.json({ error: e.message }, { status: 500 });
   }
 
-  // Buscar última posição de cada veículo em paralelo (limitado a 10 por vez)
+  // Buscar últimas posições de cada veículo (janela de 3h, pegar o mais recente)
   const results = {};
+  const now = new Date();
+  const from = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
   const chunks = [];
-  for (let i = 0; i < vehicleCodes.length; i += 10) {
-    chunks.push(vehicleCodes.slice(i, i + 10));
+  for (let i = 0; i < vehicleCodes.length; i += 8) {
+    chunks.push(vehicleCodes.slice(i, i + 8));
   }
 
   for (const chunk of chunks) {
     await Promise.all(chunk.map(async (vehicleCode) => {
       try {
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 10000);
-        const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/positions?_limit=1&_sort=-PositionTime`;
+        const t = setTimeout(() => ctrl.abort(), 12000);
+        const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/positions?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=50`;
         const res = await fetch(url, { headers, signal: ctrl.signal });
         clearTimeout(t);
         if (!res.ok) { results[vehicleCode] = null; return; }
         const data = await res.json();
         const items = Array.isArray(data) ? data : (data.Data || data.data || []);
-        const last = items[0];
-        if (last) {
-          results[vehicleCode] = {
-            address: last.Address || last.City || last.Locality || null,
-            time: last.PositionTime || last.ReceivedTime || null,
-            lat: last.Latitude,
-            lng: last.Longitude,
-          };
-        } else {
-          results[vehicleCode] = null;
-        }
+        if (!items.length) { results[vehicleCode] = null; return; }
+        // Pegar o mais recente
+        const sorted = items.sort((a, b) =>
+          new Date(b.PositionTime || b.ReceivedTime) - new Date(a.PositionTime || a.ReceivedTime)
+        );
+        const last = sorted[0];
+        results[vehicleCode] = {
+          address: last.Address || last.City || last.Locality || null,
+          time: last.PositionTime || last.ReceivedTime || null,
+          lat: last.Latitude,
+          lng: last.Longitude,
+        };
       } catch {
         results[vehicleCode] = null;
       }
