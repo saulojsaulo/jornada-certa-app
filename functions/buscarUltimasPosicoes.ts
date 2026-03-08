@@ -92,36 +92,11 @@ Deno.serve(async (req) => {
           new Date(b.PositionTime || b.ReceivedTime) - new Date(a.PositionTime || a.ReceivedTime)
         );
         const last = sorted[0];
-        const lat = last.Latitude;
-        const lng = last.Longitude;
-
-        // Geocoding reverso via Nominatim para obter cidade/endereço
-        let address = null;
-        if (lat && lng) {
-          try {
-            const geoRes = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=pt-BR`,
-              { headers: { 'User-Agent': 'JornadaFrota/1.0' } }
-            );
-            if (geoRes.ok) {
-              const geo = await geoRes.json();
-              const a = geo.address || {};
-              address = [
-                a.road || a.suburb,
-                a.city || a.town || a.village || a.municipality,
-                a.state,
-              ].filter(Boolean).join(', ');
-            }
-          } catch {
-            // sem endereço
-          }
-        }
-
         results[vehicleCode] = {
-          address: address || null,
+          address: last.Landmark || null,
           time: last.PositionTime || last.ReceivedTime || null,
-          lat,
-          lng,
+          lat: last.Latitude,
+          lng: last.Longitude,
         };
       } catch {
         results[vehicleCode] = null;
