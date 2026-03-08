@@ -52,81 +52,21 @@ export default function ControleTab({ onImportLogUpdate }) {
   const loadingMacros = loadingHoje || loadingOntem;
   const refetchMacros = () => { refetchHoje(); refetchOntem(); };
 
-  // Dedupicação e cálculo de jornadas lógicas
-  const macros = useMemo(() => {
+  // Deduplicar por chave única (tolerância de 1 segundo)
+  const dedup = (list) => {
     const seen = new Set();
-    const uniqueMacros = [];
-    
-    fetchedMacros.forEach(m => {
-      const dateToSecond = new Date(m.data_criacao);
-      dateToSecond.setMilliseconds(0);
-      const key = `${m.veiculo_id}-${m.numero_macro}-${dateToSecond.toISOString()}`;
-      
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniqueMacros.push(m);
-      }
+    return list.filter(m => {
+      const d = new Date(m.data_criacao);
+      d.setMilliseconds(0);
+      const key = `${m.veiculo_id}-${m.numero_macro}-${d.toISOString()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
-    
-    // Calcular jornada_id e data_jornada para macros antigas
-    const macrosPorVeiculo = {};
-    uniqueMacros.forEach(m => {
-      if (!macrosPorVeiculo[m.veiculo_id]) {
-        macrosPorVeiculo[m.veiculo_id] = [];
-      }
-      macrosPorVeiculo[m.veiculo_id].push(m);
-    });
-    
-    Object.values(macrosPorVeiculo).forEach(macrosVeiculo => {
-      macrosVeiculo.sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
-      
-      let jornadaAtual = null;
-      
-      macrosVeiculo.forEach(m => {
-        if (!m.jornada_id) {
-          if (m.numero_macro === 1) {
-            const dataJornada = new Date(m.data_criacao).toISOString().split('T')[0];
-            jornadaAtual = {
-              jornadaId: `${m.veiculo_id}-${dataJornada}-${new Date(m.data_criacao).getTime()}`,
-              dataJornada: dataJornada,
-              aberta: true
-            };
-            m.jornada_id = jornadaAtual.jornadaId;
-            m.data_jornada = jornadaAtual.dataJornada;
-          } else if (jornadaAtual && jornadaAtual.aberta) {
-            m.jornada_id = jornadaAtual.jornadaId;
-            m.data_jornada = jornadaAtual.dataJornada;
-            
-            if (m.numero_macro === 2) {
-              jornadaAtual.aberta = false;
-            }
-          }
-        } else {
-          if (m.numero_macro === 1) {
-            jornadaAtual = {
-              jornadaId: m.jornada_id,
-              dataJornada: m.data_jornada,
-              aberta: true
-            };
-          } else if (m.numero_macro === 2 && jornadaAtual) {
-            jornadaAtual.aberta = false;
-          }
-        }
-      });
-    });
-    
-    return uniqueMacros;
-  }, [fetchedMacros]);
+  };
 
-  // Filtrar macros por jornada lógica
-  const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
-
-  const { macrosHoje, macrosOntem } = useMemo(() => {
-    const hoje = macros.filter(m => m.data_jornada === dateString && !m.excluido);
-    const ontem = macros.filter(m => m.data_jornada === yesterdayString && !m.excluido);
-    return { macrosHoje: hoje, macrosOntem: ontem };
-  }, [macros, dateString, yesterdayString]);
+  const macrosHoje   = useMemo(() => dedup(macrosHojeRaw),  [macrosHojeRaw]);
+  const macrosOntem  = useMemo(() => dedup(macrosOntemRaw), [macrosOntemRaw]);
 
   // Agrupar macros por veículo
   const macrosPorVeiculo = useMemo(() => {
@@ -147,15 +87,15 @@ export default function ControleTab({ onImportLogUpdate }) {
     return map;
   }, [macrosOntem]);
 
-  // Agrupar TODAS as macros por veículo (para buscar Macro 2 anterior)
+  // todasMacrosPorVeiculo: usa hoje + ontem (suficiente para cálculo de Macro 2 anterior)
   const todasMacrosPorVeiculo = useMemo(() => {
     const map = {};
-    macros.forEach(m => {
+    [...macrosHoje, ...macrosOntem].forEach(m => {
       if (!map[m.veiculo_id]) map[m.veiculo_id] = [];
       map[m.veiculo_id].push(m);
     });
     return map;
-  }, [macros]);
+  }, [macrosHoje, macrosOntem]);
 
   const handleImportComplete = () => {
     refetchVeiculos();
