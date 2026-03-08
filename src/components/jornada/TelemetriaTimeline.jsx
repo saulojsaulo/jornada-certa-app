@@ -116,7 +116,7 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, curso
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        {/* Segmentos de ignição como fundo colorido */}
+        {/* Segmentos coloridos por estado: amarelo=parado ligado, verde=em movimento, transparente=desligado */}
         {(() => {
           const segs = [];
           for (let i = 0; i < points.length - 1; i++) {
@@ -125,11 +125,21 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, curso
             const left = (toMinutes(p.time) / 1440) * 100;
             const width = ((toMinutes(next.time) - toMinutes(p.time)) / 1440) * 100;
             if (width <= 0) continue;
+
+            let bgColor;
+            if (!p.ignition) {
+              bgColor = 'transparent'; // Parado - ignição desligada
+            } else if (p.speed === 0) {
+              bgColor = '#fef08a'; // Amarelo - parado em marcha lenta
+            } else {
+              bgColor = '#86efac'; // Verde - em movimento
+            }
+
             segs.push(
               <div
                 key={i}
-                className={`absolute top-0 h-full ${p.ignition ? 'bg-emerald-100' : 'bg-slate-50'}`}
-                style={{ left: `${left}%`, width: `${width}%` }}
+                className="absolute top-0 h-full"
+                style={{ left: `${left}%`, width: `${width}%`, backgroundColor: bgColor }}
               />
             );
           }
@@ -138,6 +148,7 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, curso
 
         {/* Barras de velocidade */}
         {points.map((p, i) => {
+          if (!p.ignition || p.speed === 0) return null;
           const left = (toMinutes(p.time) / 1440) * 100;
           const heightPct = (p.speed / maxSpeed) * 100;
           const next = points[i + 1];
@@ -148,13 +159,12 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, curso
           return (
             <div
               key={i}
-              className={`absolute bottom-0 ${p.speed > 80 ? 'bg-red-400' : p.speed > 40 ? 'bg-amber-400' : 'bg-emerald-500'}`}
+              className="absolute bottom-0 bg-emerald-600"
               style={{
                 left: `${left}%`,
                 width: `${barWidth}%`,
                 height: `${heightPct}%`,
-                minHeight: p.ignition && p.speed === 0 ? '2px' : undefined,
-                opacity: 0.85,
+                opacity: 0.9,
               }}
             />
           );
