@@ -79,7 +79,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
         className="p-1 cursor-pointer hover:bg-white/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="grid grid-cols-1 md:gap-1 items-center" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
+        <div className="grid grid-cols-1 md:gap-1 items-center" style={{ gridTemplateColumns: Object.entries(spans).map(([, v]) => `${v}fr`).join(' ') }}>
           {/* Gestor */}
           <div className="col-span-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Gestor</div>
