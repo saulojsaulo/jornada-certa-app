@@ -117,7 +117,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           </div>
 
           {/* Data/Hora */}
-          <div className="col-span-2 overflow-hidden">
+          <div className="col-span-1 overflow-hidden">
             <div className="md:hidden text-xs text-slate-500 mb-1">Data/Hora</div>
             <span className="text-xs text-slate-500 whitespace-nowrap block overflow-hidden">
               {formatDataHora(ultimaPosicao?.time)}
