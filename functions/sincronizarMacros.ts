@@ -173,6 +173,11 @@ Deno.serve(async (req) => {
           );
           if (duplicata) continue;
 
+          // Capturar localização da mensagem
+          const lat = msg.Latitude ?? msg.latitude ?? msg.Lat ?? msg.lat ?? null;
+          const lon = msg.Longitude ?? msg.longitude ?? msg.Long ?? msg.lon ?? msg.Lng ?? msg.lng ?? null;
+          const endereco = msg.Address ?? msg.address ?? msg.City ?? msg.city ?? msg.Location ?? msg.location ?? null;
+
           novosEventos.push({
             veiculo_id: veiculo.id,
             numero_macro: numeroMacro,
@@ -182,6 +187,9 @@ Deno.serve(async (req) => {
             excluido: false,
             editado_manualmente: false,
             company_id: empresa.id,
+            ...(lat !== null && { latitude: Number(lat) }),
+            ...(lon !== null && { longitude: Number(lon) }),
+            ...(endereco ? { endereco: String(endereco) } : {}),
           });
           savedCount++;
         }
