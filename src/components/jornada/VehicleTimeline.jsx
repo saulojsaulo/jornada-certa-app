@@ -748,10 +748,24 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
                 </div>
                 <div className={`flex-1 bg-white rounded-lg p-2 shadow-sm ${isExcluido ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`font-medium text-sm text-slate-700 ${isExcluido ? 'line-through' : ''}`}>
-                      {MACRO_NAMES[macro.numero_macro]}
-                    </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col min-w-0">
+                      <span className={`font-medium text-sm text-slate-700 ${isExcluido ? 'line-through' : ''}`}>
+                        {MACRO_NAMES[macro.numero_macro]}
+                      </span>
+                      {(macro.endereco || (macro.latitude && macro.longitude)) && (
+                        <a
+                          href={macro.latitude && macro.longitude ? `https://www.google.com/maps?q=${macro.latitude},${macro.longitude}` : undefined}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-500 transition-colors mt-0.5 truncate"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{macro.endereco || `${macro.latitude?.toFixed(5)}, ${macro.longitude?.toFixed(5)}`}</span>
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-xs text-slate-500 font-sans ${isExcluido ? 'line-through' : ''}`}>
                         {new Date(macro.data_criacao).toLocaleTimeString('pt-BR', { 
                           hour: '2-digit', 
