@@ -15,9 +15,10 @@ import {
   verificarAlertasInterjornada
 } from './MacroUtils';
 
+// Larguras iniciais em px por coluna
 const DEFAULT_WIDTHS = {
-  gestor: 100, frota: 60, motorista: 160, status: 110,
-  ultimaPosicao: 200, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 90
+  gestor: 90, frota: 70, motorista: 160, status: 100,
+  ultimaPosicao: 180, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 80
 };
 
 export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo }) {
