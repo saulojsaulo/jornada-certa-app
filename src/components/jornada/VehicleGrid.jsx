@@ -18,6 +18,11 @@ import {
 export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // Buscar últimas posições com polling de 60s
+  const companyId = veiculos[0]?.company_id || null;
+  const vehicleCodes = useMemo(() => veiculos.map(v => v.numero_frota).filter(Boolean), [veiculos]);
+  const { positions: ultimasPosicoes } = useUltimasPosicoes(vehicleCodes, companyId, 60000);
   const [alertFilter, setAlertFilter] = useState('all');
   const [sortBy, setSortBy] = useState('nome');
   const [sortOrder, setSortOrder] = useState('asc');
