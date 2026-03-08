@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
+const BASE_URL_WAPI = 'https://wapi.autotrac-online.com.br/aticapi/v1';
 
 function autotracHeaders(usuario, senha, apiKey) {
   return {
