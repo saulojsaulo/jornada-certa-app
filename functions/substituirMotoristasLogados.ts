@@ -104,7 +104,10 @@ Deno.serve(async (req) => {
     }
 
     // Excluir todos os motoristas da empresa
-    await db.entities.Motorista.delete({ company_id: empresa.id });
+    const motoristasExistentes = await db.entities.Motorista.filter({ company_id: empresa.id });
+    for (const m of motoristasExistentes) {
+      await db.entities.Motorista.delete(m.id);
+    }
 
     // Inserir novos motoristas
     const novosMotoristasData = Array.from(motoristasLogados.values()).map(m => ({
