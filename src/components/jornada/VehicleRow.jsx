@@ -44,8 +44,8 @@ function formatDataHora(isoString) {
 }
 
 const DEFAULT_WIDTHS = {
-  gestor: 100, frota: 60, motorista: 160, status: 110,
-  ultimaPosicao: 200, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 90
+  gestor: 90, frota: 60, motorista: 150, status: 100,
+  ultimaPosicao: 170, dataHoraPosicao: 120, jornada: 65, disponivel: 70, hextra: 65, alertas: 70
 };
 
 export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colWidths }) {
