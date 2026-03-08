@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     }
 
     // Buscar account code
-    const accountsRaw = await fetchAutotrac(`${BASE_URL}/accounts?_limit=500`);
+    const accountsRaw = await fetchAutotrac(`${BASE_URL}/accounts?_limit=500`, usuario, senha, apiKey);
     const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || []);
     const contas = accountNum ? accountList.filter(a => String(a.Number) === accountNum) : accountList;
     
