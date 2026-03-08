@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
 
   const body = await req.json().catch(() => ({}));
-  const { vehicleCode, data, company_id } = body;
+  const { vehicleCode, data, company_id, macro1Time } = body;
 
   if (!vehicleCode || !data) {
     return Response.json({ error: 'vehicleCode e data são obrigatórios' }, { status: 400 });
