@@ -114,10 +114,15 @@ Deno.serve(async (req) => {
 
   const accountCode = conta.Code;
 
-  // Janela de tempo: dia inteiro (00:00 até 23:59)
+  // Janela de tempo: desde Macro 1 ou desde o início do dia
   const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-  const from = new Date(`${data}T00:00:00.000Z`);
-  const to = new Date(`${data}T23:59:59.000Z`);
+  let from = new Date(`${data}T00:00:00.000Z`);
+  let to = new Date(`${data}T23:59:59.000Z`);
+  
+  // Se macro1Time foi fornecida, usar como início
+  if (macro1Time) {
+    from = new Date(macro1Time);
+  }
 
   // Endpoint /positions retorna dados GPS contínuos com Velocity e VehicleIgnition
   const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/positions?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(to))}&_limit=5000`;
