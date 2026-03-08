@@ -36,7 +36,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const companyId = user.company_id;
+    // Se for admin, usar a empresa do request; senão usar a do usuário
+    const companyId = user.role === 'admin' ? (await req.json().catch(() => ({}))).company_id || null : user.company_id;
     
     // Buscar empresa para pegar credenciais
     const empresa = await base44.entities.Empresa.filter({ id: companyId });
