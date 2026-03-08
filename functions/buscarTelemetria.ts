@@ -124,21 +124,32 @@ Deno.serve(async (req) => {
   const raw = await autotracGet(url, headers);
   const mensagens = Array.isArray(raw) ? raw : (raw.Data || raw.data || []);
 
-  // Processar apenas mensagens com posição/velocidade (tipo posição GPS)
+  // Extrair velocidade do campo Landmark (ex: "3.26 Km ESE de CIDADE, 0.00 Km/h")
+  function extractSpeedFromLandmark(landmark) {
+    if (!landmark) return null;
+    const match = landmark.match(/([\d.]+)\s*Km\/h/i);
+    return match ? parseFloat(match[1]) : null;
+  }
+
+  // Ignição: campo Ignition == 1 = ligada, 2 = desligada (baseado nos dados reais)
+  function parseIgnition(val) {
+    if (val === 1) return true;
+    if (val === 2) return false;
+    return Boolean(val);
+  }
+
+  // Processar mensagens: extrair posição/velocidade/ignição
   const pontos = mensagens
     .filter(m => {
-      const speed = m.Speed ?? m.speed ?? m.Velocity ?? m.velocity;
       const time = m.MessageTime || m.PositionTime || m.DateTime || m.Date;
-      return time && speed !== undefined && speed !== null;
+      return time && (m.Latitude || m.latitude) && (m.Longitude || m.longitude);
     })
     .map(m => {
       const time = m.MessageTime || m.PositionTime || m.DateTime || m.Date;
-      const speed = Number(m.Speed ?? m.speed ?? m.Velocity ?? m.velocity ?? 0);
-      // Ignição: Speed > 0 é uma boa heurística, ou usar campo digital
-      const ignitionField = m.Ignition ?? m.ignition ?? m.IgnitionOn ?? m.ignitionOn;
-      const ignition = ignitionField !== undefined
-        ? Boolean(ignitionField)
-        : speed > 0;
+      const speedFromLandmark = extractSpeedFromLandmark(m.Landmark || m.landmark);
+      const speed = speedFromLandmark ?? 0;
+      const ignitionField = m.Ignition ?? m.ignition ?? m.IgnitionOn;
+      const ignition = ignitionField !== undefined ? parseIgnition(ignitionField) : speed > 0;
 
       return {
         time: new Date(time).getTime(),
