@@ -119,7 +119,9 @@ Deno.serve(async (req) => {
   const from = new Date(`${data}T00:00:00.000Z`);
   const to = new Date(`${data}T23:59:59.000Z`);
 
-  const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(to))}&_limit=2000`;
+  // Buscar todas as mensagens do dia (incluindo posições GPS, não só macros)
+  // MsgSubType 1001 = macro, outros = posições GPS com velocidade
+  const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(to))}&_limit=5000`;
 
   const raw = await autotracGet(url, headers);
   const mensagens = Array.isArray(raw) ? raw : (raw.Data || raw.data || []);
