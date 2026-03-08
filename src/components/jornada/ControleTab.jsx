@@ -17,6 +17,9 @@ import SincronizarAutotrac from './SincronizarAutotrac';
 export default function ControleTab({ onImportLogUpdate }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
+  const dateString = format(selectedDate, 'yyyy-MM-dd');
+  const yesterdayString = format(new Date(selectedDate.getTime() - 86400000), 'yyyy-MM-dd');
+
   // Buscar veículos
   const { data: veiculos = [], isLoading: loadingVeiculos, refetch: refetchVeiculos } = useQuery({
     queryKey: ['veiculos'],
@@ -35,11 +38,19 @@ export default function ControleTab({ onImportLogUpdate }) {
     queryFn: () => base44.entities.Gestor.list(),
   });
 
-  // Buscar macros
-  const { data: fetchedMacros = [], isLoading: loadingMacros, refetch: refetchMacros } = useQuery({
-    queryKey: ['macros'],
-    queryFn: () => base44.entities.MacroEvento.list('-data_criacao', 50000),
+  // Buscar macros APENAS dos dois dias relevantes (hoje e ontem), direto no banco
+  const { data: macrosHojeRaw = [], isLoading: loadingHoje, refetch: refetchHoje } = useQuery({
+    queryKey: ['macros', dateString],
+    queryFn: () => base44.entities.MacroEvento.filter({ data_jornada: dateString, excluido: false }, '-data_criacao', 10000),
   });
+
+  const { data: macrosOntemRaw = [], isLoading: loadingOntem, refetch: refetchOntem } = useQuery({
+    queryKey: ['macros', yesterdayString],
+    queryFn: () => base44.entities.MacroEvento.filter({ data_jornada: yesterdayString, excluido: false }, '-data_criacao', 10000),
+  });
+
+  const loadingMacros = loadingHoje || loadingOntem;
+  const refetchMacros = () => { refetchHoje(); refetchOntem(); };
 
   // Dedupicação e cálculo de jornadas lógicas
   const macros = useMemo(() => {
