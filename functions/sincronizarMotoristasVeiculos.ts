@@ -49,7 +49,15 @@ Deno.serve(async (req) => {
     // Para cada veículo, buscar driverlogs
     for (const veiculo of veiculos) {
       try {
-        const driverLogsUrl = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles/${veiculo.numero_frota}/driverlogs?_last=true`;
+        // Datas em UTC: hoje às 00:00 até agora
+        const now = new Date();
+        const startOfDay = new Date(now);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        
+        const dateFrom = startOfDay.toISOString();
+        const dateTo = now.toISOString();
+        
+        const driverLogsUrl = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles/${veiculo.numero_frota}/driverlogs?_dateTimeFrom=${encodeURIComponent(dateFrom)}&_dateTimeTo=${encodeURIComponent(dateTo)}&_last=true`;
         const driverLogsData = await fetchAutotrac(driverLogsUrl);
         
         if (!driverLogsData.Data || driverLogsData.Data.length === 0) {
