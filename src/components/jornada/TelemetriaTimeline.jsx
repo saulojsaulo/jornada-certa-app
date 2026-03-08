@@ -3,11 +3,11 @@ import { base44 } from '@/api/base44Client';
 import { Loader2, Zap, ZapOff, TrendingUp } from 'lucide-react';
 
 /**
- * Converte timestamp em minutos desde meia-noite do mesmo dia (UTC)
+ * Converte timestamp em minutos desde meia-noite no horário local (mesmo fuso do VehicleTimeline)
  */
 function toMinutes(ts) {
   const d = new Date(ts);
-  return d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
+  return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
 }
 
 /**
