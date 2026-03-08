@@ -40,6 +40,20 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
   const [tooltip, setTooltip] = useState(null);
   const [cidades, setCidades] = useState({});
 
+  // Buscar cidade via reverse geocoding para macros com lat/lon mas sem endereço
+  useEffect(() => {
+    if (!macros) return;
+    const semCidade = macros.filter(m => m.latitude && m.longitude && !m.endereco && !cidades[m.id]);
+    if (!semCidade.length) return;
+
+    semCidade.forEach(async (m) => {
+      const cidade = await fetchCidade(m.latitude, m.longitude);
+      if (cidade) {
+        setCidades(prev => ({ ...prev, [m.id]: cidade }));
+      }
+    });
+  }, [macros]);
+
   // Usar macros já filtradas (não filtrar novamente)
   const macrosDoDia = useMemo(() => {
     if (!macros || macros.length === 0) return [];
