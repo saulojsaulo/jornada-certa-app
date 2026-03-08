@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
         const driverLogsUrl = `${BASE_URL}/accounts/${accountCode}/vehicles/${veiculo.numero_frota}/driverlogs`;
         console.log(`[SYNC] Buscando driverlogs: ${driverLogsUrl}`);
         
-        const driverLogsData = await fetchAutotrac(driverLogsUrl);
+        const driverLogsData = await fetchAutotrac(driverLogsUrl, usuario, senha, apiKey);
         
         if (!driverLogsData.Data || driverLogsData.Data.length === 0) {
           // Nenhum log, limpar motorista se houver
