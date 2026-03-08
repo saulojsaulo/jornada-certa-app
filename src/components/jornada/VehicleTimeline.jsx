@@ -748,8 +748,8 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
                 </div>
                 <div className={`flex-1 bg-white rounded-lg p-2 shadow-sm ${isExcluido ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex flex-col min-w-0">
-                      <span className={`font-medium text-sm text-slate-700 ${isExcluido ? 'line-through' : ''}`}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className={`font-medium text-sm text-slate-700 shrink-0 ${isExcluido ? 'line-through' : ''}`}>
                         {MACRO_NAMES[macro.numero_macro]}
                       </span>
                       {(macro.endereco || (macro.latitude && macro.longitude)) && (
@@ -757,7 +757,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
                           href={macro.latitude && macro.longitude ? `https://www.google.com/maps?q=${macro.latitude},${macro.longitude}` : undefined}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-500 transition-colors mt-0.5 truncate"
+                          className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-500 transition-colors truncate min-w-0"
                           onClick={e => e.stopPropagation()}
                         >
                           <MapPin className="w-3 h-3 shrink-0" />
