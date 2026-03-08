@@ -15,22 +15,18 @@ import {
   verificarAlertasInterjornada
 } from './MacroUtils';
 
-// Larguras iniciais em px por coluna
 const DEFAULT_WIDTHS = {
-  gestor: 90, frota: 70, motorista: 160, status: 100,
-  ultimaPosicao: 180, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 80
+  gestor: 100, frota: 60, motorista: 160, status: 110,
+  ultimaPosicao: 200, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 90
 };
 
 export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [colSpans, setColSpans] = useState(DEFAULT_SPANS);
+  const [colWidths, setColWidths] = useState(DEFAULT_WIDTHS);
 
-  const adjustSpan = useCallback((key, delta) => {
-    setColSpans(prev => ({
-      ...prev,
-      [key]: Math.max(1, Math.min(5, (prev[key] || 1) + delta))
-    }));
+  const handleResizeCol = useCallback((key, width) => {
+    setColWidths(prev => ({ ...prev, [key]: width }));
   }, []);
 
   // Buscar últimas posições com polling de 60s
