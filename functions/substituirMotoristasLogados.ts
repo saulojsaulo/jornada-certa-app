@@ -7,15 +7,15 @@ const PASS = Deno.env.get("AUTOTRAC_PASS");
 const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 
 async function fetchAutotrac(url, usuario, senha, apiKey) {
+  const credentials = btoa(`${usuario}:${senha}`);
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Basic ${usuario}:${senha}`,
+      'Authorization': `Basic ${credentials}`,
       'Ocp-Apim-Subscription-Key': apiKey,
       'Content-Type': 'application/json',
       'User-Agent': 'PostmanRuntime/7.37.0',
       'Cache-Control': 'no-cache',
-    },
-    timeout: 20000
+    }
   });
   
   if (!response.ok) {
