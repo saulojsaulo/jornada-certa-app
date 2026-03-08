@@ -1,16 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
-const BASE_URL = Deno.env.get("AUTOTRAC_BASE_URL");
+const BASE_URL = Deno.env.get("AUTOTRAC_BASE_URL") || 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 const ACCOUNT = Deno.env.get("AUTOTRAC_ACCOUNT");
 const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
+const API_KEY = Deno.env.get("AUTOTRAC_API_KEY");
 
 async function fetchAutotrac(url) {
-  const auth = btoa(`${USER}:${PASS}`);
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/json'
+      'Authorization': `Basic ${USER}:${PASS}`,
+      'Ocp-Apim-Subscription-Key': API_KEY,
+      'Content-Type': 'application/json',
+      'User-Agent': 'PostmanRuntime/7.37.0',
+      'Cache-Control': 'no-cache',
     },
     timeout: 20000
   });
