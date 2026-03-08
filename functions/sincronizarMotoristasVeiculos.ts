@@ -40,7 +40,14 @@ Deno.serve(async (req) => {
     const db = user.role === 'admin' ? base44.asServiceRole : base44;
     
     // Buscar empresa(s) para pegar credenciais
-    const empresas = await db.entities.Empresa.filter({});
+    let empresas;
+    try {
+      empresas = await db.entities.Empresa.list();
+    } catch (e) {
+      console.error(`[SYNC] Erro ao buscar empresas: ${e.message}`);
+      return Response.json({ error: `Erro ao buscar empresas: ${e.message}` }, { status: 500 });
+    }
+    
     if (!empresas || empresas.length === 0) {
       return Response.json({ error: 'Nenhuma empresa encontrada' }, { status: 404 });
     }
