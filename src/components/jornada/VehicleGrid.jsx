@@ -15,9 +15,23 @@ import {
   verificarAlertasInterjornada
 } from './MacroUtils';
 
+// Spans iniciais por coluna (sem "total"): total = 12 colunas
+const DEFAULT_SPANS = {
+  gestor: 1, frota: 1, motorista: 2, status: 1,
+  ultimaPosicao: 2, dataHoraPosicao: 2, jornada: 1, disponivel: 1, hextra: 1, alertas: 1
+};
+
 export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [colSpans, setColSpans] = useState(DEFAULT_SPANS);
+
+  const adjustSpan = useCallback((key, delta) => {
+    setColSpans(prev => ({
+      ...prev,
+      [key]: Math.max(1, Math.min(5, (prev[key] || 1) + delta))
+    }));
+  }, []);
 
   // Buscar últimas posições com polling de 60s
   const companyId = veiculos[0]?.company_id || null;
