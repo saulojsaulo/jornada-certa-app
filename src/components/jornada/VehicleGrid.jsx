@@ -155,6 +155,7 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
   }).filter(g => g !== '—'))].sort();
   const statuses = [...new Set(processedVehicles.map(v => v.status))].sort();
 
+  // 13 colunas: Gestor(1) Frota(1) Motorista(2) Status(1) UltPos(2) DataHora(2) Jornada(1) Disp(1) HExtra(1) Total(1) Alertas(1)
   const columns = [
     {
       key: 'gestor',
@@ -176,7 +177,7 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'motorista',
       label: 'Motorista',
-      span: 'col-span-3',
+      span: 'col-span-2',
       draggable: true,
       filterable: false,
       sortable: true
@@ -184,7 +185,7 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'status',
       label: 'Status',
-      span: 'col-span-2',
+      span: 'col-span-1',
       filterable: true,
       draggable: true,
       sortable: true,
@@ -200,7 +201,7 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     {
       key: 'dataHoraPosicao',
       label: 'Data/Hora',
-      span: 'col-span-1',
+      span: 'col-span-2',
       filterable: false,
       sortable: false
     },
