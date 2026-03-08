@@ -32,7 +32,18 @@ function getGestorDisplay(veiculo) {
 }
 import VehicleTimeline from './VehicleTimeline';
 
-export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros }) {
+function formatDataHora(isoString) {
+  if (!isoString) return '—';
+  const d = new Date(isoString);
+  if (isNaN(d)) return '—';
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'America/Sao_Paulo'
+  });
+}
+
+export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao }) {
   const [expanded, setExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
