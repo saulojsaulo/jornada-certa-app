@@ -38,6 +38,33 @@ Deno.serve(async (req) => {
 
     const companyId = user.company_id;
     
+    // Buscar empresa para pegar credenciais
+    const empresa = await base44.entities.Empresa.filter({ id: companyId });
+    if (!empresa || empresa.length === 0) {
+      return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+    }
+    
+    const cfg = empresa[0].api_config || {};
+    const usuario = cfg.autotrac_usuario || USER;
+    const senha = cfg.autotrac_senha || PASS;
+    const apiKey = cfg.autotrac_api_key || API_KEY;
+    const accountNum = String(cfg.autotrac_account || ACCOUNT || '');
+
+    if (!usuario || !senha || !apiKey) {
+      return Response.json({ error: 'Credenciais incompletas' }, { status: 400 });
+    }
+
+    // Buscar account code
+    const accountsRaw = await fetchAutotrac(`${BASE_URL}/accounts?_limit=500`);
+    const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || []);
+    const contas = accountNum ? accountList.filter(a => String(a.Number) === accountNum) : accountList;
+    
+    if (!contas.length) {
+      return Response.json({ error: `Conta ${accountNum} não encontrada` }, { status: 404 });
+    }
+    
+    const accountCode = contas[0].Code;
+    
     // Buscar todos os veículos da empresa
     const veiculos = await base44.entities.Veiculo.filter({ company_id: companyId });
     
@@ -54,8 +81,8 @@ Deno.serve(async (req) => {
     // Para cada veículo, buscar driverlogs
     for (const veiculo of veiculos) {
       try {
-        // Buscar driverlogs sem filtro de data (API pode estar rejeitando datas)
-        const driverLogsUrl = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles/${veiculo.numero_frota}/driverlogs`;
+        // Buscar driverlogs usando account code correto
+        const driverLogsUrl = `${BASE_URL}/accounts/${accountCode}/vehicles/${veiculo.numero_frota}/driverlogs`;
         console.log(`[SYNC] Buscando driverlogs: ${driverLogsUrl}`);
         
         const driverLogsData = await fetchAutotrac(driverLogsUrl);
