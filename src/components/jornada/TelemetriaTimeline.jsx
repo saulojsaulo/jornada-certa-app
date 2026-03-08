@@ -171,12 +171,14 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, curso
         })}
 
         {/* Linha de referência de velocidade (80 km/h) */}
-        <div
-          className="absolute w-full h-px bg-red-300 opacity-60 pointer-events-none"
-          style={{ bottom: `${(80 / maxSpeed) * 100}%` }}
-        >
-          <span className="absolute right-1 -top-3 text-[9px] text-red-400">80 km/h</span>
-        </div>
+        {maxSpeed > 80 && (
+          <div
+            className="absolute w-full h-px bg-red-300 opacity-60 pointer-events-none"
+            style={{ bottom: `${(80 / maxSpeed) * 100}%` }}
+          >
+            <span className="absolute right-1 -top-3 text-[9px] text-red-400">80 km/h</span>
+          </div>
+        )}
 
         {/* Cursor vertical sincronizado */}
         {activeCursor !== null && (
