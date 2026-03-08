@@ -90,6 +90,23 @@ export default function MotoristasTab() {
     }
   };
 
+  const handleSubstituirPorLogados = async () => {
+    if (!confirm('Isto irá deletar TODOS os motoristas atuais e substituir pelos logados nos veículos. Continuar?')) {
+      return;
+    }
+
+    setIsSubstituindo(true);
+    try {
+      const result = await base44.functions.invoke('substituirMotoristasLogados', {});
+      queryClient.invalidateQueries(['motoristas']);
+      alert(`Motoristas substituídos com sucesso! ${result.data.motoristasSubstituidos} inseridos.`);
+    } catch (error) {
+      alert(`Erro: ${error.message}`);
+    } finally {
+      setIsSubstituindo(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
