@@ -40,14 +40,26 @@ Deno.serve(async (req) => {
   const from = new Date(now - 4 * 60 * 60 * 1000);
   const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
-  const url = `${BASE_URL}/accounts/${accountCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`;
+  // Buscar um veículo da conta para testar por veículo
+  const veicsRaw = await fetch(`${BASE_URL}/accounts/${accountCode}/vehicles?_limit=5`, { headers }).then(r => r.json());
+  const veics = Array.isArray(veicsRaw) ? veicsRaw : (veicsRaw.Data || []);
+  const primeiroVeiculo = veics[0];
 
-  const res = await fetch(url, { headers });
-  const status = res.status;
-  const body = await res.text();
+  // Testar múltiplos endpoints possíveis
+  const endpoints = [
+    `${BASE_URL}/accounts/${accountCode}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`,
+    `${BASE_URL}/drivervehiclelog?accountCode=${accountCode}&startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5`,
+    primeiroVeiculo ? `${BASE_URL}/accounts/${accountCode}/vehicles/${primeiroVeiculo.Code}/drivervehiclelog?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=5` : null,
+  ].filter(Boolean);
 
-  let parsed;
-  try { parsed = JSON.parse(body); } catch { parsed = body; }
+  const testeResultados = await Promise.all(endpoints.map(async (url) => {
+    const res = await fetch(url, { headers });
+    const status = res.status;
+    const body = await res.text();
+    let parsed;
+    try { parsed = JSON.parse(body); } catch { parsed = body.substring(0, 300); }
+    return { url, status, data: parsed };
+  }));
 
-  return Response.json({ url, status, accountCode, data: parsed });
+  return Response.json({ accountCode, primeiroVeiculo, testeResultados });
 });
