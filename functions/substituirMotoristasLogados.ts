@@ -29,8 +29,10 @@ async function fetchAutotrac(url, usuario, senha, apiKey) {
 
 Deno.serve(async (req) => {
   try {
+    console.log('[DEBUG] Iniciando substituirMotoristasLogados');
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
+    console.log('[DEBUG] User:', user?.email, 'Role:', user?.role);
     
     if (!user || user.role !== 'admin') {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -39,7 +41,9 @@ Deno.serve(async (req) => {
     const db = base44.asServiceRole;
     
     // Buscar empresa
+    console.log('[DEBUG] Buscando empresas');
     const empresas = await db.entities.Empresa.list();
+    console.log('[DEBUG] Empresas encontradas:', empresas.length);
     if (!empresas || empresas.length === 0) {
       return Response.json({ error: 'Nenhuma empresa encontrada' }, { status: 404 });
     }
