@@ -9,7 +9,7 @@ import {
   calcularHorasExtras,
   STATUS_CONFIG
 } from './MacroUtils';
-import { Clock, Coffee, Moon, Zap, Play, Square, Trash2, RotateCcw, Pencil, AlertTriangle } from 'lucide-react';
+import { Clock, Coffee, Moon, Zap, Play, Square, Trash2, RotateCcw, Pencil, AlertTriangle, MapPin } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
