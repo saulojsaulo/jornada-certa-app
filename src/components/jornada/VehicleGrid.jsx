@@ -4,6 +4,7 @@ import VehicleRow from './VehicleRow';
 import VehicleFilters from './VehicleFilters';
 import GridHeader from './GridHeader';
 import { getManagerName } from './DriverData';
+import { useUltimasPosicoes } from './useUltimasPosicoes';
 import {
   getVehicleStatus,
   calcularJornadaLiquida,
