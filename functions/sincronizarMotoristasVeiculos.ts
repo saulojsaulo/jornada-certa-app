@@ -51,15 +51,15 @@ Deno.serve(async (req) => {
     // Para cada veículo, buscar driverlogs
     for (const veiculo of veiculos) {
       try {
-        // Datas em UTC: hoje às 00:00 até agora
+        // Buscar driverlogs dos últimos 30 dias
         const now = new Date();
-        const startOfDay = new Date(now);
-        startOfDay.setUTCHours(0, 0, 0, 0);
+        const startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 30);
         
-        const dateFrom = startOfDay.toISOString();
+        const dateFrom = startDate.toISOString();
         const dateTo = now.toISOString();
         
-        const driverLogsUrl = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles/${veiculo.numero_frota}/driverlogs?_dateTimeFrom=${encodeURIComponent(dateFrom)}&_dateTimeTo=${encodeURIComponent(dateTo)}&_last=true`;
+        const driverLogsUrl = `${BASE_URL}/v1/accounts/${ACCOUNT}/vehicles/${veiculo.numero_frota}/driverlogs?_dateTimeFrom=${encodeURIComponent(dateFrom)}&_dateTimeTo=${encodeURIComponent(dateTo)}&_offset=0&_limit=100`;
         const driverLogsData = await fetchAutotrac(driverLogsUrl);
         
         if (!driverLogsData.Data || driverLogsData.Data.length === 0) {
@@ -71,7 +71,12 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const ultimoLog = driverLogsData.Data[0];
+        // O último log (índice 0 é o mais recente quando ordenado por data DESC)
+        const ultimoLog = driverLogsData.Data.sort((a, b) => {
+          const timeA = new Date(a.LoginTime || a.LogoutTime || 0).getTime();
+          const timeB = new Date(b.LoginTime || b.LogoutTime || 0).getTime();
+          return timeB - timeA;
+        })[0];
         
         // Se há LogoutTime, o motorista saiu - limpar
         if (ultimoLog.LogoutTime) {
