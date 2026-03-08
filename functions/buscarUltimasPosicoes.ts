@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
   // Buscar últimas posições de cada veículo (janela de 3h, pegar o mais recente)
   const results = {};
   const now = new Date();
-  const from = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
 
   const chunks = [];
