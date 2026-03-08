@@ -31,7 +31,7 @@ async function fetchCidade(lat, lon) {
   }
 }
 
-export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataReferencia }) {
+export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataReferencia, vehicleCode, companyId }) {
   const [updatingIds, setUpdatingIds] = useState(new Set());
   const [editingMacro, setEditingMacro] = useState(null);
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
