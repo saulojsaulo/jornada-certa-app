@@ -55,8 +55,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Credenciais incompletas' }, { status: 400 });
     }
 
+    console.log(`[DEBUG] BASE_URL: ${BASE_URL}, accountNum: ${accountNum}, usuario: ${usuario}`);
+
     // Buscar account code
-    const accountsRaw = await fetchAutotrac(`${BASE_URL}/accounts?_limit=500`, usuario, senha, apiKey);
+    const accountsUrl = `${BASE_URL}/accounts?_limit=500`;
+    console.log(`[DEBUG] Tentando buscar: ${accountsUrl}`);
+    const accountsRaw = await fetchAutotrac(accountsUrl, usuario, senha, apiKey);
     const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || []);
     const contas = accountNum ? accountList.filter(a => String(a.Number) === accountNum) : accountList;
     
