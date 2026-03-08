@@ -36,14 +36,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Se for admin, usar a empresa do request; senão usar a do usuário
-    const companyId = user.role === 'admin' ? (await req.json().catch(() => ({}))).company_id || null : user.company_id;
+    // Se for admin, usar service role
+    const db = user.role === 'admin' ? base44.asServiceRole : base44;
     
-    // Buscar empresa para pegar credenciais
-    const empresa = await base44.entities.Empresa.filter({ id: companyId });
-    if (!empresa || empresa.length === 0) {
-      return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+    // Buscar empresa(s) para pegar credenciais
+    const empresas = await db.entities.Empresa.filter({});
+    if (!empresas || empresas.length === 0) {
+      return Response.json({ error: 'Nenhuma empresa encontrada' }, { status: 404 });
     }
+    
+    const empresa = empresas[0];
     
     const cfg = empresa[0].api_config || {};
     const usuario = cfg.autotrac_usuario || USER;
