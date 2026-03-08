@@ -39,6 +39,7 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, curso
       company_id: companyId,
     }).then(res => {
       setPoints(res.data?.points || []);
+      setDistanciaKm(res.data?.distanciaKm ?? null);
     }).catch(e => {
       setError(e.message || 'Erro ao buscar telemetria');
     }).finally(() => setLoading(false));
