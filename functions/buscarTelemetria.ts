@@ -144,8 +144,22 @@ Deno.serve(async (req) => {
 
   const sampled = samplePoints(pontos, 400);
 
+  // Calcular distância total percorrida usando o campo Odometer (mais preciso)
+  // Odometer está em metros na API Autotrac
+  let distanciaKm = 0;
+  const pontosComOdometro = mensagens
+    .filter(m => m.Odometer && m.Odometer > 0)
+    .sort((a, b) => new Date(a.PositionTime || a.ReceivedTime) - new Date(b.PositionTime || b.ReceivedTime));
+
+  if (pontosComOdometro.length >= 2) {
+    const primeiro = pontosComOdometro[0].Odometer;
+    const ultimo = pontosComOdometro[pontosComOdometro.length - 1].Odometer;
+    distanciaKm = Math.round((ultimo - primeiro) / 1000);
+  }
+
   return Response.json({
     points: sampled,
+    distanciaKm,
     total_raw: mensagens.length,
     total_pontos: pontos.length,
     total_sampled: sampled.length,
