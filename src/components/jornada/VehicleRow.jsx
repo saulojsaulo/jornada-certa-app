@@ -87,19 +87,35 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           </div>
 
           {/* Motorista */}
-          <div className="col-span-3">
+          <div className="col-span-2 overflow-hidden">
             <div className="md:hidden text-xs text-slate-500 mb-1">Motorista</div>
-            <span className="text-sm text-slate-700 block">
+            <span className="text-xs text-slate-700 truncate block whitespace-nowrap overflow-hidden">
               {getMotoristaDisplay(veiculo)}
             </span>
           </div>
 
           {/* Status */}
-          <div className="col-span-2">
+          <div className="col-span-1 overflow-hidden">
             <div className="md:hidden text-xs text-slate-500 mb-1">Status</div>
-            <Badge className={`${statusConfig.color} font-medium text-xs`}>
+            <Badge className={`${statusConfig.color} font-medium text-[10px] whitespace-nowrap px-1.5 py-0.5`}>
               {status}
             </Badge>
+          </div>
+
+          {/* Última Posição */}
+          <div className="col-span-2 overflow-hidden">
+            <div className="md:hidden text-xs text-slate-500 mb-1">Última Posição</div>
+            <span className="text-xs text-slate-600 truncate block whitespace-nowrap overflow-hidden" title={ultimaPosicao?.address || ''}>
+              {ultimaPosicao?.address || <span className="text-slate-300">—</span>}
+            </span>
+          </div>
+
+          {/* Data/Hora */}
+          <div className="col-span-2 overflow-hidden">
+            <div className="md:hidden text-xs text-slate-500 mb-1">Data/Hora</div>
+            <span className="text-xs text-slate-500 whitespace-nowrap block overflow-hidden">
+              {formatDataHora(ultimaPosicao?.time)}
+            </span>
           </div>
 
           {/* Jornada em Tempo Real */}
