@@ -125,65 +125,37 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
           </div>
 
           {/* Jornada em Tempo Real */}
-          <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-1 md:hidden">Jornada</div>
-            <div className={`font-sans font-bold text-sm ${jornadaLiquida > 480 ? 'text-amber-600' : 'text-slate-700'}`}>
+          <div className="flex items-center justify-center overflow-hidden">
+            <div className={`font-sans font-bold text-sm whitespace-nowrap ${jornadaLiquida > 480 ? 'text-amber-600' : 'text-slate-700'}`}>
               {minutesToHHMM(jornadaLiquida)}
             </div>
           </div>
 
           {/* Tempo Disponível */}
-          <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-1 md:hidden">Disponível</div>
-            <div className={`font-sans font-bold text-sm ${tempoDisponivel < 60 ? 'text-red-600' : 'text-emerald-600'}`}>
+          <div className="flex items-center justify-center overflow-hidden">
+            <div className={`font-sans font-bold text-sm whitespace-nowrap ${tempoDisponivel < 60 ? 'text-red-600' : 'text-emerald-600'}`}>
               {minutesToHHMM(tempoDisponivel)}
             </div>
           </div>
 
           {/* Horas Extras */}
-          <div className="col-span-1 text-center">
-            <div className="text-xs text-slate-500 mb-1 md:hidden">H. Extra</div>
-            <div className={`font-sans font-bold text-sm ${horasExtras > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+          <div className="flex items-center justify-center overflow-hidden">
+            <div className={`font-sans font-bold text-sm whitespace-nowrap ${horasExtras > 0 ? 'text-red-600' : 'text-slate-400'}`}>
               {minutesToHHMM(horasExtras)}
             </div>
           </div>
 
           {/* Alertas */}
-          <div className="col-span-1 flex items-center justify-end gap-2">
-            {/* Alerta Refeição */}
+          <div className="flex items-center justify-end gap-1 overflow-hidden">
             {alertaRefeicao && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-medium"
-              >
-                🍽️
-              </motion.div>
+              <span title="Alerta Refeição" className="text-base leading-none">🍽️</span>
             )}
-
-            {/* Alerta Interjornada < 11h */}
             {alertasInterjornada.alerta11h && !alertasInterjornada.alerta8h && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="flex items-center gap-1 bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full text-xs font-medium"
-              >
-                🌙
-              </motion.div>
+              <span title="Interjornada < 11h" className="text-base leading-none">🌙</span>
             )}
-
-            {/* Alerta Interjornada < 8h */}
             {alertasInterjornada.alerta8h && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium"
-              >
-                💣
-              </motion.div>
+              <span title="Interjornada < 8h" className="text-base leading-none">💣</span>
             )}
-
-            {/* Sem alertas */}
             {!alertaRefeicao && !alertasInterjornada.alerta11h && !alertasInterjornada.alerta8h && (
               <span className="text-slate-300 text-xs">—</span>
             )}
