@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
         // Se há LogoutTime, o motorista saiu - limpar
         if (ultimoLog.LogoutTime) {
           if (veiculo.motorista_id) {
-            await base44.entities.Veiculo.update(veiculo.id, { motorista_id: null });
+            await db.entities.Veiculo.update(veiculo.id, { motorista_id: null });
             atualizacoes++;
           }
         } else {
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
             
             // Atualizar somente se mudou
             if (veiculo.motorista_id !== motorista_id) {
-              await base44.entities.Veiculo.update(veiculo.id, { motorista_id });
+              await db.entities.Veiculo.update(veiculo.id, { motorista_id });
               atualizacoes++;
             }
           }
