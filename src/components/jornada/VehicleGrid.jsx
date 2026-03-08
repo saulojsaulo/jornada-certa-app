@@ -191,6 +191,20 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
       filterOptions: statuses.map(s => ({ value: s, label: s }))
     },
     {
+      key: 'ultimaPosicao',
+      label: 'Última Posição',
+      span: 'col-span-2',
+      filterable: false,
+      sortable: false
+    },
+    {
+      key: 'dataHoraPosicao',
+      label: 'Data/Hora',
+      span: 'col-span-1',
+      filterable: false,
+      sortable: false
+    },
+    {
       key: 'jornada',
       label: 'Jornada',
       span: 'col-span-1',
