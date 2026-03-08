@@ -44,8 +44,8 @@ function formatDataHora(isoString) {
 }
 
 const DEFAULT_WIDTHS = {
-  gestor: 100, frota: 60, motorista: 160, status: 110,
-  ultimaPosicao: 200, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 90
+  gestor: 90, frota: 70, motorista: 160, status: 100,
+  ultimaPosicao: 180, dataHoraPosicao: 130, jornada: 80, disponivel: 90, hextra: 80, alertas: 80
 };
 
 export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colWidths }) {
@@ -79,7 +79,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
         className="p-1 cursor-pointer hover:bg-white/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="grid grid-cols-1 md:gap-1 items-center" style={{ gridTemplateColumns: Object.entries(widths).map(([, w]) => `${w}px`).join(' ') }}>
+        <div className="grid grid-cols-1 md:gap-1 items-center overflow-hidden" style={{ gridTemplateColumns: Object.entries(widths).map(([, w]) => `${w}px`).join(' ') }}>
           {/* Gestor */}
           <div className="col-span-1">
             <div className="md:hidden text-xs text-slate-500 mb-1">Gestor</div>
