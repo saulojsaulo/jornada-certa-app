@@ -313,6 +313,7 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
                 macrosHoje={v.macrosHoje}
                 macrosOntem={v.macrosOntem}
                 todasMacros={todasMacrosPorVeiculo ? todasMacrosPorVeiculo[v.id] : null}
+                ultimaPosicao={ultimasPosicoes[v.numero_frota] || null}
               />
             </motion.div>
           ))
