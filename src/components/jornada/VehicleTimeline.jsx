@@ -441,6 +441,8 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
                 endMinutes = nextDate.getHours() * 60 + nextDate.getMinutes();
               } else if (isToday && macro.numero_macro !== 2) {
                 endMinutes = now.getHours() * 60 + now.getMinutes();
+              } else if (isHistoricoTooltip && macro.numero_macro !== 2) {
+                endMinutes = 1440;
               }
               
               if (minutes >= startMinutes && minutes < endMinutes) {
