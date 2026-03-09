@@ -94,23 +94,7 @@ Deno.serve(async (req) => {
         from = new Date(end.getTime() - 24 * 3600 * 1000);
       }
 
-      // 3. Buscar TODAS as mensagens da conta em UMA chamada (endpoint bulk)
-      const bulkRaw = await autotracGet(
-        `${BASE_URL}/accounts/${accountCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(end))}&_limit=5000`,
-        headers
-      );
-      const todasMensagens = Array.isArray(bulkRaw) ? bulkRaw : (bulkRaw.Data || bulkRaw.data || []);
-
-      // 4. Agrupar mensagens por vehicleCode (número de frota)
-      const msgPorFrota = {};
-      for (const msg of todasMensagens) {
-        const code = String(msg.VehicleCode ?? msg.vehicleCode ?? msg.Vehicle ?? msg.vehicle ?? '');
-        if (!code) continue;
-        if (!msgPorFrota[code]) msgPorFrota[code] = [];
-        msgPorFrota[code].push(msg);
-      }
-
-      // 5. Buscar veículos do sistema (paginado por lote para o DB)
+      // 3. Buscar veículos do sistema
       const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id }, '-created_date', 500);
       const lote = veiculosSistema.slice(offset, offset + LOTE_SIZE);
       const proximo = offset + LOTE_SIZE < veiculosSistema.length ? offset + LOTE_SIZE : null;
@@ -120,27 +104,44 @@ Deno.serve(async (req) => {
       const dataEndStr  = end.toISOString().split('T')[0];
       const datasParaChecar = dataFromStr === dataEndStr ? [dataFromStr] : [dataFromStr, dataEndStr];
 
-      // 6. Buscar macros do banco para todos os veículos do lote em paralelo
+      // 4. Para cada veículo: buscar macros do banco + mensagens da API (sequencial com delay)
+      const mensagensPorVeiculo = [];
       const macrosPorVeiculo = {};
-      await Promise.all(
-        lote.map(async (veiculo) => {
-          const fetches = await Promise.all(
-            datasParaChecar.map(d =>
-              db.entities.MacroEvento.filter({ veiculo_id: veiculo.id, data_jornada: d }, '-data_criacao', 50)
-            )
-          );
-          macrosPorVeiculo[veiculo.id] = fetches.flat();
-        })
-      );
 
-      // 7. Processar e inserir novos eventos
+      for (const veiculo of lote) {
+        // Buscar macros existentes no banco
+        const fetches = await Promise.all(
+          datasParaChecar.map(d =>
+            db.entities.MacroEvento.filter({ veiculo_id: veiculo.id, data_jornada: d }, '-data_criacao', 50)
+          )
+        );
+        macrosPorVeiculo[veiculo.id] = fetches.flat();
+
+        // Buscar mensagens da API Autotrac
+        const vehicleCode = String(veiculo.numero_frota || '');
+        if (!vehicleCode) {
+          mensagensPorVeiculo.push({ veiculo, mensagens: [] });
+          continue;
+        }
+        try {
+          const r = await autotracGet(
+            `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(end))}&_limit=500`,
+            headers
+          );
+          mensagensPorVeiculo.push({ veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) });
+        } catch {
+          mensagensPorVeiculo.push({ veiculo, mensagens: [] });
+        }
+        // Pausa para respeitar rate limit
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      // 5. Processar e inserir novos eventos
       let savedCount = 0;
       const novosEventos = [];
 
-      for (const veiculo of lote) {
-        const vehicleCode = String(veiculo.numero_frota || '');
-        const mensagens = (vehicleCode && msgPorFrota[vehicleCode]) || [];
-        const macrosDb  = macrosPorVeiculo[veiculo.id] || [];
+      for (const { veiculo, mensagens } of mensagensPorVeiculo) {
+        const macrosDb = macrosPorVeiculo[veiculo.id] || [];
 
         const manualKeys = new Set(
           macrosDb.filter(m => m.editado_manualmente).map(m => `${m.numero_macro}-${m.jornada_id}`)
