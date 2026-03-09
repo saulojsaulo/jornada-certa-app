@@ -99,7 +99,7 @@ export default function Jornada() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+      </div>
     </ErrorBoundary>
   );
 }
