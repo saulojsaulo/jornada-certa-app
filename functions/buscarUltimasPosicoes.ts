@@ -64,7 +64,15 @@ Deno.serve(async (req) => {
     return Response.json({ error: e.message }, { status: 500 });
   }
 
-  // Buscar últimas posições de cada veículo (janela de 3h, pegar o mais recente)
+  // Buscar veículos do sistema para mapear vehicle_code -> veiculo_id
+  let veiculoMap = {};
+  try {
+    const veiculos = await db.entities.Veiculo.filter(company_id ? { company_id } : {});
+    for (const v of veiculos) {
+      if (v.numero_frota) veiculoMap[v.numero_frota.toUpperCase().trim()] = v.id;
+    }
+  } catch {}
+
   const results = {};
   const now = new Date();
   const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -92,12 +100,28 @@ Deno.serve(async (req) => {
           new Date(b.PositionTime || b.ReceivedTime) - new Date(a.PositionTime || a.ReceivedTime)
         );
         const last = sorted[0];
-        results[vehicleCode] = {
+        const posicao = {
           address: last.Landmark || null,
           time: last.PositionTime || last.ReceivedTime || null,
           lat: last.Latitude,
           lng: last.Longitude,
         };
+        results[vehicleCode] = posicao;
+
+        // Persistir última posição no banco
+        const veiculoId = veiculoMap[vehicleCode?.toUpperCase()?.trim()];
+        const dataPosicao = posicao.time ? new Date(posicao.time).toISOString() : now.toISOString();
+        try {
+          await db.entities.PosicaoVeiculo.create({
+            vehicle_code: vehicleCode,
+            ...(veiculoId && { veiculo_id: veiculoId }),
+            data_posicao: dataPosicao,
+            latitude: posicao.lat ?? null,
+            longitude: posicao.lng ?? null,
+            endereco: posicao.address ?? null,
+            ...(company_id && { company_id }),
+          });
+        } catch {}
       } catch {
         results[vehicleCode] = null;
       }
