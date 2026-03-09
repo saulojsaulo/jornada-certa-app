@@ -99,10 +99,16 @@ Deno.serve(async (req) => {
         if (v.placa)        mapPlaca[v.placa.toUpperCase().trim()] = v;
       }
 
-      // 3. Janela de busca: fatia de JANELA_H horas
-      const now  = new Date();
-      const end  = new Date(now - janelaOff * 60 * 60 * 1000);
-      const from = new Date(end - JANELA_H * 60 * 60 * 1000);
+      // 3. Janela de busca: fatia de JANELA_H horas (ou intervalo explícito via from_iso/to_iso)
+      let from, end;
+      if (body.from_iso && body.to_iso) {
+        from = new Date(body.from_iso);
+        end  = new Date(body.to_iso);
+      } else {
+        const now = new Date();
+        end  = new Date(now - janelaOff * 60 * 60 * 1000);
+        from = new Date(end - JANELA_H * 60 * 60 * 1000);
+      }
       const fmt  = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
       const totalHoras = Math.min(horas, 24);
       const proximaJanelaOff = janelaOff + JANELA_H < totalHoras ? janelaOff + JANELA_H : null;
