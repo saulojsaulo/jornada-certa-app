@@ -3,8 +3,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 const MACROS_VALIDAS = new Set([1, 2, 3, 4, 5, 6, 9, 10]);
 const MACROS_REGEX = /^\d+$/;
-const LOTE_SIZE = 25; // veículos por execução
-const CHUNK_SIZE = 2; // requisições paralelas simultâneas à Autotrac
+const LOTE_SIZE = 10; // veículos por execução
+const CHUNK_SIZE = 1; // sequencial — sem paralelismo para não bater no rate limit
 
 function autotracHeaders(usuario, senha, apiKey) {
   return {
