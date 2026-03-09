@@ -131,7 +131,7 @@ export default function ControleTab({ onImportLogUpdate }) {
       </div>
 
       {/* Aviso: data histórica sem macros */}
-      {dateString !== new Date().toISOString().split('T')[0] && !loadingMacros && macrosHoje.length === 0 && (
+      {dateString !== new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()) && !loadingMacros && macrosHoje.length === 0 && (
         <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
           <span className="text-lg">⚠️</span>
           <div>
