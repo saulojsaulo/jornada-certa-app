@@ -54,6 +54,7 @@ export default function Jornada() {
   };
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       {/* Sub-header da página */}
       <div className="bg-white border-b border-slate-200 px-4 py-3">
