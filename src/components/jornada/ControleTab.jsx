@@ -109,7 +109,7 @@ export default function ControleTab({ onImportLogUpdate }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={onImportLogUpdate} />
-          <SincronizarAutotrac onSyncComplete={handleImportComplete} />
+          <SincronizarAutotrac onSyncComplete={handleImportComplete} selectedDate={selectedDate} />
         </div>
         
         <Popover>
