@@ -4,7 +4,7 @@ const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 const MACROS_VALIDAS = new Set([1, 2, 3, 4, 5, 6, 9, 10]);
 const MACROS_REGEX = /^\d+$/;
 const LOTE_SIZE = 25; // veículos por execução
-const CHUNK_SIZE = 3; // requisições paralelas simultâneas à Autotrac
+const CHUNK_SIZE = 2; // requisições paralelas simultâneas à Autotrac
 
 function autotracHeaders(usuario, senha, apiKey) {
   return {
