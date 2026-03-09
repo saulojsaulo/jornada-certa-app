@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
   const db = base44.asServiceRole;
 
-  const empresas = await db.entities.Empresa.filter({ provedora_rastreamento: 'autotrac', ativa: true });
+  const empresas = await db.entities.Empresa.filter({ provedora_rastreamento: 'autotrac', ativa: true }, '-created_date', 100);
   if (!empresas?.length) return Response.json({ message: 'Nenhuma empresa Autotrac configurada.' });
 
   const results = [];
