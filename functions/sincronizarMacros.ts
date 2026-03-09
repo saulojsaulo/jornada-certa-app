@@ -122,37 +122,32 @@ Deno.serve(async (req) => {
       const dataEndStr = end.toISOString().split('T')[0];
       const datasParaChecar = dataFromStr === dataEndStr ? [dataFromStr] : [dataFromStr, dataEndStr];
 
-      for (let i = 0; i < lote.length; i += CHUNK_SIZE) {
-        if (i > 0) await new Promise(r => setTimeout(r, 1500)); // delay entre chunks para não saturar rate limit
-        const chunk = lote.slice(i, i + CHUNK_SIZE);
-        await Promise.all(
-          chunk.map(async (veiculo) => {
-            const vehicleCode = veiculo.numero_frota;
-
-            // Buscar macros do banco para este veículo, cobrindo todas as datas da janela
-            const macrosFetches = await Promise.all(
-              datasParaChecar.map(d =>
-                db.entities.MacroEvento.filter({ veiculo_id: veiculo.id, data_jornada: d }, '-data_criacao', 30)
-              )
-            );
-            const macrosDb = macrosFetches.flat();
-            macrosPorVeiculo[veiculo.id] = macrosDb;
-
-            if (!vehicleCode) {
-              mensagensPorVeiculo.push({ veiculo, mensagens: [] });
-              return;
-            }
-            try {
-              const r = await autotracGet(
-                `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(end))}&_limit=500`,
-                headers
-              );
-              mensagensPorVeiculo.push({ veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) });
-            } catch {
-              mensagensPorVeiculo.push({ veiculo, mensagens: [] });
-            }
-          })
+      for (const veiculo of lote) {
+        // Buscar macros do banco para este veículo
+        const macrosFetches = await Promise.all(
+          datasParaChecar.map(d =>
+            db.entities.MacroEvento.filter({ veiculo_id: veiculo.id, data_jornada: d }, '-data_criacao', 50)
+          )
         );
+        const macrosDb = macrosFetches.flat();
+        macrosPorVeiculo[veiculo.id] = macrosDb;
+
+        const vehicleCode = veiculo.numero_frota;
+        if (!vehicleCode) {
+          mensagensPorVeiculo.push({ veiculo, mensagens: [] });
+          continue;
+        }
+        try {
+          const r = await autotracGet(
+            `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(end))}&_limit=500`,
+            headers
+          );
+          mensagensPorVeiculo.push({ veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) });
+        } catch {
+          mensagensPorVeiculo.push({ veiculo, mensagens: [] });
+        }
+        // pausa entre requisições para respeitar rate limit
+        await new Promise(r => setTimeout(r, 800));
       }
 
       let savedCount = 0;
