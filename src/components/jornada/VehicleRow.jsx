@@ -48,7 +48,7 @@ const DEFAULT_WIDTHS = {
   ultimaPosicao: 170, dataHoraPosicao: 120, jornada: 65, disponivel: 70, hextra: 65, alertas: 70
 };
 
-export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colWidths }) {
+export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colWidths, selectedDate }) {
   const widths = colWidths || DEFAULT_WIDTHS;
   const [expanded, setExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
