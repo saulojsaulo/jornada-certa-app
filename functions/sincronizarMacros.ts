@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       const accountCode = contas[0].Code;
 
       // 2. Buscar veículos cadastrados no sistema (com paginação)
-      const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id });
+      const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id }, '-created_date', 500);
 
       // Lote: processar apenas LOTE_SIZE veículos por vez
       const lote = veiculosSistema.slice(offset, offset + LOTE_SIZE);
