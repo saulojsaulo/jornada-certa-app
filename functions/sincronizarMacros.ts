@@ -81,19 +81,11 @@ Deno.serve(async (req) => {
       const accountCode = contas[0].Code;
 
       // 2. Buscar veículos cadastrados no sistema (com paginação)
-      const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id }, '-created_date', 500);
+      const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id }, '-created_date', 200);
 
       // Lote: processar apenas LOTE_SIZE veículos por vez
       const lote = veiculosSistema.slice(offset, offset + LOTE_SIZE);
       const proximo = offset + LOTE_SIZE < veiculosSistema.length ? offset + LOTE_SIZE : null;
-
-      // Mapa de veículo por número_frota (Code da Autotrac) e por placa
-      const mapFrota = {};
-      const mapPlaca = {};
-      for (const v of veiculosSistema) {
-        if (v.numero_frota) mapFrota[v.numero_frota.toUpperCase().trim()] = v;
-        if (v.placa)        mapPlaca[v.placa.toUpperCase().trim()] = v;
-      }
 
       // 3. Janela de busca: fatia de JANELA_H horas (ou intervalo explícito via from_iso/to_iso)
       let from, end;
