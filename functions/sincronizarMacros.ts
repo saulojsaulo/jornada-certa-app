@@ -206,8 +206,10 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (novosEventos.length) {
-        await db.entities.MacroEvento.bulkCreate(novosEventos);
+      // Inserir em lotes de 50 para evitar payloads grandes
+      for (let i = 0; i < novosEventos.length; i += 50) {
+        const loteInsert = novosEventos.slice(i, i + 50);
+        await db.entities.MacroEvento.bulkCreate(loteInsert);
       }
 
       results.push({
