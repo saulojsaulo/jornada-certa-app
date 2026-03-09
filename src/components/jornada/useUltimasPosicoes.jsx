@@ -17,7 +17,7 @@ export function useUltimasPosicoes(vehicleCodes, companyId, intervalMs = 60000, 
   const timerRef = useRef(null);
   const codesKey = vehicleCodes.join(',');
 
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
   const isHoje = !selectedDate || selectedDate === hoje;
 
   const fetchPositionsHoje = useCallback(async () => {
