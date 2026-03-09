@@ -109,6 +109,7 @@ Deno.serve(async (req) => {
       const macrosPorVeiculo = {};
 
       for (let i = 0; i < lote.length; i += CHUNK_SIZE) {
+        if (i > 0) await new Promise(r => setTimeout(r, 500)); // delay para não saturar rate limit
         const chunk = lote.slice(i, i + CHUNK_SIZE);
         await Promise.all(
           chunk.map(async (veiculo) => {
