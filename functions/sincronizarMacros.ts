@@ -37,12 +37,7 @@ async function autotracGet(url, headers) {
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  try {
-    const user = await base44.auth.me();
-    if (user?.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
-  } catch {}
 
-  // Parâmetro opcional: offset de veículos para processar em lotes via automação
   const body = await req.json().catch(() => ({}));
   const offset    = Number(body.offset || 0);
   const horas     = Number(body.horas  || 24); // janela total desejada
