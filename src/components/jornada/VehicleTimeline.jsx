@@ -762,6 +762,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
             companyId={companyId}
             data={dataReferencia || new Date().toISOString().split('T')[0]}
             macro1Time={sorted.length > 0 && sorted[0].numero_macro === 1 ? sorted[0].data_criacao : null}
+            isHistorico={dataReferencia !== new Date().toISOString().split('T')[0]}
             cursorX={syncCursor}
             onCursorChange={setSyncCursor}
           />
