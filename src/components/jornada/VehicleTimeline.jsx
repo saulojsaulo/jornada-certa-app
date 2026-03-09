@@ -391,6 +391,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
             const dataRef = dataReferencia || new Date().toISOString().split('T')[0];
             const now = new Date();
             const isToday = dataRef === now.toISOString().split('T')[0];
+            const isHistoricoTooltip = !isToday;
             
             let segmentInfo = { status: 'Sem atividade', isPrevious: false, journeyDate: null };
             
