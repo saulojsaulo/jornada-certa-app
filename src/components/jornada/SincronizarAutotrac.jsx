@@ -3,9 +3,39 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
-export default function SincronizarAutotrac({ onSyncComplete }) {
+export default function SincronizarAutotrac({ onSyncComplete, selectedDate }) {
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [info, setInfo] = useState('');
+
+  // Sincroniza um intervalo de 24h (das 00:00 às 23:59 da data) em fatias de 1h
+  const syncDia = async (dateStr, label) => {
+    const fromBase = new Date(`${dateStr}T00:00:00.000Z`);
+    const toBase   = new Date(`${dateStr}T23:59:59.999Z`);
+    const totalH   = 24;
+    let totalSaved = 0;
+
+    for (let h = 0; h < totalH; h++) {
+      const from = new Date(fromBase.getTime() + h * 3600000);
+      const end  = new Date(from.getTime() + 3600000);
+      const clampedEnd = end > toBase ? toBase : end;
+
+      let offset = 0;
+      while (true) {
+        const macRes = await base44.functions.invoke('sincronizarMacros', {
+          offset,
+          from_iso: from.toISOString(),
+          to_iso: clampedEnd.toISOString(),
+        });
+        const macResult = macRes.data?.results?.[0];
+        if (macResult?.error) throw new Error(macResult.error);
+        totalSaved += macResult?.saved || 0;
+        setInfo(`${label} - ${h + 1}/24h: ${macResult?.processados}/${macResult?.total_veiculos} veículos, ${totalSaved} macros salvas...`);
+        if (!macResult?.proximo_offset) break;
+        offset = macResult.proximo_offset;
+      }
+    }
+    return totalSaved;
+  };
 
   const handleSync = async () => {
     setStatus('running');
@@ -17,49 +47,33 @@ export default function SincronizarAutotrac({ onSyncComplete }) {
       const veicRes = await base44.functions.invoke('sincronizarVeiculos', {});
       const veicResult = veicRes.data?.results?.[0];
       if (veicResult?.error) throw new Error(veicResult.error);
-
       const criados = veicResult?.criados || 0;
 
-      // Passo 2: sincronizar macros — itera por janela de tempo (1h por vez) e por lote de veículos
-      const HORAS_TOTAL = 24;
-      setInfo(`Veículos: ${criados} novos. Buscando macros das últimas ${HORAS_TOTAL}h...`);
+      // Determinar datas a sincronizar
+      const hoje = new Date();
+      const hojeStr = hoje.toISOString().split('T')[0];
+
+      let datas = [];
+      if (selectedDate) {
+        // Sincroniza o dia selecionado + o dia anterior (para interjornada)
+        const sel = new Date(selectedDate);
+        const selStr = sel.toISOString().split('T')[0];
+        const antStr = new Date(sel.getTime() - 86400000).toISOString().split('T')[0];
+        datas = selStr === hojeStr ? [selStr] : [antStr, selStr];
+      } else {
+        // Sem data específica: sincroniza hoje e ontem
+        const ontemStr = new Date(hoje.getTime() - 86400000).toISOString().split('T')[0];
+        datas = [ontemStr, hojeStr];
+      }
 
       let totalSaved = 0;
-      let janelaOffset = 0; // começa da hora mais recente
-
-      while (janelaOffset !== null && janelaOffset < HORAS_TOTAL) {
-        // Para cada janela de 1h, iterar todos os lotes de veículos
-        let offset = 0;
-        let totalVeiculos = 0;
-
-        while (true) {
-          const macRes = await base44.functions.invoke('sincronizarMacros', {
-            offset,
-            horas: HORAS_TOTAL,
-            janela_offset: janelaOffset,
-          });
-          const macResult = macRes.data?.results?.[0];
-
-          if (macResult?.error) throw new Error(macResult.error);
-
-          totalSaved += macResult?.saved || 0;
-          totalVeiculos = macResult?.total_veiculos || 0;
-
-          const horaInicio = HORAS_TOTAL - janelaOffset - 1;
-          const horaFim = HORAS_TOTAL - janelaOffset;
-          setInfo(`Janela ${horaInicio}-${horaFim}h atrás: ${macResult?.processados}/${totalVeiculos} veículos, ${totalSaved} macros salvas...`);
-
-          if (!macResult?.proximo_offset) {
-            // Avança para próxima janela de tempo
-            janelaOffset = macResult?.proxima_janela_offset ?? null;
-            break;
-          }
-          offset = macResult.proximo_offset;
-        }
+      for (const d of datas) {
+        setInfo(`Sincronizando ${d}...`);
+        totalSaved += await syncDia(d, d);
       }
 
       setStatus('done');
-      setInfo(`Sincronização concluída: ${criados} veículos novos, ${totalSaved} macros salvas.`);
+      setInfo(`Concluído: ${criados} veículos novos, ${totalSaved} macros salvas.`);
       if (onSyncComplete) onSyncComplete();
 
     } catch (e) {
