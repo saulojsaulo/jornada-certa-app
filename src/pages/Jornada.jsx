@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Clock, TrendingUp, UserSearch, Truck } from 'lucide-react';
+import { RefreshCw, Clock, TrendingUp, UserSearch, Truck, AlertTriangle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
@@ -10,6 +10,24 @@ import { ptBR } from 'date-fns/locale';
 import ControleTab from '../components/jornada/ControleTab';
 import RankingTab from '../components/jornada/RankingTab';
 import FiltroMotoristaTab from '../components/jornada/FiltroMotoristaTab';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="p-8 text-center">
+          <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-slate-700 mb-2">Erro ao carregar a página</h2>
+          <p className="text-sm text-red-600 font-mono bg-red-50 p-3 rounded">{this.state.error.message}</p>
+          <Button className="mt-4" onClick={() => window.location.reload()}>Recarregar</Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function Jornada() {
   const queryClient = useQueryClient();
