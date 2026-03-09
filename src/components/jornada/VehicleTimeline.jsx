@@ -193,23 +193,8 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
 
   const sorted = [...macrosDoDia].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   
-  // Buscar Macro 2 do dia anterior
-  const macro2DiaAnterior = useMemo(() => {
-    const macrosParaBuscar = todasMacrosVeiculo || macros;
-    if (!macrosParaBuscar || macrosParaBuscar.length === 0 || !dataReferencia) return null;
-    
-    // Pegar todas as Macro 2 anteriores à data de referência
-    const macros2Anteriores = macrosParaBuscar
-      .filter(m => 
-        m.numero_macro === 2 && 
-        m.data_jornada && 
-        m.data_jornada < dataReferencia &&
-        !m.excluido
-      )
-      .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
-    
-    return macros2Anteriores[0] || null;
-  }, [todasMacrosVeiculo, macros, dataReferencia]);
+  // Alias para uso abaixo (já calculado antes do early return)
+  const macro2DiaAnterior = macro2DiaAnteriorEarly;
   
   const jornadaBruta = calcularJornadaBruta(macrosDoDia);
   const jornadaLiquida = calcularJornadaLiquida(macrosDoDia);
