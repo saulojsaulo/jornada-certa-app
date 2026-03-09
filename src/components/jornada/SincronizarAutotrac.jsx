@@ -7,9 +7,8 @@ export default function SincronizarAutotrac({ onSyncComplete, selectedDate }) {
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [info, setInfo] = useState('');
 
-  // Sincroniza um dia inteiro em uma única janela de 24h (sem loop por hora)
+  // Sincroniza um dia inteiro em uma única chamada bulk à API
   const syncDia = async (dateStr, label) => {
-    // Janela completa cobrindo o dia no fuso Brasília (UTC-3)
     const from = new Date(`${dateStr}T03:00:00.000Z`); // 00:00 BRT
     const to   = new Date(from.getTime() + 24 * 3600 * 1000 - 1); // 23:59:59 BRT
 
@@ -30,7 +29,6 @@ export default function SincronizarAutotrac({ onSyncComplete, selectedDate }) {
       if (!macResult?.proximo_offset) break;
       offset = macResult.proximo_offset;
       lote++;
-      await new Promise(r => setTimeout(r, 2000)); // pausa entre lotes
     }
     return totalSaved;
   };
