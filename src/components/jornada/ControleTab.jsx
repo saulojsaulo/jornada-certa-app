@@ -150,6 +150,7 @@ export default function ControleTab({ onImportLogUpdate }) {
           macrosPorVeiculo={macrosPorVeiculo}
           macrosOntemPorVeiculo={macrosOntemPorVeiculo}
           todasMacrosPorVeiculo={todasMacrosPorVeiculo}
+          selectedDate={dateString}
         />
       </motion.div>
     </div>
