@@ -211,11 +211,6 @@ Deno.serve(async (req) => {
         await db.entities.MacroEvento.bulkCreate(novosEventos);
       }
 
-      // Contar total de mensagens recebidas da API (diagnóstico)
-      const totalMensagensApi = mensagensPorVeiculo.reduce((acc, { mensagens }) => acc + mensagens.length, 0);
-      // Amostra de mensagem para diagnóstico
-      const amostra = mensagensPorVeiculo.find(m => m.mensagens.length > 0)?.mensagens?.[0];
-
       results.push({
         empresa: empresa.nome,
         saved: savedCount,
@@ -224,11 +219,7 @@ Deno.serve(async (req) => {
         proximo_offset: proximo,
         janela_offset: janelaOff,
         proxima_janela_offset: proximo ? null : proximaJanelaOff,
-        debug_mensagens_api: totalMensagensApi,
-        debug_janela: `${fmt(from)} -> ${fmt(end)}`,
-        debug_amostra_msg: amostra || null,
-        debug_dataFromStr: dataFromStr,
-        debug_macros_banco: macrosEmpresa.length,
+        janela: `${fmt(from)} -> ${fmt(end)}`,
       });
 
     } catch (e) {
