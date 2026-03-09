@@ -112,40 +112,39 @@ Deno.serve(async (req) => {
       // Buscar TODOS os MacroEventos da empresa de uma só vez (para checar duplicatas em memória)
       const dataFromStr = from.toISOString().split('T')[0];
 
-      // Buscar MacroEventos do banco para o dia (limitado a 2000 para evitar StreamingResponse)
-      const macrosEmpresa = await db.entities.MacroEvento.filter(
-        { company_id: empresa.id, data_jornada: dataFromStr },
-        '-data_criacao',
-        2000
-      );
-
-      // Buscar mensagens de cada veículo em chunks pequenos para não sobrecarregar a API
+      // Buscar mensagens da Autotrac E macros do banco em paralelo, por veículo, em chunks pequenos
       const mensagensPorVeiculo = [];
+      const macrosPorVeiculo = {};
+
       for (let i = 0; i < lote.length; i += CHUNK_SIZE) {
         const chunk = lote.slice(i, i + CHUNK_SIZE);
-        const chunkResults = await Promise.all(
+        await Promise.all(
           chunk.map(async (veiculo) => {
             const vehicleCode = veiculo.numero_frota;
-            if (!vehicleCode) return { veiculo, mensagens: [] };
+
+            // Buscar macros do banco para este veículo (no máximo 20 por dia)
+            const macrosDb = await db.entities.MacroEvento.filter(
+              { veiculo_id: veiculo.id, data_jornada: dataFromStr },
+              '-data_criacao',
+              20
+            );
+            macrosPorVeiculo[veiculo.id] = macrosDb;
+
+            if (!vehicleCode) {
+              mensagensPorVeiculo.push({ veiculo, mensagens: [] });
+              return;
+            }
             try {
               const r = await autotracGet(
                 `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(end))}&_limit=500`,
                 headers
               );
-              return { veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) };
+              mensagensPorVeiculo.push({ veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) });
             } catch {
-              return { veiculo, mensagens: [] };
+              mensagensPorVeiculo.push({ veiculo, mensagens: [] });
             }
           })
         );
-        mensagensPorVeiculo.push(...chunkResults);
-      }
-
-      // Indexar MacroEventos por veiculo_id para lookup rápido
-      const macrosPorVeiculo = {};
-      for (const m of macrosEmpresa) {
-        if (!macrosPorVeiculo[m.veiculo_id]) macrosPorVeiculo[m.veiculo_id] = [];
-        macrosPorVeiculo[m.veiculo_id].push(m);
       }
 
       let savedCount = 0;
