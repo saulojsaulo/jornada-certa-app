@@ -237,7 +237,7 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, macro
       {/* Distância percorrida */}
       {distanciaKm !== null && distanciaKm >= 0 && (
         <div className="mt-2 text-[11px] text-slate-500 bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-100">
-          Hoje até o momento, esse veículo/motorista deslocou-se por{' '}
+          {data === new Date().toISOString().split('T')[0] ? 'Hoje até o momento' : `Em ${data}`}, esse veículo/motorista deslocou-se por{' '}
           <span className="font-semibold text-slate-700">{distanciaKm} km</span>{' '}
           <span className="text-slate-400">(período entre o início da jornada até a última posição do rastreador)</span>
         </div>
