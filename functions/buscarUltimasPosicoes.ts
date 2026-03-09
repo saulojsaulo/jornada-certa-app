@@ -64,15 +64,6 @@ Deno.serve(async (req) => {
     return Response.json({ error: e.message }, { status: 500 });
   }
 
-  // Buscar veículos do sistema para mapear vehicle_code -> veiculo_id
-  let veiculoMap = {};
-  try {
-    const veiculos = await db.entities.Veiculo.filter(company_id ? { company_id } : {});
-    for (const v of veiculos) {
-      if (v.numero_frota) veiculoMap[v.numero_frota.toUpperCase().trim()] = v.id;
-    }
-  } catch {}
-
   const results = {};
   const now = new Date();
   const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
