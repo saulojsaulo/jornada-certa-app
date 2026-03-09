@@ -49,14 +49,22 @@ export function useUltimasPosicoes(vehicleCodes, companyId, intervalMs = 60000, 
       for (let i = 0; i < vehicleCodes.length; i += CHUNK) {
         const chunk = vehicleCodes.slice(i, i + CHUNK);
         await Promise.all(chunk.map(async (code) => {
+          // Buscar mais registros para poder filtrar pelo dia correto no fuso de SP
           const registros = await base44.entities.PosicaoVeiculo.filter(
             { vehicle_code: code, company_id: companyId },
             '-data_posicao',
-            1
+            200
           );
-          if (registros.length > 0) {
-            const r = registros[0];
-            // Checar se é do dia selecionado ou próximo
+          // Filtrar posições dentro do dia selecionado no horário de SP (UTC-3)
+          const dayStart = new Date(`${selectedDate}T00:00:00-03:00`).getTime();
+          const dayEnd   = new Date(`${selectedDate}T23:59:59-03:00`).getTime();
+          const dosDia = registros.filter(r => {
+            if (!r.data_posicao) return false;
+            const t = new Date(r.data_posicao).getTime();
+            return t >= dayStart && t <= dayEnd;
+          });
+          if (dosDia.length > 0) {
+            const r = dosDia[0]; // já ordenado por -data_posicao (mais recente primeiro)
             result[code] = {
               lat: r.latitude,
               lng: r.longitude,

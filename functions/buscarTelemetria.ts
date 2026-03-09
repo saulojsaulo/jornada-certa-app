@@ -77,8 +77,10 @@ Deno.serve(async (req) => {
 
   const db = base44.asServiceRole;
 
+  // Calcular "hoje" no fuso de São Paulo (UTC-3) para evitar confusão no período 21h-23h59 SP
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+
   // Para dias que não são hoje, verificar banco primeiro
-  const hoje = new Date().toISOString().split('T')[0];
   if (data !== hoje) {
     const existentes = await db.entities.TelemetriaVeiculo.filter({ vehicle_code: vehicleCode, data_jornada: data }, '-created_date', 1);
     if (existentes.length > 0 && existentes[0].pontos?.length > 0) {
@@ -130,10 +132,11 @@ Deno.serve(async (req) => {
 
   const accountCode = conta.Code;
 
-  // Janela de tempo: desde Macro 1 ou desde o início do dia
+  // Janela de tempo: desde Macro 1 ou desde o início do dia NO FUSO DE BRASÍLIA (UTC-3)
+  // Usar offset explícito -03:00 para garantir meia-noite e 23h59 corretos em SP
   const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-  let from = new Date(`${data}T00:00:00.000Z`);
-  let to = new Date(`${data}T23:59:59.000Z`);
+  let from = new Date(`${data}T00:00:00-03:00`);
+  let to   = new Date(`${data}T23:59:59-03:00`);
   
   // Se macro1Time foi fornecida, usar como início
   if (macro1Time) {
