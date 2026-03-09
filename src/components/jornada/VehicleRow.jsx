@@ -166,13 +166,13 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
       {/* Timeline expandida */}
       <AnimatePresence>
         {expanded && (
-            <VehicleTimeline 
-              macros={macrosHoje} 
-              todasMacrosVeiculo={todasMacros}
-              dataReferencia={macrosHoje[0]?.data_jornada}
-              vehicleCode={veiculo.numero_frota}
-              companyId={veiculo.company_id}
-            />
+          <VehicleTimeline 
+            macros={macrosHoje} 
+            todasMacrosVeiculo={todasMacros}
+            dataReferencia={selectedDate || macrosHoje[0]?.data_jornada}
+            vehicleCode={veiculo.numero_frota}
+            companyId={veiculo.company_id}
+          />
           )}
       </AnimatePresence>
     </motion.div>
