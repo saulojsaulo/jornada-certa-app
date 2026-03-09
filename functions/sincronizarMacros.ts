@@ -227,5 +227,6 @@ Deno.serve(async (req) => {
     }
   }
 
-  return Response.json({ success: true, timestamp: new Date().toISOString(), results });
+  const payload = JSON.stringify({ success: true, timestamp: new Date().toISOString(), results });
+  return new Response(payload, { headers: { 'Content-Type': 'application/json' } });
 });
