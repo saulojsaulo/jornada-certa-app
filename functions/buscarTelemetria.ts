@@ -77,6 +77,22 @@ Deno.serve(async (req) => {
 
   const db = base44.asServiceRole;
 
+  // Para dias que não são hoje, verificar banco primeiro
+  const hoje = new Date().toISOString().split('T')[0];
+  if (data !== hoje) {
+    const existentes = await db.entities.TelemetriaVeiculo.filter({ vehicle_code: vehicleCode, data_jornada: data }, '-created_date', 1);
+    if (existentes.length > 0 && existentes[0].pontos?.length > 0) {
+      return Response.json({
+        points: existentes[0].pontos,
+        distanciaKm: existentes[0].distancia_km ?? 0,
+        total_raw: existentes[0].total_raw ?? 0,
+        total_pontos: existentes[0].pontos.length,
+        total_sampled: existentes[0].pontos.length,
+        source: 'db',
+      });
+    }
+  }
+
   // Buscar credenciais da empresa
   let usuario, senha, apiKey, accountNum;
 
