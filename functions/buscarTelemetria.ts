@@ -170,6 +170,28 @@ Deno.serve(async (req) => {
     distanciaKm = Math.round((ultimoOdometro - primeiroOdometro) * 100) / 100;
   }
 
+  // Persistir telemetria no banco (upsert: delete antigo e cria novo)
+  try {
+    const veiculos = await db.entities.Veiculo.filter({ numero_frota: vehicleCode });
+    const veiculoId = veiculos[0]?.id || null;
+
+    // Remover telemetria existente do mesmo veículo+dia para evitar duplicatas
+    const existentes = await db.entities.TelemetriaVeiculo.filter({ vehicle_code: vehicleCode, data_jornada: data });
+    for (const e of existentes) {
+      await db.entities.TelemetriaVeiculo.delete(e.id);
+    }
+
+    await db.entities.TelemetriaVeiculo.create({
+      vehicle_code: vehicleCode,
+      ...(veiculoId && { veiculo_id: veiculoId }),
+      data_jornada: data,
+      pontos: sampled,
+      distancia_km: distanciaKm,
+      total_raw: mensagens.length,
+      ...(company_id && { company_id }),
+    });
+  } catch {}
+
   return Response.json({
     points: sampled,
     distanciaKm,
