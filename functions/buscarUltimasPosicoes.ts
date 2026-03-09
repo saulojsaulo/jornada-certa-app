@@ -98,21 +98,6 @@ Deno.serve(async (req) => {
           lng: last.Longitude,
         };
         results[vehicleCode] = posicao;
-
-        // Persistir última posição no banco
-        const veiculoId = veiculoMap[vehicleCode?.toUpperCase()?.trim()];
-        const dataPosicao = posicao.time ? new Date(posicao.time).toISOString() : now.toISOString();
-        try {
-          await db.entities.PosicaoVeiculo.create({
-            vehicle_code: vehicleCode,
-            ...(veiculoId && { veiculo_id: veiculoId }),
-            data_posicao: dataPosicao,
-            latitude: posicao.lat ?? null,
-            longitude: posicao.lng ?? null,
-            endereco: posicao.address ?? null,
-            ...(company_id && { company_id }),
-          });
-        } catch {}
       } catch {
         results[vehicleCode] = null;
       }
