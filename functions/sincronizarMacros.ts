@@ -107,6 +107,8 @@ Deno.serve(async (req) => {
       // Buscar mensagens da Autotrac E macros do banco em paralelo, por veículo, em chunks pequenos
       const mensagensPorVeiculo = [];
       const macrosPorVeiculo = {};
+      const dataEndStr = end.toISOString().split('T')[0];
+      const datasParaChecar = dataFromStr === dataEndStr ? [dataFromStr] : [dataFromStr, dataEndStr];
 
       for (let i = 0; i < lote.length; i += CHUNK_SIZE) {
         if (i > 0) await new Promise(r => setTimeout(r, 500)); // delay para não saturar rate limit
@@ -115,12 +117,13 @@ Deno.serve(async (req) => {
           chunk.map(async (veiculo) => {
             const vehicleCode = veiculo.numero_frota;
 
-            // Buscar macros do banco para este veículo (no máximo 20 por dia)
-            const macrosDb = await db.entities.MacroEvento.filter(
-              { veiculo_id: veiculo.id, data_jornada: dataFromStr },
-              '-data_criacao',
-              20
+            // Buscar macros do banco para este veículo, cobrindo todas as datas da janela
+            const macrosFetches = await Promise.all(
+              datasParaChecar.map(d =>
+                db.entities.MacroEvento.filter({ veiculo_id: veiculo.id, data_jornada: d }, '-data_criacao', 30)
+              )
             );
+            const macrosDb = macrosFetches.flat();
             macrosPorVeiculo[veiculo.id] = macrosDb;
 
             if (!vehicleCode) {
