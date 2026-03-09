@@ -117,11 +117,15 @@ Deno.serve(async (req) => {
       // Buscar TODOS os MacroEventos da empresa de uma só vez (para checar duplicatas em memória)
       const dataFromStr = from.toISOString().split('T')[0];
 
-      // Buscar MacroEventos do banco e mensagens por veículo em paralelo
-      const [macrosEmpresa, mensagensPorVeiculo] = await Promise.all([
-        db.entities.MacroEvento.filter({ company_id: empresa.id, data_jornada: dataFromStr }),
-        Promise.all(
-          lote.map(async (veiculo) => {
+      // Buscar MacroEventos do banco para o dia
+      const macrosEmpresa = await db.entities.MacroEvento.filter({ company_id: empresa.id, data_jornada: dataFromStr });
+
+      // Buscar mensagens de cada veículo em chunks pequenos para não sobrecarregar a API
+      const mensagensPorVeiculo = [];
+      for (let i = 0; i < lote.length; i += CHUNK_SIZE) {
+        const chunk = lote.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(async (veiculo) => {
             const vehicleCode = veiculo.numero_frota;
             if (!vehicleCode) return { veiculo, mensagens: [] };
             try {
@@ -134,8 +138,9 @@ Deno.serve(async (req) => {
               return { veiculo, mensagens: [] };
             }
           })
-        ),
-      ]);
+        );
+        mensagensPorVeiculo.push(...chunkResults);
+      }
 
       // Indexar MacroEventos por veiculo_id para lookup rápido
       const macrosPorVeiculo = {};
