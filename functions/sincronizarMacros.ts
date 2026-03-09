@@ -16,23 +16,35 @@ function autotracHeaders(usuario, senha, apiKey) {
   };
 }
 
-async function autotracGet(url, headers) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
-  let res;
-  try {
-    res = await fetch(url, { headers, signal: controller.signal });
-    clearTimeout(timeout);
-  } catch (e) {
-    clearTimeout(timeout);
-    if (e.name === 'AbortError') throw new Error(`Timeout: ${url}`);
-    throw e;
+async function autotracGet(url, headers, retries = 3) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    let res;
+    try {
+      res = await fetch(url, { headers, signal: controller.signal });
+      clearTimeout(timeout);
+    } catch (e) {
+      clearTimeout(timeout);
+      if (e.name === 'AbortError') throw new Error(`Timeout: ${url}`);
+      throw e;
+    }
+    if (res.status === 429) {
+      clearTimeout(timeout);
+      if (attempt < retries) {
+        // Backoff exponencial: 2s, 4s, 8s
+        const delay = 2000 * Math.pow(2, attempt);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw new Error('Rate limit exceeded');
+    }
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`${res.status}: ${txt.substring(0, 200)}`);
+    }
+    return res.json();
   }
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`${res.status}: ${txt.substring(0, 200)}`);
-  }
-  return res.json();
 }
 
 Deno.serve(async (req) => {
