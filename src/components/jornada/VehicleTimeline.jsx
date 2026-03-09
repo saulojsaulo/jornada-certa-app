@@ -85,6 +85,16 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
     return unique;
   }, [macros]);
 
+  // TODOS os hooks devem vir ANTES de qualquer return condicional (Rules of Hooks)
+  const macro2DiaAnteriorEarly = useMemo(() => {
+    const macrosParaBuscar = todasMacrosVeiculo || macros;
+    if (!macrosParaBuscar || macrosParaBuscar.length === 0 || !dataReferencia) return null;
+    const macros2Anteriores = macrosParaBuscar
+      .filter(m => m.numero_macro === 2 && m.data_jornada && m.data_jornada < dataReferencia && !m.excluido)
+      .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
+    return macros2Anteriores[0] || null;
+  }, [todasMacrosVeiculo, macros, dataReferencia]);
+
   if (!macrosDoDia || macrosDoDia.length === 0) {
     return (
       <div className="p-6 text-center text-slate-400">
