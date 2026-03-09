@@ -7,32 +7,30 @@ export default function SincronizarAutotrac({ onSyncComplete, selectedDate }) {
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [info, setInfo] = useState('');
 
-  // Sincroniza um intervalo de 24h (das 00:00 às 23:59 da data) em fatias de 1h
+  // Sincroniza um dia inteiro em uma única janela de 24h (sem loop por hora)
   const syncDia = async (dateStr, label) => {
-    const fromBase = new Date(`${dateStr}T00:00:00.000Z`);
-    const toBase   = new Date(`${dateStr}T23:59:59.999Z`);
-    const totalH   = 24;
+    // Janela completa cobrindo o dia no fuso Brasília (UTC-3)
+    const from = new Date(`${dateStr}T03:00:00.000Z`); // 00:00 BRT
+    const to   = new Date(from.getTime() + 24 * 3600 * 1000 - 1); // 23:59:59 BRT
+
+    let offset = 0;
     let totalSaved = 0;
+    let lote = 1;
 
-    for (let h = 0; h < totalH; h++) {
-      const from = new Date(fromBase.getTime() + h * 3600000);
-      const end  = new Date(from.getTime() + 3600000);
-      const clampedEnd = end > toBase ? toBase : end;
-
-      let offset = 0;
-      while (true) {
-        const macRes = await base44.functions.invoke('sincronizarMacros', {
-          offset,
-          from_iso: from.toISOString(),
-          to_iso: clampedEnd.toISOString(),
-        });
-        const macResult = macRes.data?.results?.[0];
-        if (macResult?.error) throw new Error(macResult.error);
-        totalSaved += macResult?.saved || 0;
-        setInfo(`${label} - ${h + 1}/24h: ${macResult?.processados}/${macResult?.total_veiculos} veículos, ${totalSaved} macros salvas...`);
-        if (!macResult?.proximo_offset) break;
-        offset = macResult.proximo_offset;
-      }
+    while (true) {
+      const macRes = await base44.functions.invoke('sincronizarMacros', {
+        offset,
+        from_iso: from.toISOString(),
+        to_iso: to.toISOString(),
+      });
+      const macResult = macRes.data?.results?.[0];
+      if (macResult?.error) throw new Error(macResult.error);
+      totalSaved += macResult?.saved || 0;
+      setInfo(`${label} - lote ${lote}: ${macResult?.processados}/${macResult?.total_veiculos} veículos, ${totalSaved} macros salvas...`);
+      if (!macResult?.proximo_offset) break;
+      offset = macResult.proximo_offset;
+      lote++;
+      await new Promise(r => setTimeout(r, 2000)); // pausa entre lotes
     }
     return totalSaved;
   };
