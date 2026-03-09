@@ -536,6 +536,9 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
               } else if (isToday && macro.numero_macro !== 2) {
                 // Se não há próxima macro e é hoje e não é fim de jornada, vai até agora
                 endMinutes = now.getHours() * 60 + now.getMinutes();
+              } else if (isHistorico && macro.numero_macro !== 2) {
+                // Dia histórico sem macro seguinte: vai até o fim do dia
+                endMinutes = 1440;
               }
 
               const leftPercent = (startMinutes / 1440) * 100;
