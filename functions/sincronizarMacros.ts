@@ -112,8 +112,12 @@ Deno.serve(async (req) => {
       // Buscar TODOS os MacroEventos da empresa de uma só vez (para checar duplicatas em memória)
       const dataFromStr = from.toISOString().split('T')[0];
 
-      // Buscar MacroEventos do banco para o dia
-      const macrosEmpresa = await db.entities.MacroEvento.filter({ company_id: empresa.id, data_jornada: dataFromStr });
+      // Buscar MacroEventos do banco para o dia (limitado a 2000 para evitar StreamingResponse)
+      const macrosEmpresa = await db.entities.MacroEvento.filter(
+        { company_id: empresa.id, data_jornada: dataFromStr },
+        '-data_criacao',
+        2000
+      );
 
       // Buscar mensagens de cada veículo em chunks pequenos para não sobrecarregar a API
       const mensagensPorVeiculo = [];
