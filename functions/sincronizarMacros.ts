@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
         saved: savedCount,
         processados: lote.length,
         total_veiculos: veiculosSistema.length,
-        total_mensagens_api: todasMensagens.length,
+
         proximo_offset: proximo,
         janela: `${fmt(from)} -> ${fmt(end)}`,
       });
