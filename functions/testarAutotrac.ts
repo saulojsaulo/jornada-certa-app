@@ -22,26 +22,10 @@ Deno.serve(async (req) => {
 
   const results = {};
 
-  // Usar uma data recente com hora atual
-  const now = new Date();
-  const from = new Date(now - 7 * 24 * 60 * 60 * 1000); // últimos 7 dias
-  const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-  const sd = encodeURIComponent(fmt(from));
-  const ed = encodeURIComponent(fmt(now));
-
-  // Pegar um veículo real do banco para testar
-  const db = base44.asServiceRole;
-  const veiculos = await db.entities.Veiculo.list('-created_date', 10);
-  const v = veiculos[0];
-  const vehicleCode = v?.numero_frota || '704792';
-
-  // Testar returnmessages com veículos ativos da API diretamente (usando Code da API)
-  const from7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
   const endpoints = [
-    `/accounts/${accountCode}/vehicles/731123/returnmessages?startDate=${encodeURIComponent(fmt(from7d))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`,
-    `/accounts/${accountCode}/vehicles/731134/returnmessages?startDate=${encodeURIComponent(fmt(from7d))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`,
-    `/accounts/${accountCode}/vehicles/711540/returnmessages?startDate=${encodeURIComponent(fmt(from7d))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`,
-    `/accounts/${accountCode}/vehicles/705982/returnmessages?startDate=${encodeURIComponent(fmt(from7d))}&endDate=${encodeURIComponent(fmt(now))}&_limit=10`,
+    `/accounts/${accountCode}/vehicles?_limit=500`,
+    `/accounts/${accountCode}/vehicles?_limit=1000`,
+    `/accounts/${accountCode}/vehicles?_limit=300`,
   ];
 
   const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
