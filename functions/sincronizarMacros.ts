@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
       const datasParaChecar = dataFromStr === dataEndStr ? [dataFromStr] : [dataFromStr, dataEndStr];
 
       for (let i = 0; i < lote.length; i += CHUNK_SIZE) {
-        if (i > 0) await new Promise(r => setTimeout(r, 500)); // delay para não saturar rate limit
+        if (i > 0) await new Promise(r => setTimeout(r, 1500)); // delay entre chunks para não saturar rate limit
         const chunk = lote.slice(i, i + CHUNK_SIZE);
         await Promise.all(
           chunk.map(async (veiculo) => {
