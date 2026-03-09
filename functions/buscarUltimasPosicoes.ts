@@ -104,5 +104,25 @@ Deno.serve(async (req) => {
     }));
   }
 
+  // Persistir posições no banco de forma sequencial para não saturar rate limit
+  const hoje = now.toISOString().split('T')[0];
+  for (const [vehicleCode, posicao] of Object.entries(results)) {
+    if (!posicao || !posicao.lat || !posicao.lng) continue;
+    const posDate = posicao.time ? new Date(posicao.time).toISOString().split('T')[0] : hoje;
+    // Só persiste posições de hoje (para não criar duplicatas de dias anteriores)
+    if (posDate !== hoje) continue;
+    try {
+      await db.entities.PosicaoVeiculo.create({
+        vehicle_code: vehicleCode,
+        data_posicao: posicao.time || now.toISOString(),
+        latitude: posicao.lat,
+        longitude: posicao.lng,
+        endereco: posicao.address || null,
+        ...(company_id && { company_id }),
+      });
+    } catch { /* ignora falhas individuais */ }
+    await new Promise(r => setTimeout(r, 150)); // delay entre writes
+  }
+
   return Response.json({ positions: results });
 });
