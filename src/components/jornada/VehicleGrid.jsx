@@ -30,10 +30,12 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     setColWidths(prev => ({ ...prev, [key]: width }));
   }, []);
 
-  // Buscar últimas posições com polling de 60s
+  // Buscar últimas posições com polling de 60s (somente se for o dia de hoje)
   const companyId = veiculos[0]?.company_id || null;
   const vehicleCodes = useMemo(() => veiculos.map(v => v.numero_frota).filter(Boolean), [veiculos]);
-  const { positions: ultimasPosicoes } = useUltimasPosicoes(vehicleCodes, companyId, 60000);
+  const hoje = new Date().toISOString().split('T')[0];
+  const isHoje = !selectedDate || selectedDate === hoje;
+  const { positions: ultimasPosicoes } = useUltimasPosicoes(vehicleCodes, companyId, isHoje ? 60000 : null, selectedDate);
   const [alertFilter, setAlertFilter] = useState('all');
   const [sortBy, setSortBy] = useState('nome');
   const [sortOrder, setSortOrder] = useState('asc');
