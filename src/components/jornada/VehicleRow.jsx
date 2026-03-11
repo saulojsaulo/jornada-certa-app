@@ -52,6 +52,9 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
   const widths = colWidths || DEFAULT_WIDTHS;
   const [expanded, setExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Debug: verificar se ultimaPosicao está chegando
+  console.log(`Veículo ${veiculo.numero_frota}:`, ultimaPosicao);
 
   // Atualizar a cada minuto
   useEffect(() => {
