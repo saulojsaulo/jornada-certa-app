@@ -28,8 +28,12 @@ export function useUltimasPosicoes(vehicleCodes, companyId, intervalMs = 60000, 
         vehicleCodes,
         company_id: companyId,
       });
+      console.log('Resposta buscarUltimasPosicoes:', res.data);
       if (res.data?.positions) {
+        console.log('Positions recebidas:', res.data.positions);
         setPositions(res.data.positions);
+      } else {
+        console.warn('Nenhuma position retornada na resposta');
       }
     } catch (e) {
       console.error('Erro ao buscar últimas posições:', e);
