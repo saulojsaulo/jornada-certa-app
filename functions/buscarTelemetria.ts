@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClient } from 'npm:@supabase/supabase-js';
 
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 
@@ -67,6 +68,20 @@ function samplePoints(points, maxPoints = 300) {
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
+  const db = base44.asServiceRole;
+
+  // Inicialização do cliente Supabase
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return new Response(JSON.stringify({ error: 'Credenciais do Supabase não configuradas.' }), { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+  });
+  // Fim da inicialização do Supabase
 
   const body = await req.json().catch(() => ({}));
   const { vehicleCode, data, company_id, macro1Time } = body;
@@ -75,15 +90,25 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'vehicleCode e data são obrigatórios' }, { status: 400 });
   }
 
-  const db = base44.asServiceRole;
-
   // Calcular "hoje" no fuso de São Paulo (UTC-3) para evitar confusão no período 21h-23h59 SP
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
 
   // Para dias que não são hoje, verificar banco primeiro
   if (data !== hoje) {
-    const existentes = await db.entities.TelemetriaVeiculo.filter({ vehicle_code: vehicleCode, data_jornada: data }, '-created_date', 1);
-    if (existentes.length > 0 && existentes[0].pontos?.length > 0) {
+    const { data: existentes, error: selectError } = await supabase
+      .from('telemetria_veiculo')
+      .select('pontos, distancia_km, total_raw')
+      .eq('vehicle_code', vehicleCode)
+      .eq('data_jornada', data)
+      .order('created_date', { ascending: false }) // Verifique se a coluna 'created_date' existe na sua tabela 'telemetria_veiculo'. Se não, remova esta linha.
+      .limit(1);
+
+    if (selectError) {
+      console.error(`Erro ao buscar telemetria existente no Supabase: ${selectError.message}`);
+      // Decida se você quer lançar um erro ou continuar sem os dados existentes
+    }
+
+    if (existentes?.length > 0 && existentes[0].pontos?.length > 0) {
       return Response.json({
         points: existentes[0].pontos,
         distanciaKm: existentes[0].distancia_km ?? 0,
@@ -99,8 +124,17 @@ Deno.serve(async (req) => {
   let usuario, senha, apiKey, accountNum;
 
   if (company_id) {
-    const empresas = await db.entities.Empresa.filter({ id: company_id });
-    const empresa = empresas[0];
+    const { data: empresas, error: empresaError } = await supabase
+      .from('empresas')
+      .select('*')
+      .eq('id', company_id);
+
+    if (empresaError) {
+      console.error(`Erro ao buscar empresa no Supabase: ${empresaError.message}`);
+      return Response.json({ error: 'Erro ao buscar dados da empresa.' }, { status: 500 });
+    }
+    
+    const empresa = empresas?.[0];
     const cfg = empresa?.api_config || {};
     usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
     senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
@@ -191,25 +225,50 @@ Deno.serve(async (req) => {
 
   // Persistir telemetria no banco (upsert: delete antigo e cria novo)
   try {
-    const veiculos = await db.entities.Veiculo.filter({ numero_frota: vehicleCode });
-    const veiculoId = veiculos[0]?.id || null;
+    const { data: veiculos, error: veiculoError } = await supabase
+      .from('veiculos')
+      .select('id')
+      .eq('numero_frota', vehicleCode);
+
+    if (veiculoError) {
+      console.error(`Erro ao buscar veículo no Supabase: ${veiculoError.message}`);
+      // Decida como tratar o erro, se necessário
+    }
+    
+    const veiculoId = veiculos?.[0]?.id || null;
 
     // Remover telemetria existente do mesmo veículo+dia para evitar duplicatas
-    const existentes = await db.entities.TelemetriaVeiculo.filter({ vehicle_code: vehicleCode, data_jornada: data });
-    for (const e of existentes) {
-      await db.entities.TelemetriaVeiculo.delete(e.id);
+    const { error: deleteError } = await supabase
+      .from('telemetria_veiculo')
+      .delete()
+      .eq('vehicle_code', vehicleCode)
+      .eq('data_jornada', data);
+
+    if (deleteError) {
+      console.error(`Erro ao deletar telemetria existente no Supabase: ${deleteError.message}`);
+      // Decida como tratar o erro, se necessário
     }
 
-    await db.entities.TelemetriaVeiculo.create({
-      vehicle_code: vehicleCode,
-      ...(veiculoId && { veiculo_id: veiculoId }),
-      data_jornada: data,
-      pontos: sampled,
-      distancia_km: distanciaKm,
-      total_raw: mensagens.length,
-      ...(company_id && { company_id }),
-    });
-  } catch {}
+    const { error: insertError } = await supabase
+      .from('telemetria_veiculo')
+      .insert({
+        vehicle_code: vehicleCode,
+        veiculo_id: veiculoId,
+        data_jornada: data,
+        pontos: sampled,
+        distancia_km: distanciaKm,
+        total_raw: mensagens.length,
+        company_id: company_id,
+      });
+    
+    if (insertError) {
+      console.error(`Erro ao inserir telemetria no Supabase: ${insertError.message}`);
+      // Decida como tratar o erro, se necessário
+    }
+
+  } catch (e) {
+    console.error("Erro na seção de persistência de telemetria:", e.message);
+  }
 
   return Response.json({
     points: sampled,
