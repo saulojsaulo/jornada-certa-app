@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
-import { createClient } from 'npm:@supabase/supabase-js'; // Nova importação para Supabase
 
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 
@@ -16,18 +15,6 @@ function autotracHeaders(usuario, senha, apiKey) {
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const db = base44.asServiceRole;
-  
-  // Inicialização do cliente Supabase
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseAnonKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return Response.json({ error: 'Credenciais do Supabase não configuradas.' }, { status: 500 });
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false },
-  });
 
   const body = await req.json().catch(() => ({}));
   const { vehicleCodes, company_id } = body;
