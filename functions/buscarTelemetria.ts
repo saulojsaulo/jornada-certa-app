@@ -179,18 +179,14 @@ Deno.serve(async (req) => {
   let usuario, senha, apiKey, accountNum;
 
   if (company_id) {
-    const { data: empresas, error: empresaError } = await supabase
-      .from('empresas')
-      .select('*')
-      .eq('id', company_id);
-
-    if (empresaError) {
-      console.error(`Erro ao buscar empresa no Supabase: ${empresaError.message}`);
-      return Response.json({ error: 'Erro ao buscar dados da empresa.' }, { status: 500 });
+    const empresa = await db.entities.Empresa.get(company_id);
+    
+    if (!empresa) {
+      console.error(`Empresa ${company_id} não encontrada`);
+      return Response.json({ error: 'Empresa não encontrada.' }, { status: 404 });
     }
     
-    const empresa = empresas?.[0];
-    const cfg = empresa?.api_config || {};
+    const cfg = empresa.api_config || {};
     usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
     senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
     apiKey = cfg.autotrac_api_key || Deno.env.get('AUTOTRAC_API_KEY');
