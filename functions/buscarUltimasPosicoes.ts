@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
   // Modo manual (frontend): retornar posições para lista específica de veículos
   if (vehicleCodes?.length && company_id) {
     try {
-      const { data: empresa } = await supabase.from('empresas').select('*').eq('id', company_id).single();
+      const empresa = await db.entities.Empresa.get(company_id);
       if (!empresa) {
         return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
       }
