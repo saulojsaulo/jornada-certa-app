@@ -75,19 +75,74 @@ Deno.serve(async (req) => {
   const supabaseAnonKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return new Response(JSON.stringify({ error: 'Credenciais do Supabase não configuradas.' }), { status: 500 });
+    return Response.json({ error: 'Credenciais do Supabase não configuradas.' }, { status: 500 });
   }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false },
   });
-  // Fim da inicialização do Supabase
 
   const body = await req.json().catch(() => ({}));
   const { vehicleCode, data, company_id, macro1Time } = body;
 
+  // Modo automação: processar todas as empresas e veículos de hoje
   if (!vehicleCode || !data) {
-    return Response.json({ error: 'vehicleCode e data são obrigatórios' }, { status: 400 });
+    const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+    
+    const empresas = await db.entities.Empresa.filter({ 
+      provedora_rastreamento: 'autotrac', 
+      ativa: true 
+    }, '-created_date', 100);
+
+    if (!empresas?.length) {
+      return Response.json({ message: 'Nenhuma empresa Autotrac ativa.' });
+    }
+
+    const resultsPorEmpresa = [];
+
+    for (const empresa of empresas) {
+      try {
+        const { data: veiculos } = await supabase
+          .from('veiculos')
+          .select('numero_frota')
+          .eq('company_id', empresa.id)
+          .eq('ativo', true)
+          .limit(100);
+
+        if (!veiculos?.length) continue;
+
+        let processados = 0;
+        for (const veiculo of veiculos.slice(0, 20)) { // Limitar a 20 veículos por empresa
+          if (!veiculo.numero_frota) continue;
+          
+          try {
+            await base44.functions.invoke('buscarTelemetria', {
+              vehicleCode: veiculo.numero_frota,
+              data: hoje,
+              company_id: empresa.id,
+            });
+            processados++;
+          } catch (e) {
+            console.error(`Erro ao processar veículo ${veiculo.numero_frota}: ${e.message}`);
+          }
+          
+          await new Promise(r => setTimeout(r, 200));
+        }
+
+        resultsPorEmpresa.push({
+          empresa: empresa.nome,
+          veiculos_processados: processados,
+        });
+      } catch (e) {
+        resultsPorEmpresa.push({ empresa: empresa.nome, error: e.message });
+      }
+    }
+
+    return Response.json({ 
+      success: true, 
+      data: hoje,
+      results: resultsPorEmpresa 
+    });
   }
 
   // Calcular "hoje" no fuso de São Paulo (UTC-3) para evitar confusão no período 21h-23h59 SP
