@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
   return Response.json({ 
     success: true, 
     timestamp: now.toISOString(), 
-    results: resultsPorEmpresa 
+    results: resultsPorEmpresa,
+    positions: {} // Modo automação não retorna positions individuais
   });
 });
