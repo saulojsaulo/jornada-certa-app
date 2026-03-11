@@ -150,18 +150,10 @@ Deno.serve(async (req) => {
 
   // Para dias que não são hoje, verificar banco primeiro
   if (data !== hoje) {
-    const { data: existentes, error: selectError } = await supabase
-      .from('telemetria_veiculo')
-      .select('pontos, distancia_km, total_raw')
-      .eq('vehicle_code', vehicleCode)
-      .eq('data_jornada', data)
-      .order('created_date', { ascending: false }) // Verifique se a coluna 'created_date' existe na sua tabela 'telemetria_veiculo'. Se não, remova esta linha.
-      .limit(1);
-
-    if (selectError) {
-      console.error(`Erro ao buscar telemetria existente no Supabase: ${selectError.message}`);
-      // Decida se você quer lançar um erro ou continuar sem os dados existentes
-    }
+    const existentes = await db.entities.TelemetriaVeiculo.filter({
+      vehicle_code: vehicleCode,
+      data_jornada: data
+    }, '-created_date', 1);
 
     if (existentes?.length > 0 && existentes[0].pontos?.length > 0) {
       return Response.json({
@@ -274,48 +266,31 @@ Deno.serve(async (req) => {
     distanciaKm = Math.round((ultimoOdometro - primeiroOdometro) * 100) / 100;
   }
 
-  // Persistir telemetria no banco (upsert: delete antigo e cria novo)
+  // Persistir telemetria usando entidade Base44
   try {
-    const { data: veiculos, error: veiculoError } = await supabase
-      .from('veiculos')
-      .select('id')
-      .eq('numero_frota', vehicleCode);
-
-    if (veiculoError) {
-      console.error(`Erro ao buscar veículo no Supabase: ${veiculoError.message}`);
-      // Decida como tratar o erro, se necessário
-    }
-    
+    const veiculos = await db.entities.Veiculo.filter({ numero_frota: vehicleCode }, '-created_date', 1);
     const veiculoId = veiculos?.[0]?.id || null;
 
     // Remover telemetria existente do mesmo veículo+dia para evitar duplicatas
-    const { error: deleteError } = await supabase
-      .from('telemetria_veiculo')
-      .delete()
-      .eq('vehicle_code', vehicleCode)
-      .eq('data_jornada', data);
-
-    if (deleteError) {
-      console.error(`Erro ao deletar telemetria existente no Supabase: ${deleteError.message}`);
-      // Decida como tratar o erro, se necessário
-    }
-
-    const { error: insertError } = await supabase
-      .from('telemetria_veiculo')
-      .insert({
-        vehicle_code: vehicleCode,
-        veiculo_id: veiculoId,
-        data_jornada: data,
-        pontos: sampled,
-        distancia_km: distanciaKm,
-        total_raw: mensagens.length,
-        company_id: company_id,
-      });
+    const existentes = await db.entities.TelemetriaVeiculo.filter({
+      vehicle_code: vehicleCode,
+      data_jornada: data
+    });
     
-    if (insertError) {
-      console.error(`Erro ao inserir telemetria no Supabase: ${insertError.message}`);
-      // Decida como tratar o erro, se necessário
+    for (const tel of existentes) {
+      await db.entities.TelemetriaVeiculo.delete(tel.id);
     }
+
+    // Criar nova telemetria
+    await db.entities.TelemetriaVeiculo.create({
+      vehicle_code: vehicleCode,
+      veiculo_id: veiculoId,
+      data_jornada: data,
+      pontos: sampled,
+      distancia_km: distanciaKm,
+      total_raw: mensagens.length,
+      company_id: company_id,
+    });
 
   } catch (e) {
     console.error("Erro na seção de persistência de telemetria:", e.message);

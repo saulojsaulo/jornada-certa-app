@@ -174,18 +174,16 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Buscar veículos da empresa no Supabase
-      const { data: veiculos, error: veiculosError } = await supabase
-        .from('veiculos')
-        .select('numero_frota')
-        .eq('company_id', empresa.id)
-        .eq('ativo', true)
-        .limit(500);
+      // Buscar veículos da empresa
+      const veiculos = await db.entities.Veiculo.filter({
+        company_id: empresa.id,
+        ativo: true
+      }, '-created_date', 500);
 
-      if (veiculosError || !veiculos?.length) {
+      if (!veiculos?.length) {
         resultsPorEmpresa.push({ 
           empresa: empresa.nome, 
-          error: veiculosError?.message || 'Nenhum veículo encontrado' 
+          error: 'Nenhum veículo encontrado' 
         });
         continue;
       }
@@ -235,7 +233,7 @@ Deno.serve(async (req) => {
         }));
       }
 
-      // Persistir posições no Supabase
+      // Persistir posições usando entidade Base44
       let persistidas = 0;
       for (const [vehicleCode, posicao] of Object.entries(results)) {
         if (!posicao || !posicao.lat || !posicao.lng) continue;
@@ -243,19 +241,15 @@ Deno.serve(async (req) => {
         if (posDate !== hoje) continue;
         
         try {
-          const { error: insertError } = await supabase
-            .from('posicoes_veiculos')
-            .insert({
-              vehicle_code: vehicleCode,
-              data_posicao: posicao.time || now.toISOString(),
-              latitude: posicao.lat,
-              longitude: posicao.lng,
-              endereco: posicao.address || null,
-              company_id: empresa.id,
-            });
-
-          if (!insertError) persistidas++;
-          else console.error(`Erro ao inserir posição: ${insertError.message}`);
+          await db.entities.PosicaoVeiculo.create({
+            vehicle_code: vehicleCode,
+            data_posicao: posicao.time || now.toISOString(),
+            latitude: posicao.lat,
+            longitude: posicao.lng,
+            endereco: posicao.address || null,
+            company_id: empresa.id,
+          });
+          persistidas++;
         } catch (e) {
           console.error(`Erro ao persistir posição para ${vehicleCode}: ${e.message}`);
         }
