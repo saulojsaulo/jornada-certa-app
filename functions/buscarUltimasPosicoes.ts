@@ -29,7 +29,98 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
 
-  // Buscar todas as empresas ativas com Autotrac
+  const body = await req.json().catch(() => ({}));
+  const { vehicleCodes, company_id } = body;
+
+  // Modo manual (frontend): retornar posições para lista específica de veículos
+  if (vehicleCodes?.length && company_id) {
+    try {
+      const { data: empresa } = await supabase.from('empresas').select('*').eq('id', company_id).single();
+      if (!empresa) {
+        return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+      }
+
+      const cfg = empresa.api_config || {};
+      const usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
+      const senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
+      const apiKey = cfg.autotrac_api_key || Deno.env.get('AUTOTRAC_API_KEY');
+      const accountNum = String(cfg.autotrac_account || Deno.env.get('AUTOTRAC_ACCOUNT') || '');
+
+      if (!usuario || !senha || !apiKey) {
+        return Response.json({ error: 'Credenciais Autotrac não configuradas' }, { status: 500 });
+      }
+
+      const headers = autotracHeaders(usuario, senha, apiKey);
+      const now = new Date();
+      const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+
+      // Buscar account code
+      const accountsRes = await fetch(`${BASE_URL}/accounts?_limit=500`, { headers });
+      const accountsRaw = await accountsRes.json();
+      const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || []);
+      const conta = accountNum ? accountList.find(a => String(a.Number) === accountNum) : accountList[0];
+      
+      if (!conta) {
+        return Response.json({ error: 'Conta Autotrac não encontrada' }, { status: 404 });
+      }
+
+      const accountCode = conta.Code;
+      const positions = {};
+
+      // Buscar posições em lotes de 8
+      const chunks = [];
+      for (let i = 0; i < vehicleCodes.length; i += 8) {
+        chunks.push(vehicleCodes.slice(i, i + 8));
+      }
+
+      for (const chunk of chunks) {
+        await Promise.all(chunk.map(async (vehicleCode) => {
+          try {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 12000);
+            const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/positions?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=50`;
+            const res = await fetch(url, { headers, signal: ctrl.signal });
+            clearTimeout(t);
+            
+            if (!res.ok) { 
+              positions[vehicleCode] = null; 
+              return; 
+            }
+            
+            const data = await res.json();
+            const items = Array.isArray(data) ? data : (data.Data || data.data || []);
+            
+            if (!items.length) { 
+              positions[vehicleCode] = null; 
+              return; 
+            }
+            
+            const sorted = items.sort((a, b) =>
+              new Date(b.PositionTime || b.ReceivedTime) - new Date(a.PositionTime || a.ReceivedTime)
+            );
+            const last = sorted[0];
+            
+            positions[vehicleCode] = {
+              address: last.Landmark || null,
+              time: last.PositionTime || last.ReceivedTime || null,
+              lat: last.Latitude,
+              lng: last.Longitude,
+            };
+          } catch (e) {
+            console.error(`Erro ao buscar posição para ${vehicleCode}: ${e.message}`);
+            positions[vehicleCode] = null;
+          }
+        }));
+      }
+
+      return Response.json({ positions });
+    } catch (e) {
+      return Response.json({ error: e.message }, { status: 500 });
+    }
+  }
+
+  // Modo automação: processar todas as empresas ativas com Autotrac
   const empresas = await db.entities.Empresa.filter({ 
     provedora_rastreamento: 'autotrac', 
     ativa: true 
