@@ -113,7 +113,6 @@ Deno.serve(async (req) => {
         .from('veiculos')
         .select('id, numero_frota')
         .eq('company_id', empresa.id)
-        .order('created_date', { ascending: false })
         .limit(500);
 
       if (veiculoError) {
