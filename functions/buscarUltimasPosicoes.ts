@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
   if (company_id) {
     // Usando Supabase para buscar dados da empresa
     const { data: empresas, error: empresaError } = await supabase
-      .from('Empresa') // Usando o nome da entidade, que o Supabase deve ter transformado para 'empresa' ou 'Empresa'
+      .from('empresas') // CORRIGIDO: Usando 'empresas'
       .select('*')
       .eq('id', company_id);
 
@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
     try {
       // Usando Supabase para criar o registro de posição
       const { error: insertError } = await supabase
-        .from('PosicaoVeiculo') // Usando o nome da entidade, que o Supabase deve ter transformado para 'posicao_veiculo' ou 'PosicaoVeiculo'
+        .from('posicoes_veiculos') // CORRIGIDO: Usando 'posicoes_veiculos'
         .insert({
           vehicle_code: vehicleCode,
           data_posicao: posicao.time || now.toISOString(),
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
         });
 
       if (insertError) {
-        console.error(`Erro ao inserir PosicaoVeiculo no Supabase: ${insertError.message}`);
+        console.error(`Erro ao inserir posicoes_veiculos no Supabase: ${insertError.message}`);
         // Decida como tratar o erro, se necessário
       }
 
