@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClient } from 'npm:@supabase/supabase-js'; // Nova importação para Supabase
 
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 
@@ -21,12 +22,33 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'vehicleCodes é obrigatório' }, { status: 400 });
   }
 
-  const db = base44.asServiceRole;
+  // Inicialização do cliente Supabase
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return new Response(JSON.stringify({ error: 'Credenciais do Supabase não configuradas.' }), { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+  });
+  // Fim da inicialização do Supabase
 
   let usuario, senha, apiKey, accountNum;
   if (company_id) {
-    const empresas = await db.entities.Empresa.filter({ id: company_id });
-    const empresa = empresas[0];
+    // Usando Supabase para buscar dados da empresa
+    const { data: empresas, error: empresaError } = await supabase
+      .from('Empresa') // Usando o nome da entidade, que o Supabase deve ter transformado para 'empresa' ou 'Empresa'
+      .select('*')
+      .eq('id', company_id);
+
+    if (empresaError) {
+      console.error(`Erro ao buscar empresa no Supabase: ${empresaError.message}`);
+      return Response.json({ error: 'Erro ao buscar dados da empresa.' }, { status: 500 });
+    }
+    
+    const empresa = empresas?.[0]; // Usar optional chaining
     const cfg = empresa?.api_config || {};
     usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
     senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
@@ -98,7 +120,8 @@ Deno.serve(async (req) => {
           lng: last.Longitude,
         };
         results[vehicleCode] = posicao;
-      } catch {
+      } catch (e) { // Captura o erro aqui para logar
+        console.error(`Erro ao buscar posição para ${vehicleCode}: ${e.message}`);
         results[vehicleCode] = null;
       }
     }));
@@ -112,15 +135,26 @@ Deno.serve(async (req) => {
     // Só persiste posições de hoje (para não criar duplicatas de dias anteriores)
     if (posDate !== hoje) continue;
     try {
-      await db.entities.PosicaoVeiculo.create({
-        vehicle_code: vehicleCode,
-        data_posicao: posicao.time || now.toISOString(),
-        latitude: posicao.lat,
-        longitude: posicao.lng,
-        endereco: posicao.address || null,
-        ...(company_id && { company_id }),
-      });
-    } catch { /* ignora falhas individuais */ }
+      // Usando Supabase para criar o registro de posição
+      const { error: insertError } = await supabase
+        .from('PosicaoVeiculo') // Usando o nome da entidade, que o Supabase deve ter transformado para 'posicao_veiculo' ou 'PosicaoVeiculo'
+        .insert({
+          vehicle_code: vehicleCode,
+          data_posicao: posicao.time || now.toISOString(),
+          latitude: posicao.lat,
+          longitude: posicao.lng,
+          endereco: posicao.address || null,
+          company_id: company_id, // company_id pode ser null se não fornecido
+        });
+
+      if (insertError) {
+        console.error(`Erro ao inserir PosicaoVeiculo no Supabase: ${insertError.message}`);
+        // Decida como tratar o erro, se necessário
+      }
+
+    } catch (e) { 
+        console.error(`Erro ao persistir posição para ${vehicleCode}: ${e.message}`);
+    }
     await new Promise(r => setTimeout(r, 150)); // delay entre writes
   }
 
