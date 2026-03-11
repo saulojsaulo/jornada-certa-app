@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClient } from 'npm:@supabase/supabase-js'; // Nova importação
 
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 const MACROS_VALIDAS = new Set([1, 2, 3, 4, 5, 6, 9, 10]);
@@ -48,6 +49,19 @@ Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const db = base44.asServiceRole;
 
+  // Inicialização do cliente Supabase
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return new Response(JSON.stringify({ error: 'Credenciais do Supabase não configuradas.' }), { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+  });
+  // Fim da inicialização do Supabase
+
   const body = await req.json().catch(() => ({}));
   const offset = Number(body.offset || 0);
   const LOTE_SIZE = 50; // veículos processados por lote (só para DB, não para API)
@@ -94,8 +108,19 @@ Deno.serve(async (req) => {
         from = new Date(end.getTime() - 24 * 3600 * 1000);
       }
 
-      // 3. Buscar veículos do sistema
-      const veiculosSistema = await db.entities.Veiculo.filter({ company_id: empresa.id }, '-created_date', 500);
+      // 3. Buscar veículos do sistema (via Supabase)
+      const { data: veiculosSistema, error: veiculoError } = await supabase
+        .from('veiculos')
+        .select('id, numero_frota')
+        .eq('company_id', empresa.id)
+        .order('created_date', { ascending: false })
+        .limit(500);
+
+      if (veiculoError) {
+        results.push({ empresa: empresa.nome, error: `Erro ao buscar veículos no Supabase: ${veiculoError.message}` });
+        continue;
+      }
+
       const lote = veiculosSistema.slice(offset, offset + LOTE_SIZE);
       const proximo = offset + LOTE_SIZE < veiculosSistema.length ? offset + LOTE_SIZE : null;
 
@@ -104,16 +129,28 @@ Deno.serve(async (req) => {
       const dataEndStr  = end.toISOString().split('T')[0];
       const datasParaChecar = dataFromStr === dataEndStr ? [dataFromStr] : [dataFromStr, dataEndStr];
 
-      // 4. Para cada veículo: buscar macros do banco + mensagens da API (sequencial com delay)
+      // 4. Para cada veículo: buscar macros do banco (via Supabase) + mensagens da API (sequencial com delay)
       const mensagensPorVeiculo = [];
       const macrosPorVeiculo = {};
 
       for (const veiculo of lote) {
-        // Buscar macros existentes no banco
+        // Buscar macros existentes no banco (via Supabase)
         const fetches = await Promise.all(
-          datasParaChecar.map(d =>
-            db.entities.MacroEvento.filter({ veiculo_id: veiculo.id, data_jornada: d }, '-data_criacao', 50)
-          )
+          datasParaChecar.map(async (d) => {
+            const { data: macros, error: macroError } = await supabase
+              .from('macro_eventos')
+              .select('*')
+              .eq('veiculo_id', veiculo.id)
+              .eq('data_jornada', d)
+              .order('data_criacao', { ascending: false })
+              .limit(50);
+            
+            if (macroError) {
+              console.error(`Erro ao buscar macros para veículo ${veiculo.id} e data ${d} no Supabase: ${macroError.message}`);
+              return [];
+            }
+            return macros;
+          })
         );
         macrosPorVeiculo[veiculo.id] = fetches.flat();
 
@@ -129,7 +166,8 @@ Deno.serve(async (req) => {
             headers
           );
           mensagensPorVeiculo.push({ veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) });
-        } catch {
+        } catch(e) {
+          console.error(`Erro ao buscar mensagens Autotrac para veículo ${veiculo.numero_frota}: ${e.message}`);
           mensagensPorVeiculo.push({ veiculo, mensagens: [] });
         }
         // Pausa para respeitar rate limit
@@ -193,9 +231,16 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Inserir em lotes de 100
+      // Inserir em lotes de 100 (via Supabase)
       for (let i = 0; i < novosEventos.length; i += 100) {
-        await db.entities.MacroEvento.bulkCreate(novosEventos.slice(i, i + 100));
+        const { error: insertError } = await supabase
+          .from('macro_eventos')
+          .insert(novosEventos.slice(i, i + 100));
+        
+        if (insertError) {
+          console.error(`Erro ao inserir macros no Supabase: ${insertError.message}`);
+          // Dependendo da sua necessidade, você pode querer lançar um erro ou adicionar a results aqui.
+        }
       }
 
       results.push({
