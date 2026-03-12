@@ -314,7 +314,11 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
                 macrosHoje={v.macrosHoje}
                 macrosOntem={v.macrosOntem}
                 todasMacros={todasMacrosPorVeiculo ? todasMacrosPorVeiculo[v.id] : null}
-                ultimaPosicao={ultimasPosicoes[v.numero_frota] || null}
+                ultimaPosicao={(() => {
+                  const pos = ultimasPosicoes[v.numero_frota] || null;
+                  if (idx < 3) console.log(`Veículo ${v.numero_frota} (${idx}):`, pos);
+                  return pos;
+                })()}
                 colWidths={colWidths}
                 selectedDate={selectedDate}
               />
