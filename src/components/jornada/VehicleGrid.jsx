@@ -36,6 +36,10 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
   const isHoje = !selectedDate || selectedDate === hoje;
   const { positions: ultimasPosicoes } = useUltimasPosicoes(vehicleCodes, companyId, isHoje ? 60000 : null, selectedDate);
+  
+  // Debug
+  console.log('ultimasPosicoes no VehicleGrid:', ultimasPosicoes);
+  console.log('vehicleCodes:', vehicleCodes.slice(0, 5));
   const [alertFilter, setAlertFilter] = useState('all');
   const [sortBy, setSortBy] = useState('nome');
   const [sortOrder, setSortOrder] = useState('asc');
