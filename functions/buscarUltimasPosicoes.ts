@@ -186,19 +186,25 @@ Deno.serve(async (req) => {
 
       const results = {};
       const chunks = [];
-      for (let i = 0; i < vehicleCodes.length; i += 8) {
-        chunks.push(vehicleCodes.slice(i, i + 8));
+      // Reduzir para 5 por vez para evitar timeout
+      for (let i = 0; i < vehicleCodes.length; i += 5) {
+        chunks.push(vehicleCodes.slice(i, i + 5));
       }
 
       for (const chunk of chunks) {
         await Promise.all(chunk.map(async (vehicleCode) => {
           try {
             const ctrl = new AbortController();
-            const t = setTimeout(() => ctrl.abort(), 12000);
+            const t = setTimeout(() => ctrl.abort(), 10000);
             const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/positions?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=50`;
             const res = await fetch(url, { headers, signal: ctrl.signal });
             clearTimeout(t);
-            if (!res.ok) { results[vehicleCode] = null; return; }
+            if (!res.ok) { 
+              // Se 422, veículo não autorizado - pular silenciosamente
+              if (res.status === 422) return;
+              results[vehicleCode] = null; 
+              return; 
+            }
             const data = await res.json();
             const items = Array.isArray(data) ? data : (data.Data || data.data || []);
             if (!items.length) { results[vehicleCode] = null; return; }
@@ -218,29 +224,42 @@ Deno.serve(async (req) => {
             results[vehicleCode] = null;
           }
         }));
+        // Delay entre chunks
+        await new Promise(r => setTimeout(r, 500));
       }
 
-      // Persistir posições usando entidade Base44
-      let persistidas = 0;
+      // Persistir posições em lote (bulk create para evitar rate limit)
+      const posicoesParaSalvar = [];
       for (const [vehicleCode, posicao] of Object.entries(results)) {
         if (!posicao || !posicao.lat || !posicao.lng) continue;
         const posDate = posicao.time ? new Date(posicao.time).toISOString().split('T')[0] : hoje;
         if (posDate !== hoje) continue;
         
+        posicoesParaSalvar.push({
+          vehicle_code: vehicleCode,
+          data_posicao: posicao.time || now.toISOString(),
+          latitude: posicao.lat,
+          longitude: posicao.lng,
+          endereco: posicao.address || null,
+          company_id: empresa.id,
+        });
+      }
+
+      let persistidas = 0;
+      if (posicoesParaSalvar.length > 0) {
         try {
-          await db.entities.PosicaoVeiculo.create({
-            vehicle_code: vehicleCode,
-            data_posicao: posicao.time || now.toISOString(),
-            latitude: posicao.lat,
-            longitude: posicao.lng,
-            endereco: posicao.address || null,
-            company_id: empresa.id,
-          });
-          persistidas++;
+          // Criar em lotes de 20 para evitar rate limit
+          for (let i = 0; i < posicoesParaSalvar.length; i += 20) {
+            const batch = posicoesParaSalvar.slice(i, i + 20);
+            await db.entities.PosicaoVeiculo.bulkCreate(batch);
+            persistidas += batch.length;
+            if (i + 20 < posicoesParaSalvar.length) {
+              await new Promise(r => setTimeout(r, 1000)); // 1s entre lotes
+            }
+          }
         } catch (e) {
-          console.error(`Erro ao persistir posição para ${vehicleCode}: ${e.message}`);
+          console.error(`Erro ao persistir posições em lote: ${e.message}`);
         }
-        await new Promise(r => setTimeout(r, 150));
       }
 
       resultsPorEmpresa.push({
