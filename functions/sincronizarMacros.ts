@@ -166,7 +166,10 @@ Deno.serve(async (req) => {
           );
           mensagensPorVeiculo.push({ veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) });
         } catch(e) {
-          console.error(`Erro ao buscar mensagens Autotrac para veículo ${veiculo.numero_frota}: ${e.message}`);
+          // Se erro 422, veículo não está autorizado - pular silenciosamente
+          if (!e.message.includes('422')) {
+            console.error(`Erro ao buscar mensagens Autotrac para veículo ${veiculo.numero_frota}: ${e.message}`);
+          }
           mensagensPorVeiculo.push({ veiculo, mensagens: [] });
         }
         // Pausa para respeitar rate limit
