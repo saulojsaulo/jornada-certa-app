@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
+export default function ImportXLSX({ onImportComplete, onImportLogUpdate, compact = false }) {
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState(null);
@@ -335,9 +335,13 @@ export default function ImportXLSX({ onImportComplete, onImportLogUpdate }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="bg-emerald-600 hover:bg-emerald-700 shadow-lg">
-          <Upload className="w-4 h-4 mr-2" />
-          Importar Dados
+        <Button
+          className={compact ? "h-9 w-9 bg-emerald-600 hover:bg-emerald-700" : "bg-emerald-600 hover:bg-emerald-700 shadow-lg"}
+          size={compact ? "icon" : "default"}
+          title="Importar Dados"
+        >
+          <Upload className="w-4 h-4" />
+          {!compact && 'Importar Dados'}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

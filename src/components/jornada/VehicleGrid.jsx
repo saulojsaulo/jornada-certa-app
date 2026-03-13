@@ -272,6 +272,14 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
         setSortOrder={setSortOrder}
         alertFilter={alertFilter}
         setAlertFilter={setAlertFilter}
+        selectedDate={new Date(`${selectedDate}T12:00:00`)}
+        setSelectedDate={(date) => {
+          const next = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(date);
+          window.location.search = `?date=${next}`;
+        }}
+        onImportComplete={onMacrosChanged}
+        onImportLogUpdate={onMacrosChanged}
+        onSyncComplete={onMacrosChanged}
       />
 
       {/* Cabeçalho com filtros */}

@@ -2,7 +2,13 @@ import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, X, ArrowUpDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Search, Filter, X, ArrowUpDown, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import ImportXLSX from './ImportXLSX';
+import SincronizarAutotrac from './SincronizarAutotrac';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Todos os Status' },
@@ -31,7 +37,12 @@ export default function VehicleFilters({
   sortOrder,
   setSortOrder,
   alertFilter,
-  setAlertFilter
+  setAlertFilter,
+  selectedDate,
+  setSelectedDate,
+  onImportComplete,
+  onImportLogUpdate,
+  onSyncComplete
 }) {
   const clearFilters = () => {
     setSearch('');
@@ -46,6 +57,35 @@ export default function VehicleFilters({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
       <div className="flex flex-wrap gap-3 items-center">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2 bg-slate-50">
+              <Calendar className="w-4 h-4" />
+              {format(selectedDate, 'dd/MM/yyyy', { locale: ptBR })}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <CalendarComponent
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              locale={ptBR}
+            />
+          </PopoverContent>
+        </Popover>
+
+        <ImportXLSX
+          compact
+          onImportComplete={onImportComplete}
+          onImportLogUpdate={onImportLogUpdate}
+        />
+
+        <SincronizarAutotrac
+          compact
+          onSyncComplete={onSyncComplete}
+          selectedDate={selectedDate}
+        />
+
         {/* Busca */}
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

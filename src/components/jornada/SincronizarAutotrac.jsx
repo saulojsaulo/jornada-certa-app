@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
-export default function SincronizarAutotrac({ onSyncComplete, selectedDate }) {
+export default function SincronizarAutotrac({ onSyncComplete, selectedDate, compact = false }) {
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [info, setInfo] = useState('');
 
@@ -84,8 +84,9 @@ export default function SincronizarAutotrac({ onSyncComplete, selectedDate }) {
         onClick={handleSync}
         disabled={status === 'running'}
         variant={status === 'error' ? 'destructive' : 'outline'}
-        size="sm"
-        className="gap-2 whitespace-nowrap"
+        size={compact ? 'icon' : 'sm'}
+        className={compact ? 'h-9 w-9' : 'gap-2 whitespace-nowrap'}
+        title="Sincronizar Autotrac"
       >
         {status === 'running' ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -96,9 +97,9 @@ export default function SincronizarAutotrac({ onSyncComplete, selectedDate }) {
         ) : (
           <RefreshCw className="w-4 h-4" />
         )}
-        Sincronizar Autotrac
+        {!compact && 'Sincronizar Autotrac'}
       </Button>
-      {info && (
+      {!compact && info && (
         <span className="text-xs text-slate-500 max-w-[300px] truncate" title={info}>
           {info}
         </span>

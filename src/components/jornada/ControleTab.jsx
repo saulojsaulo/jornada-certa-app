@@ -2,17 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { Calendar } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-import ImportXLSX from './ImportXLSX';
 import StatsCards from './StatsCards';
 import VehicleGrid from './VehicleGrid';
-import SincronizarAutotrac from './SincronizarAutotrac';
 
 export default function ControleTab({ onImportLogUpdate }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -125,30 +119,6 @@ export default function ControleTab({ onImportLogUpdate }) {
 
   return (
     <div className="space-y-6">
-      {/* Controles */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <ImportXLSX onImportComplete={handleImportComplete} onImportLogUpdate={onImportLogUpdate} />
-          <SincronizarAutotrac onSyncComplete={handleImportComplete} selectedDate={selectedDate} />
-        </div>
-        
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              {format(selectedDate, 'dd/MM/yyyy', { locale: ptBR })}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <CalendarComponent
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              locale={ptBR}
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
 
       {/* Aviso: data histórica sem macros */}
       {dateString !== new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()) && !loadingMacros && macrosHoje.length === 0 && (
