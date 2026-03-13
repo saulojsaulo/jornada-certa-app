@@ -26,6 +26,8 @@ export default function ControleTab({ onImportLogUpdate }) {
     queryFn: () => base44.entities.Veiculo.list(),
   });
 
+  const companyId = veiculos[0]?.company_id || null;
+
   // Buscar motoristas
   const { data: motoristas = [] } = useQuery({
     queryKey: ['motoristas'],
@@ -38,19 +40,33 @@ export default function ControleTab({ onImportLogUpdate }) {
     queryFn: () => base44.entities.Gestor.list(),
   });
 
-  // Buscar macros APENAS dos dois dias relevantes (hoje e ontem), direto no banco
-  const { data: macrosHojeRaw = [], isLoading: loadingHoje, refetch: refetchHoje } = useQuery({
-    queryKey: ['macros', dateString],
-    queryFn: () => base44.entities.MacroEvento.filter({ data_jornada: dateString, excluido: false }, '-data_criacao', 10000),
+  // Buscar macros dos dois dias relevantes direto do Supabase
+  const {
+    data: macrosBanco = { macros: [] },
+    isLoading: loadingMacros,
+    refetch: refetchMacros,
+  } = useQuery({
+    queryKey: ['macros-banco', companyId, yesterdayString, dateString],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listarMacrosBanco', {
+        company_id: companyId,
+        date_inicio: yesterdayString,
+        date_fim: dateString,
+      });
+      return { macros: res.data?.macros || [] };
+    },
   });
 
-  const { data: macrosOntemRaw = [], isLoading: loadingOntem, refetch: refetchOntem } = useQuery({
-    queryKey: ['macros', yesterdayString],
-    queryFn: () => base44.entities.MacroEvento.filter({ data_jornada: yesterdayString, excluido: false }, '-data_criacao', 10000),
-  });
+  const macrosHojeRaw = useMemo(
+    () => (macrosBanco.macros || []).filter(m => m.data_jornada === dateString),
+    [macrosBanco, dateString]
+  );
 
-  const loadingMacros = loadingHoje || loadingOntem;
-  const refetchMacros = () => { refetchHoje(); refetchOntem(); };
+  const macrosOntemRaw = useMemo(
+    () => (macrosBanco.macros || []).filter(m => m.data_jornada === yesterdayString),
+    [macrosBanco, yesterdayString]
+  );
 
   // Deduplicar por chave única (tolerância de 1 segundo)
   const dedup = (list) => {
@@ -162,6 +178,7 @@ export default function ControleTab({ onImportLogUpdate }) {
           macrosOntemPorVeiculo={macrosOntemPorVeiculo}
           todasMacrosPorVeiculo={todasMacrosPorVeiculo}
           selectedDate={dateString}
+          onMacrosChanged={refetchMacros}
         />
       </motion.div>
     </div>

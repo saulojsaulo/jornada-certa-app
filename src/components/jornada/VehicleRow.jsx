@@ -48,13 +48,10 @@ const DEFAULT_WIDTHS = {
   ultimaPosicao: 170, dataHoraPosicao: 120, jornada: 65, disponivel: 70, hextra: 65, alertas: 70
 };
 
-export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colWidths, selectedDate }) {
+export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colWidths, selectedDate, onMacrosChanged }) {
   const widths = colWidths || DEFAULT_WIDTHS;
   const [expanded, setExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  
-  // Debug: verificar se ultimaPosicao está chegando
-  console.log(`Veículo ${veiculo.numero_frota}:`, ultimaPosicao);
 
   // Atualizar a cada minuto
   useEffect(() => {
@@ -175,6 +172,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
             dataReferencia={selectedDate || macrosHoje[0]?.data_jornada}
             vehicleCode={veiculo.numero_frota}
             companyId={veiculo.company_id}
+            onMacrosChanged={onMacrosChanged}
           />
           )}
       </AnimatePresence>

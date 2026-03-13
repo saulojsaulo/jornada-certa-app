@@ -29,22 +29,38 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, macro
   const barRef = useRef(null);
 
   useEffect(() => {
-    if (!vehicleCode || !data) return;
-    setLoading(true);
-    setError(null);
-    setPoints([]);
+    if (!vehicleCode || !data || !companyId) return;
 
-    base44.functions.invoke('buscarTelemetria', {
-      vehicleCode,
-      data,
-      company_id: companyId,
-      macro1Time: macro1Time || null,
-    }).then(res => {
-      setPoints(res.data?.points || []);
-      setDistanciaKm(res.data?.distanciaKm ?? null);
-    }).catch(e => {
-      setError(e.message || 'Erro ao buscar telemetria');
-    }).finally(() => setLoading(false));
+    let timerId = null;
+
+    const fetchTelemetria = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await base44.functions.invoke('obterTelemetriaBanco', {
+          vehicleCode,
+          data,
+          company_id: companyId,
+        });
+        setPoints(res.data?.pontos || []);
+        setDistanciaKm(res.data?.distancia_km ?? null);
+      } catch (e) {
+        setError(e.message || 'Erro ao buscar telemetria');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTelemetria();
+
+    const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+    if (data === hoje) {
+      timerId = setInterval(fetchTelemetria, 60000);
+    }
+
+    return () => {
+      if (timerId) clearInterval(timerId);
+    };
   }, [vehicleCode, data, companyId, macro1Time]);
 
   const handleMouseMove = useCallback((e) => {

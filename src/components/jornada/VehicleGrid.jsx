@@ -15,13 +15,15 @@ import {
   verificarAlertasInterjornada
 } from './MacroUtils';
 
+const refetchSafe = (fn) => () => fn?.();
+
 // Larguras iniciais em px por coluna
 const DEFAULT_WIDTHS = {
   gestor: 90, frota: 60, motorista: 150, status: 100,
   ultimaPosicao: 170, dataHoraPosicao: 120, jornada: 65, disponivel: 70, hextra: 65, alertas: 70
 };
 
-export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo, selectedDate }) {
+export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo, selectedDate, onMacrosChanged }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [colWidths, setColWidths] = useState(DEFAULT_WIDTHS);
@@ -30,16 +32,11 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
     setColWidths(prev => ({ ...prev, [key]: width }));
   }, []);
 
-  // Buscar últimas posições com polling de 60s (somente se for o dia de hoje)
   const companyId = veiculos[0]?.company_id || null;
   const vehicleCodes = useMemo(() => veiculos.map(v => v.numero_frota).filter(Boolean), [veiculos]);
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
   const isHoje = !selectedDate || selectedDate === hoje;
   const { positions: ultimasPosicoes } = useUltimasPosicoes(vehicleCodes, companyId, isHoje ? 60000 : null, selectedDate);
-  
-  // Debug
-  console.log('ultimasPosicoes no VehicleGrid:', ultimasPosicoes);
-  console.log('vehicleCodes:', vehicleCodes.slice(0, 5));
   const [alertFilter, setAlertFilter] = useState('all');
   const [sortBy, setSortBy] = useState('nome');
   const [sortOrder, setSortOrder] = useState('asc');
@@ -314,13 +311,10 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
                 macrosHoje={v.macrosHoje}
                 macrosOntem={v.macrosOntem}
                 todasMacros={todasMacrosPorVeiculo ? todasMacrosPorVeiculo[v.id] : null}
-                ultimaPosicao={(() => {
-                  const pos = ultimasPosicoes[v.numero_frota] || null;
-                  if (idx < 3) console.log(`Veículo ${v.numero_frota} (${idx}):`, pos);
-                  return pos;
-                })()}
+                ultimaPosicao={ultimasPosicoes[v.numero_frota] || null}
                 colWidths={colWidths}
                 selectedDate={selectedDate}
+                onMacrosChanged={refetchSafe(onMacrosChanged)}
               />
             </motion.div>
           ))

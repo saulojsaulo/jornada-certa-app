@@ -31,7 +31,7 @@ async function fetchCidade(lat, lon) {
   }
 }
 
-export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataReferencia, vehicleCode, companyId }) {
+export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataReferencia, vehicleCode, companyId, onMacrosChanged }) {
   const [updatingIds, setUpdatingIds] = useState(new Set());
   const [editingMacro, setEditingMacro] = useState(null);
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
@@ -106,10 +106,11 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
   const handleToggleExcluir = async (macro) => {
     setUpdatingIds(prev => new Set(prev).add(macro.id));
     try {
-      await base44.entities.MacroEvento.update(macro.id, {
-        excluido: !macro.excluido,
-        editado_manualmente: true
+      await base44.functions.invoke('salvarMacroManual', {
+        action: 'toggle',
+        macro_id: macro.id,
       });
+      onMacrosChanged?.();
     } catch (error) {
       console.error('Erro ao atualizar macro:', error);
     } finally {
@@ -138,13 +139,17 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
     try {
       const dataCriacao = new Date(`${editForm.data}T${editForm.hora}:00`).toISOString();
       
-      await base44.entities.MacroEvento.update(editingMacro.id, {
+      await base44.functions.invoke('salvarMacroManual', {
+        action: 'update',
+        macro_id: editingMacro.id,
+        veiculo_id: editingMacro.veiculo_id,
+        company_id: editingMacro.company_id,
         numero_macro: editForm.numero_macro,
         data_criacao: dataCriacao,
-        editado_manualmente: true
       });
       
       setEditingMacro(null);
+      onMacrosChanged?.();
     } catch (error) {
       console.error('Erro ao editar macro:', error);
     } finally {
@@ -173,19 +178,17 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
     
     try {
       const dataCriacao = new Date(`${createForm.data}T${createForm.hora}:00`).toISOString();
-      const dataJornada = createForm.data;
-      const jornadaId = `${veiculoId}-${dataJornada}-${new Date(dataCriacao).getTime()}`;
       
-      await base44.entities.MacroEvento.create({
+      await base44.functions.invoke('salvarMacroManual', {
+        action: 'create',
         veiculo_id: veiculoId,
+        company_id: macros[0].company_id,
         numero_macro: createForm.numero_macro,
         data_criacao: dataCriacao,
-        jornada_id: jornadaId,
-        data_jornada: dataJornada,
-        editado_manualmente: true
       });
       
       setIsCreating(false);
+      onMacrosChanged?.();
     } catch (error) {
       console.error('Erro ao criar macro:', error);
     }
