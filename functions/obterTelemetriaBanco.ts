@@ -9,21 +9,28 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { company_id, vehicleCode, date } = await req.json();
-    if (!vehicleCode || !date) {
-      return Response.json({ error: 'Parâmetros obrigatórios: vehicleCode, date' }, { status: 400 });
+    const { company_id, vehicleCode, veiculo_id, date } = await req.json();
+    if ((!vehicleCode && !veiculo_id) || !date) {
+      return Response.json({ error: 'Parâmetros obrigatórios: vehicleCode ou veiculo_id, e date' }, { status: 400 });
     }
 
     const db = base44.asServiceRole;
     let resolvedCompanyId = company_id;
+    let resolvedVehicleCode = vehicleCode;
+    let resolvedVeiculoId = veiculo_id;
 
-    if (!resolvedCompanyId) {
-      const veiculos = await db.entities.Veiculo.filter({ numero_frota: vehicleCode }, '-created_date', 1);
-      resolvedCompanyId = veiculos?.[0]?.company_id || null;
-    }
-
-    if (!resolvedCompanyId) {
-      return Response.json({ error: 'company_id não encontrado para este veículo' }, { status: 400 });
+    if (!resolvedCompanyId || !resolvedVehicleCode || !resolvedVeiculoId) {
+      if (resolvedVeiculoId) {
+        const veiculos = await db.entities.Veiculo.filter({ id: resolvedVeiculoId }, '-created_date', 1);
+        const veiculo = veiculos?.[0];
+        resolvedCompanyId = resolvedCompanyId || veiculo?.company_id || null;
+        resolvedVehicleCode = resolvedVehicleCode || veiculo?.numero_frota || null;
+      } else if (resolvedVehicleCode) {
+        const veiculos = await db.entities.Veiculo.filter({ numero_frota: resolvedVehicleCode }, '-created_date', 1);
+        const veiculo = veiculos?.[0];
+        resolvedCompanyId = resolvedCompanyId || veiculo?.company_id || null;
+        resolvedVeiculoId = resolvedVeiculoId || veiculo?.id || null;
+      }
     }
 
     const supabase = createClient(
@@ -31,13 +38,20 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     );
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('telemetria_veiculos')
       .select('*')
-      .eq('company_id', resolvedCompanyId)
-      .eq('vehicle_code', vehicleCode)
-      .eq('data_jornada', date)
-      .maybeSingle();
+      .eq('data_jornada', date);
+
+    if (resolvedVeiculoId) {
+      query = query.eq('veiculo_id', resolvedVeiculoId);
+    } else if (resolvedCompanyId && resolvedVehicleCode) {
+      query = query.eq('company_id', resolvedCompanyId).eq('vehicle_code', resolvedVehicleCode);
+    } else {
+      return Response.json({ error: 'Não foi possível resolver o veículo da telemetria' }, { status: 400 });
+    }
+
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       return Response.json({ error: error.message }, { status: 500 });

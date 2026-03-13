@@ -31,7 +31,7 @@ async function fetchCidade(lat, lon) {
   }
 }
 
-export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataReferencia, vehicleCode, companyId, onMacrosChanged }) {
+export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataReferencia, vehicleCode, veiculoId, companyId, onMacrosChanged }) {
   const [updatingIds, setUpdatingIds] = useState(new Set());
   const [editingMacro, setEditingMacro] = useState(null);
   const [editForm, setEditForm] = useState({ numero_macro: 1, data: '', hora: '' });
@@ -764,6 +764,7 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
         <div className="mb-6 mt-1 bg-white rounded-lg p-3 shadow-sm border border-slate-100">
           <TelemetriaTimeline
             vehicleCode={vehicleCode}
+            veiculoId={veiculoId || macros?.[0]?.veiculo_id || todasMacrosVeiculo?.[0]?.veiculo_id}
             companyId={companyId}
             data={dataReferencia || new Date().toISOString().split('T')[0]}
             macro1Time={sorted.length > 0 && sorted[0].numero_macro === 1 ? sorted[0].data_criacao : null}

@@ -20,7 +20,7 @@ function toMinutes(ts) {
  *  - cursorX: número 0-100 (percentual) enviado pelo pai (sync scrubbing)
  *  - onCursorChange: callback (pct) para notificar o pai
  */
-export default function TelemetriaTimeline({ vehicleCode, companyId, data, macro1Time, cursorX, onCursorChange }) {
+export default function TelemetriaTimeline({ vehicleCode, veiculoId, companyId, data, macro1Time, cursorX, onCursorChange }) {
   const [loading, setLoading] = useState(false);
   const [points, setPoints] = useState([]);
   const [distanciaKm, setDistanciaKm] = useState(null);
@@ -29,7 +29,7 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, macro
   const barRef = useRef(null);
 
   useEffect(() => {
-    if (!vehicleCode || !data || !companyId) return;
+    if ((!vehicleCode && !veiculoId) || !data) return;
 
     let timerId = null;
 
@@ -39,6 +39,7 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, macro
       try {
         const res = await base44.functions.invoke('obterTelemetriaBanco', {
           vehicleCode,
+          veiculo_id: veiculoId,
           data,
           company_id: companyId,
         });
@@ -61,7 +62,7 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, macro
     return () => {
       if (timerId) clearInterval(timerId);
     };
-  }, [vehicleCode, data, companyId, macro1Time]);
+  }, [vehicleCode, veiculoId, data, companyId, macro1Time]);
 
   const handleMouseMove = useCallback((e) => {
     if (!barRef.current) return;

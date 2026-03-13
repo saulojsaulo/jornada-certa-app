@@ -171,6 +171,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
             todasMacrosVeiculo={todasMacros}
             dataReferencia={selectedDate || macrosHoje[0]?.data_jornada}
             vehicleCode={veiculo.numero_frota}
+            veiculoId={veiculo.id}
             companyId={veiculo.company_id || companyId || macrosHoje?.[0]?.company_id || macrosOntem?.[0]?.company_id}
             onMacrosChanged={onMacrosChanged}
           />
