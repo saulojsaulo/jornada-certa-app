@@ -167,7 +167,7 @@ async function sincronizarMacrosEmpresa(db, supabase, empresa, date_inicio, date
   if (novosMacros.length > 0) {
     for (let i = 0; i < novosMacros.length; i += 50) {
       const batch = novosMacros.slice(i, i + 50);
-      const { error } = await supabase.from('MacroEvento').insert(batch);
+      const { error } = await supabase.from('macro_eventos').insert(batch);
       if (!error) {
         salvos += batch.length;
       } else {
