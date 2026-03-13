@@ -56,8 +56,94 @@ function amostrarPontos(pontos, maxPontos = 100) {
   return amostrados;
 }
 
+async function buscarTelemetriaVeiculo(supabase, empresa, vehicleCode, date) {
+  const cfg = empresa.api_config || {};
+  const usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
+  const senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
+  const apiKey = cfg.autotrac_api_key || Deno.env.get('AUTOTRAC_API_KEY');
+  const accountNum = String(cfg.autotrac_account || Deno.env.get('AUTOTRAC_ACCOUNT') || '');
+
+  if (!usuario || !senha || !apiKey) {
+    throw new Error('Credenciais Autotrac não configuradas');
+  }
+
+  const headers = autotracHeaders(usuario, senha, apiKey);
+  const accountsRes = await fetch(`${BASE_URL}/accounts?_limit=500`, { headers });
+  const accountsRaw = await accountsRes.json();
+  const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || []);
+  const conta = accountNum ? accountList.find(a => String(a.Number) === accountNum) : accountList[0];
+
+  if (!conta) {
+    throw new Error('Conta Autotrac não encontrada');
+  }
+
+  const startDate = new Date(`${date}T00:00:00-03:00`);
+  const endDate = new Date(`${date}T23:59:59-03:00`);
+  const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+  const url = `${BASE_URL}/accounts/${conta.Code}/vehicles/${vehicleCode}/positions?startDate=${encodeURIComponent(fmt(startDate))}&endDate=${encodeURIComponent(fmt(endDate))}&_limit=2000`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  const res = await fetch(url, { headers, signal: controller.signal });
+  clearTimeout(timeout);
+
+  if (!res.ok) {
+    if (res.status === 422) {
+      return { pontos: [], distancia_km: 0, total_raw: 0, skipped: true };
+    }
+    throw new Error(`Erro API: ${res.status}`);
+  }
+
+  const data = await res.json();
+  const items = Array.isArray(data) ? data : (data.Data || data.data || []);
+
+  if (!items.length) {
+    return { pontos: [], distancia_km: 0, total_raw: 0, saved: true };
+  }
+
+  const pontosBrutos = items.map(p => ({
+    time: p.PositionTime || p.ReceivedTime,
+    speed: p.Speed || 0,
+    ignition: p.Ignition === 'ON' || p.Ignition === true,
+    lat: p.Latitude,
+    lng: p.Longitude,
+  })).sort((a, b) => new Date(a.time) - new Date(b.time));
+
+  const distancia = calcularDistancia(pontosBrutos);
+  const pontosAmostrados = amostrarPontos(pontosBrutos, 100);
+  const telemetriaData = {
+    vehicle_code: vehicleCode,
+    data_jornada: date,
+    company_id: empresa.id,
+    pontos: pontosAmostrados,
+    distancia_km: distancia,
+    total_raw: pontosBrutos.length,
+  };
+
+  const { data: existente } = await supabase
+    .from('TelemetriaVeiculo')
+    .select('id')
+    .eq('vehicle_code', vehicleCode)
+    .eq('data_jornada', date)
+    .eq('company_id', empresa.id)
+    .maybeSingle();
+
+  if (existente) {
+    await supabase.from('TelemetriaVeiculo').update(telemetriaData).eq('id', existente.id);
+  } else {
+    await supabase.from('TelemetriaVeiculo').insert([telemetriaData]);
+  }
+
+  return {
+    pontos: pontosAmostrados,
+    distancia_km: distancia,
+    total_raw: pontosBrutos.length,
+    saved: true,
+  };
+}
+
 Deno.serve(async (req) => {
-  const base44 = createClientFromRequest(req);
+  createClientFromRequest(req);
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL'),
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -67,142 +153,73 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return Response.json({ 
-      error: 'Parâmetros obrigatórios: vehicleCode, company_id, date' 
-    }, { status: 400 });
+    body = {};
   }
-  
+
   const { vehicleCode, company_id, date } = body;
 
-  if (!vehicleCode || !company_id || !date) {
-    return Response.json({ 
-      error: 'Parâmetros obrigatórios: vehicleCode, company_id, date' 
-    }, { status: 400 });
-  }
-
   try {
-    // Buscar empresa via Supabase
-    const { data: empresa } = await supabase
+    if (vehicleCode && company_id && date) {
+      const { data: empresa } = await supabase
+        .from('Empresa')
+        .select('*')
+        .eq('id', company_id)
+        .single();
+
+      if (!empresa) {
+        return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+      }
+
+      const result = await buscarTelemetriaVeiculo(supabase, empresa, vehicleCode, date);
+      return Response.json(result);
+    }
+
+    const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+    const { data: empresas } = await supabase
       .from('Empresa')
       .select('*')
-      .eq('id', company_id)
-      .single();
+      .eq('provedora_rastreamento', 'autotrac')
+      .eq('ativa', true)
+      .limit(100);
 
-    if (!empresa) {
-      return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+    if (!empresas?.length) {
+      return Response.json({ success: true, message: 'Nenhuma empresa ativa encontrada', results: [] });
     }
 
-    const cfg = empresa.api_config || {};
-    const usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
-    const senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
-    const apiKey = cfg.autotrac_api_key || Deno.env.get('AUTOTRAC_API_KEY');
-    const accountNum = String(cfg.autotrac_account || Deno.env.get('AUTOTRAC_ACCOUNT') || '');
+    const results = [];
 
-    if (!usuario || !senha || !apiKey) {
-      return Response.json({ error: 'Credenciais Autotrac não configuradas' }, { status: 500 });
-    }
+    for (const empresa of empresas) {
+      const { data: veiculos } = await supabase
+        .from('Veiculo')
+        .select('numero_frota')
+        .eq('company_id', empresa.id)
+        .eq('ativo', true)
+        .limit(500);
 
-    const headers = autotracHeaders(usuario, senha, apiKey);
+      const codigos = (veiculos || []).map(v => v.numero_frota).filter(Boolean);
+      let processados = 0;
+      let salvos = 0;
 
-    // Buscar account code
-    const accountsRes = await fetch(`${BASE_URL}/accounts?_limit=500`, { headers });
-    const accountsRaw = await accountsRes.json();
-    const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || []);
-    const conta = accountNum ? accountList.find(a => String(a.Number) === accountNum) : accountList[0];
-    
-    if (!conta) {
-      return Response.json({ error: 'Conta Autotrac não encontrada' }, { status: 404 });
-    }
-
-    const accountCode = conta.Code;
-
-    // Definir intervalo do dia selecionado
-    const startDate = new Date(`${date}T00:00:00-03:00`);
-    const endDate = new Date(`${date}T23:59:59-03:00`);
-    const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-
-    // Buscar telemetria da API Autotrac
-    const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/positions?startDate=${encodeURIComponent(fmt(startDate))}&endDate=${encodeURIComponent(fmt(endDate))}&_limit=2000`;
-    
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-    
-    const res = await fetch(url, { headers, signal: controller.signal });
-    clearTimeout(timeout);
-
-    if (!res.ok) {
-      if (res.status === 422) {
-        return Response.json({ 
-          error: 'Veículo não autorizado ou não encontrado',
-          pontos: [],
-          distancia_km: 0
-        });
+      for (let i = 0; i < codigos.length; i += 5) {
+        const lote = codigos.slice(i, i + 5);
+        const loteResultados = await Promise.all(lote.map(async (codigo) => {
+          try {
+            const result = await buscarTelemetriaVeiculo(supabase, empresa, codigo, hoje);
+            return result.saved ? 1 : 0;
+          } catch (error) {
+            console.error(`Erro telemetria ${empresa.nome} ${codigo}:`, error.message);
+            return 0;
+          }
+        }));
+        processados += lote.length;
+        salvos += loteResultados.reduce((a, b) => a + b, 0);
+        await new Promise(r => setTimeout(r, 400));
       }
-      return Response.json({ error: `Erro API: ${res.status}` }, { status: res.status });
+
+      results.push({ empresa: empresa.nome, veiculos_processados: processados, telemetrias_salvas: salvos, data: hoje });
     }
 
-    const data = await res.json();
-    const items = Array.isArray(data) ? data : (data.Data || data.data || []);
-
-    if (!items.length) {
-      return Response.json({ 
-        pontos: [],
-        distancia_km: 0,
-        total_raw: 0
-      });
-    }
-
-    // Processar pontos
-    const pontosBrutos = items.map(p => ({
-      time: p.PositionTime || p.ReceivedTime,
-      speed: p.Speed || 0,
-      ignition: p.Ignition === 'ON' || p.Ignition === true,
-      lat: p.Latitude,
-      lng: p.Longitude,
-    })).sort((a, b) => new Date(a.time) - new Date(b.time));
-
-    const distancia = calcularDistancia(pontosBrutos);
-    const pontosAmostrados = amostrarPontos(pontosBrutos, 100);
-
-    // Salvar no Supabase
-    const telemetriaData = {
-      vehicle_code: vehicleCode,
-      data_jornada: date,
-      company_id: company_id,
-      pontos: pontosAmostrados,
-      distancia_km: distancia,
-      total_raw: pontosBrutos.length,
-    };
-
-    // Verificar se já existe registro
-    const { data: existente } = await supabase
-      .from('TelemetriaVeiculo')
-      .select('id')
-      .eq('vehicle_code', vehicleCode)
-      .eq('data_jornada', date)
-      .eq('company_id', company_id)
-      .maybeSingle();
-
-    if (existente) {
-      // Atualizar
-      await supabase
-        .from('TelemetriaVeiculo')
-        .update(telemetriaData)
-        .eq('id', existente.id);
-    } else {
-      // Inserir
-      await supabase
-        .from('TelemetriaVeiculo')
-        .insert([telemetriaData]);
-    }
-
-    return Response.json({
-      pontos: pontosAmostrados,
-      distancia_km: distancia,
-      total_raw: pontosBrutos.length,
-      saved: true
-    });
-
+    return Response.json({ success: true, scheduled: true, date: hoje, results });
   } catch (e) {
     console.error('Erro buscarTelemetria:', e);
     return Response.json({ error: e.message }, { status: 500 });
