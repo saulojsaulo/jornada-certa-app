@@ -10,8 +10,20 @@ Deno.serve(async (req) => {
     }
 
     const { company_id, vehicleCode, date } = await req.json();
-    if (!company_id || !vehicleCode || !date) {
-      return Response.json({ error: 'Parâmetros obrigatórios: company_id, vehicleCode, date' }, { status: 400 });
+    if (!vehicleCode || !date) {
+      return Response.json({ error: 'Parâmetros obrigatórios: vehicleCode, date' }, { status: 400 });
+    }
+
+    const db = base44.asServiceRole;
+    let resolvedCompanyId = company_id;
+
+    if (!resolvedCompanyId) {
+      const veiculos = await db.entities.Veiculo.filter({ numero_frota: vehicleCode }, '-created_date', 1);
+      resolvedCompanyId = veiculos?.[0]?.company_id || null;
+    }
+
+    if (!resolvedCompanyId) {
+      return Response.json({ error: 'company_id não encontrado para este veículo' }, { status: 400 });
     }
 
     const supabase = createClient(
@@ -22,7 +34,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase
       .from('telemetria_veiculos')
       .select('*')
-      .eq('company_id', company_id)
+      .eq('company_id', resolvedCompanyId)
       .eq('vehicle_code', vehicleCode)
       .eq('data_jornada', date)
       .maybeSingle();
