@@ -93,53 +93,44 @@ export function getJourneyMacrosForDate(macrosHoje = [], macrosOntem = [], todas
   return janela.slice(startIdx).filter(m => new Date(m.data_criacao) <= dayEnd);
 }
 
-// Obter status atual do veículo baseado nas macros do dia
+// Obter status atual do veículo baseado na jornada atual/mais recente
 export function getVehicleStatus(macros) {
   if (!macros || macros.length === 0) return 'Sem Jornada';
 
-  // Filtrar macros não excluídos
   const activeMacros = macros.filter(m => !m.excluido);
   if (activeMacros.length === 0) return 'Sem Jornada';
 
   const sorted = [...activeMacros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   const lastMacro = sorted[sorted.length - 1];
-  
-  // Verificar macros abertas
-  const has1 = sorted.some(m => m.numero_macro === 1);
-  const has2 = sorted.some(m => m.numero_macro === 2);
-  
-  // Contar pares abertos
+
   const count3 = sorted.filter(m => m.numero_macro === 3).length;
   const count4 = sorted.filter(m => m.numero_macro === 4).length;
   const count5 = sorted.filter(m => m.numero_macro === 5).length;
   const count6 = sorted.filter(m => m.numero_macro === 6).length;
   const count9 = sorted.filter(m => m.numero_macro === 9).length;
   const count10 = sorted.filter(m => m.numero_macro === 10).length;
-  
-  // Verificar status atual
+
   if (count3 > count4) return 'Em Refeição';
   if (count5 > count6) return 'Em Repouso';
   if (count9 > count10) return 'Em Complemento';
-  if (has2) return 'Fim de Jornada';
-  if (has1) return 'Em Jornada';
-  
+  if (lastMacro?.numero_macro === 2) return 'Fim de Jornada';
+  if ([1, 4, 6, 10].includes(lastMacro?.numero_macro)) return 'Em Jornada';
+
   return 'Sem Jornada';
 }
 
-// Calcular jornada bruta (macro 1 até macro 2 ou agora)
+// Calcular jornada bruta (início da jornada atual/mais recente até fechamento ou agora)
 export function calcularJornadaBruta(macros) {
   if (!macros || macros.length === 0) return 0;
-  
-  // Filtrar macros não excluídos
+
   const activeMacros = macros.filter(m => !m.excluido);
   if (activeMacros.length === 0) return 0;
-  
+
   const sorted = [...activeMacros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   const macro1 = sorted.find(m => m.numero_macro === 1);
-  const macro2 = sorted.find(m => m.numero_macro === 2);
-  
   if (!macro1) return 0;
-  
+
+  const macro2 = sorted.find(m => m.numero_macro === 2 && new Date(m.data_criacao) >= new Date(macro1.data_criacao));
   const end = macro2 ? new Date(macro2.data_criacao) : new Date();
   return diffInMinutes(macro1.data_criacao, end);
 }
@@ -249,9 +240,9 @@ export function verificarAlertaRefeicao(macros) {
 
   const sorted = [...activeMacros].sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
   const macro1 = sorted.find(m => m.numero_macro === 1);
-  const macro2 = sorted.find(m => m.numero_macro === 2);
+  const lastMacro = sorted[sorted.length - 1];
   
-  if (!macro1 || macro2) return false; // Sem jornada ou já encerrada
+  if (!macro1 || lastMacro?.numero_macro === 2) return false; // Sem jornada ou já encerrada
   
   // Contar macros de refeição
   const count3 = sorted.filter(m => m.numero_macro === 3).length;
