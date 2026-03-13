@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
 
     const { company_id, vehicleCode, veiculo_id, date } = await req.json();
     if ((!vehicleCode && !veiculo_id) || !date) {
-      return Response.json({ error: 'Parâmetros obrigatórios: vehicleCode ou veiculo_id, e date' }, { status: 400 });
+      return Response.json({ pontos: [], distancia_km: null, total_raw: 0 });
     }
 
     const db = base44.asServiceRole;
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     } else if (resolvedCompanyId && resolvedVehicleCode) {
       query = query.eq('company_id', resolvedCompanyId).eq('vehicle_code', resolvedVehicleCode);
     } else {
-      return Response.json({ error: 'Não foi possível resolver o veículo da telemetria' }, { status: 400 });
+      return Response.json({ pontos: [], distancia_km: null, total_raw: 0 });
     }
 
     const { data, error } = await query.maybeSingle();

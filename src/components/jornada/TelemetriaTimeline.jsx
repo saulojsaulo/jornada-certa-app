@@ -46,7 +46,12 @@ export default function TelemetriaTimeline({ vehicleCode, veiculoId, companyId, 
         setPoints(res.data?.pontos || []);
         setDistanciaKm(res.data?.distancia_km ?? null);
       } catch (e) {
-        setError(e.message || 'Erro ao buscar telemetria');
+        if (e?.response?.status === 400) {
+          setPoints([]);
+          setDistanciaKm(null);
+        } else {
+          setError(e?.response?.data?.error || e.message || 'Erro ao buscar telemetria');
+        }
       } finally {
         setLoading(false);
       }
