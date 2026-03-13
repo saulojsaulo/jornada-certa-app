@@ -814,8 +814,8 @@ export default function VehicleTimeline({ macros, todasMacrosVeiculo, dataRefere
                       </span>
                       {(macro.endereco || (macro.latitude && macro.longitude)) && (
                         <a
-                          href={macro.latitude && macro.longitude ? `https://www.google.com/maps?q=${macro.latitude},${macro.longitude}` : undefined}
-                          target="_blank"
+                          href={macro.latitude && macro.longitude ? `https://www.google.com/maps/search/?api=1&query=${macro.latitude},${macro.longitude}` : undefined}
+                          target="_top"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-500 transition-colors truncate min-w-0"
                           onClick={e => e.stopPropagation()}
