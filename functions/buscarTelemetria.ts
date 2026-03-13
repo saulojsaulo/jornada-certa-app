@@ -56,7 +56,43 @@ function amostrarPontos(pontos, maxPontos = 100) {
   return amostrados;
 }
 
-async function buscarTelemetriaVeiculo(db, supabase, empresa, vehicleCode, date) {
+async function autotracGetJson(url, headers, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    try {
+      const res = await fetch(url, { headers, signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (res.status === 429) {
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+          continue;
+        }
+        throw new Error('Rate limit exceeded');
+      }
+
+      if (!res.ok) {
+        throw new Error(`Erro API: ${res.status}`);
+      }
+
+      return await res.json();
+    } catch (error) {
+      clearTimeout(timeout);
+      if (attempt >= maxRetries) throw error;
+      if (error.name === 'AbortError') {
+        await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+        continue;
+      }
+      if (String(error.message).includes('Rate limit')) {
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
+async function getAutotracContext(empresa) {
   const cfg = empresa.api_config || {};
   const usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
   const senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
@@ -68,8 +104,7 @@ async function buscarTelemetriaVeiculo(db, supabase, empresa, vehicleCode, date)
   }
 
   const headers = autotracHeaders(usuario, senha, apiKey);
-  const accountsRes = await fetch(`${BASE_URL}/accounts?_limit=500`, { headers });
-  const accountsRaw = await accountsRes.json();
+  const accountsRaw = await autotracGetJson(`${BASE_URL}/accounts?_limit=500`, headers);
   const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || []);
   const conta = accountNum ? accountList.find(a => String(a.Number) === accountNum) : accountList[0];
 
@@ -77,24 +112,24 @@ async function buscarTelemetriaVeiculo(db, supabase, empresa, vehicleCode, date)
     throw new Error('Conta Autotrac não encontrada');
   }
 
+  return { headers, accountCode: conta.Code };
+}
+
+async function buscarTelemetriaVeiculo(db, supabase, empresa, headers, accountCode, vehicleCode, date) {
   const startDate = new Date(`${date}T00:00:00-03:00`);
   const endDate = new Date(`${date}T23:59:59-03:00`);
   const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-  const url = `${BASE_URL}/accounts/${conta.Code}/vehicles/${vehicleCode}/positions?startDate=${encodeURIComponent(fmt(startDate))}&endDate=${encodeURIComponent(fmt(endDate))}&_limit=2000`;
+  const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/positions?startDate=${encodeURIComponent(fmt(startDate))}&endDate=${encodeURIComponent(fmt(endDate))}&_limit=2000`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
-  const res = await fetch(url, { headers, signal: controller.signal });
-  clearTimeout(timeout);
-
-  if (!res.ok) {
-    if (res.status === 422) {
+  let data;
+  try {
+    data = await autotracGetJson(url, headers);
+  } catch (error) {
+    if (String(error.message).includes('422')) {
       return { pontos: [], distancia_km: 0, total_raw: 0, skipped: true };
     }
-    throw new Error(`Erro API: ${res.status}`);
+    throw error;
   }
-
-  const data = await res.json();
   const items = Array.isArray(data) ? data : (data.Data || data.data || []);
 
   if (!items.length) {
@@ -177,7 +212,8 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
       }
 
-      const result = await buscarTelemetriaVeiculo(db, supabase, empresa, vehicleCode, date);
+      const { headers, accountCode } = await getAutotracContext(empresa);
+      const result = await buscarTelemetriaVeiculo(db, supabase, empresa, headers, accountCode, vehicleCode, date);
       return Response.json(result);
     }
 
@@ -191,17 +227,18 @@ Deno.serve(async (req) => {
     const results = [];
 
     for (const empresa of empresas) {
+      const { headers, accountCode } = await getAutotracContext(empresa);
       const veiculos = await db.entities.Veiculo.filter({ company_id: empresa.id, ativo: true }, '-created_date', 500);
 
       const codigos = (veiculos || []).map(v => v.numero_frota).filter(Boolean);
       let processados = 0;
       let salvos = 0;
 
-      for (let i = 0; i < codigos.length; i += 5) {
-        const lote = codigos.slice(i, i + 5);
+      for (let i = 0; i < codigos.length; i += 3) {
+        const lote = codigos.slice(i, i + 3);
         const loteResultados = await Promise.all(lote.map(async (codigo) => {
           try {
-            const result = await buscarTelemetriaVeiculo(db, supabase, empresa, codigo, hoje);
+            const result = await buscarTelemetriaVeiculo(db, supabase, empresa, headers, accountCode, codigo, hoje);
             return result.saved ? 1 : 0;
           } catch (error) {
             console.error(`Erro telemetria ${empresa.nome} ${codigo}:`, error.message);
@@ -210,7 +247,7 @@ Deno.serve(async (req) => {
         }));
         processados += lote.length;
         salvos += loteResultados.reduce((a, b) => a + b, 0);
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 800));
       }
 
       results.push({ empresa: empresa.nome, veiculos_processados: processados, telemetrias_salvas: salvos, data: hoje });
