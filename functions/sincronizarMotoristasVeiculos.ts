@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
 
 const BASE_URL = Deno.env.get("AUTOTRAC_BASE_URL") || 'https://aapi3.autotrac-online.com.br/aticapi/v1';
+const BASE_URL_WAPI = 'https://wapi.autotrac-online.com.br/aticapi/v1';
 const ACCOUNT = Deno.env.get("AUTOTRAC_ACCOUNT");
 const USER = Deno.env.get("AUTOTRAC_USER");
 const PASS = Deno.env.get("AUTOTRAC_PASS");
@@ -49,6 +50,27 @@ async function fetchAutotrac(url, usuario, senha, apiKey) {
   }
 
   return response.json();
+}
+
+async function fetchDriverLogs(accountCode, vehicleCode, from, now, usuario, senha, apiKey) {
+  const qs = `startDate=${encodeURIComponent(fmtAutotracDate(from))}&endDate=${encodeURIComponent(fmtAutotracDate(now))}&_limit=10`;
+  const candidates = [
+    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/driverlogs?${qs}`,
+    `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/driverlog?${qs}`,
+    `${BASE_URL_WAPI}/accounts/${accountCode}/vehicles/${vehicleCode}/driverlogs?${qs}`,
+    `${BASE_URL_WAPI}/accounts/${accountCode}/vehicles/${vehicleCode}/driverlog?${qs}`,
+  ];
+
+  let lastError = null;
+  for (const url of candidates) {
+    try {
+      return await fetchAutotrac(url, usuario, senha, apiKey);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('Driverlogs não encontrado');
 }
 
 Deno.serve(async (req) => {
@@ -124,8 +146,7 @@ Deno.serve(async (req) => {
           if (!veiculo.numero_frota) continue;
 
           try {
-            const driverLogsUrl = `${BASE_URL}/accounts/${accountCode}/vehicles/${veiculo.numero_frota}/driverlogs?startDate=${encodeURIComponent(fmtAutotracDate(from))}&endDate=${encodeURIComponent(fmtAutotracDate(now))}&_limit=10`;
-            const driverLogsData = await fetchAutotrac(driverLogsUrl, usuario, senha, apiKey);
+            const driverLogsData = await fetchDriverLogs(accountCode, veiculo.numero_frota, from, now, usuario, senha, apiKey);
             const logs = Array.isArray(driverLogsData?.Data) ? driverLogsData.Data : [];
 
             if (!logs.length) {
