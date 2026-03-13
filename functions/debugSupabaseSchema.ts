@@ -12,10 +12,16 @@ Deno.serve(async () => {
     });
 
     const data = await res.json();
-    const definitions = Object.keys(data?.definitions || {});
+    const definitions = data?.definitions || {};
     const paths = Object.keys(data?.paths || {});
 
-    return Response.json({ definitions, paths: paths.slice(0, 50) });
+    return Response.json({
+      definitions: Object.keys(definitions),
+      paths: paths.slice(0, 50),
+      telemetria_veiculos: Object.keys(definitions.telemetria_veiculos?.properties || {}),
+      macro_eventos: Object.keys(definitions.macro_eventos?.properties || {}),
+      posicoes_veiculos: Object.keys(definitions.posicoes_veiculos?.properties || {}),
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
