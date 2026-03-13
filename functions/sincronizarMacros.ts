@@ -1,266 +1,238 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
-import { createClient } from 'npm:@supabase/supabase-js'; // Nova importação
+import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
 
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
-const MACROS_VALIDAS = new Set([1, 2, 3, 4, 5, 6, 9, 10]);
-const MACROS_REGEX = /^\d+$/;
 
 function autotracHeaders(usuario, senha, apiKey) {
   return {
     'Authorization': `Basic ${usuario}:${senha}`,
     'Ocp-Apim-Subscription-Key': apiKey,
     'Content-Type': 'application/json',
-    'User-Agent': 'PostmanRuntime/7.37.0',
-    'Cache-Control': 'no-cache',
   };
 }
 
-async function autotracGet(url, headers, retries = 3) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-    let res;
+async function fetchComRetry(url, options, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
     try {
-      res = await fetch(url, { headers, signal: controller.signal });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+      const res = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timeout);
-    } catch (e) {
-      clearTimeout(timeout);
-      if (e.name === 'AbortError') throw new Error(`Timeout: ${url}`);
-      throw e;
-    }
-    if (res.status === 429) {
-      if (attempt < retries) {
-        await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+      
+      if (res.status === 429) {
+        const delay = Math.pow(2, i) * 2000;
+        await new Promise(r => setTimeout(r, delay));
         continue;
       }
-      throw new Error('Rate limit exceeded');
+      
+      return res;
+    } catch (e) {
+      if (i === maxRetries - 1) throw e;
+      await new Promise(r => setTimeout(r, 2000 * (i + 1)));
     }
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`${res.status}: ${txt.substring(0, 200)}`);
-    }
-    return res.json();
   }
+  throw new Error('Max retries excedido');
 }
 
-const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+function normalizarMacro(numero) {
+  const mapa = {
+    '1': 1, '2': 2, '3': 3, '4': 4, '5': 5,
+    '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+    'Macro 1': 1, 'Macro 2': 2, 'Macro 3': 3, 'Macro 4': 4,
+    'Macro 5': 5, 'Macro 6': 6, 'Macro 7': 7, 'Macro 8': 8,
+    'Macro 9': 9, 'Macro 10': 10,
+  };
+  return mapa[String(numero)] || null;
+}
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  const db = base44.asServiceRole;
-
-  // Inicialização do cliente Supabase
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseAnonKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return new Response(JSON.stringify({ error: 'Credenciais do Supabase não configuradas.' }), { status: 500 });
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false },
-  });
-  // Fim da inicialização do Supabase
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL'),
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  );
 
   const body = await req.json().catch(() => ({}));
-  const offset = Number(body.offset || 0);
-  const LOTE_SIZE = 50; // veículos processados por lote (só para DB, não para API)
+  const { date_inicio, date_fim, company_id } = body;
 
-  const empresas = await db.entities.Empresa.filter({ provedora_rastreamento: 'autotrac', ativa: true }, '-created_date', 100);
-  if (!empresas?.length) {
-    return new Response(JSON.stringify({ message: 'Nenhuma empresa Autotrac configurada.' }), { headers: { 'Content-Type': 'application/json' } });
+  if (!date_inicio || !date_fim || !company_id) {
+    return Response.json({ 
+      error: 'Parâmetros obrigatórios: date_inicio, date_fim, company_id' 
+    }, { status: 400 });
   }
 
-  const results = [];
+  try {
+    // Buscar empresa via Supabase
+    const { data: empresa } = await supabase
+      .from('Empresa')
+      .select('*')
+      .eq('id', company_id)
+      .single();
 
-  for (const empresa of empresas) {
+    if (!empresa) {
+      return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+    }
+
     const cfg = empresa.api_config || {};
     const usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
-    const senha   = cfg.autotrac_senha   || Deno.env.get('AUTOTRAC_PASS');
-    const apiKey  = cfg.autotrac_api_key || Deno.env.get('AUTOTRAC_API_KEY');
+    const senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
+    const apiKey = cfg.autotrac_api_key || Deno.env.get('AUTOTRAC_API_KEY');
     const accountNum = String(cfg.autotrac_account || Deno.env.get('AUTOTRAC_ACCOUNT') || '');
 
     if (!usuario || !senha || !apiKey) {
-      results.push({ empresa: empresa.nome, error: 'Credenciais incompletas.' });
-      continue;
+      return Response.json({ error: 'Credenciais Autotrac não configuradas' }, { status: 500 });
     }
 
     const headers = autotracHeaders(usuario, senha, apiKey);
 
-    try {
-      // 1. Buscar accountCode (1 chamada)
-      const accountsRaw = await autotracGet(`${BASE_URL}/accounts?_limit=500`, headers);
-      const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || []);
-      const contas = accountNum ? accountList.filter(a => String(a.Number) === accountNum) : accountList;
-      if (!contas.length) {
-        results.push({ empresa: empresa.nome, error: `Conta ${accountNum} não encontrada.` });
-        continue;
-      }
-      const accountCode = contas[0].Code;
-
-      // 2. Janela de busca
-      let from, end;
-      if (body.from_iso && body.to_iso) {
-        from = new Date(body.from_iso);
-        end  = new Date(body.to_iso);
-      } else {
-        end  = new Date();
-        from = new Date(end.getTime() - 24 * 3600 * 1000);
-      }
-
-      // 3. Buscar veículos do sistema (via Supabase)
-      const { data: veiculosSistema, error: veiculoError } = await supabase
-        .from('veiculos')
-        .select('id, numero_frota')
-        .eq('company_id', empresa.id)
-        .limit(500);
-
-      if (veiculoError) {
-        results.push({ empresa: empresa.nome, error: `Erro ao buscar veículos no Supabase: ${veiculoError.message}` });
-        continue;
-      }
-
-      const lote = veiculosSistema.slice(offset, offset + LOTE_SIZE);
-      const proximo = offset + LOTE_SIZE < veiculosSistema.length ? offset + LOTE_SIZE : null;
-
-      // Datas a checar para duplicatas
-      const dataFromStr = from.toISOString().split('T')[0];
-      const dataEndStr  = end.toISOString().split('T')[0];
-      const datasParaChecar = dataFromStr === dataEndStr ? [dataFromStr] : [dataFromStr, dataEndStr];
-
-      // 4. Para cada veículo: buscar macros do banco (via Supabase) + mensagens da API (sequencial com delay)
-      const mensagensPorVeiculo = [];
-      const macrosPorVeiculo = {};
-
-      for (const veiculo of lote) {
-        // Buscar macros existentes no banco (via Supabase)
-        const fetches = await Promise.all(
-          datasParaChecar.map(async (d) => {
-            const { data: macros, error: macroError } = await supabase
-              .from('macro_eventos')
-              .select('*')
-              .eq('veiculo_id', veiculo.id)
-              .eq('data_jornada', d)
-              .order('data_criacao', { ascending: false })
-              .limit(50);
-            
-            if (macroError) {
-              console.error(`Erro ao buscar macros para veículo ${veiculo.id} e data ${d} no Supabase: ${macroError.message}`);
-              return [];
-            }
-            return macros;
-          })
-        );
-        macrosPorVeiculo[veiculo.id] = fetches.flat();
-
-        // Buscar mensagens da API Autotrac
-        const vehicleCode = String(veiculo.numero_frota || '');
-        if (!vehicleCode) {
-          mensagensPorVeiculo.push({ veiculo, mensagens: [] });
-          continue;
-        }
-        try {
-          const r = await autotracGet(
-            `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(end))}&_limit=500`,
-            headers
-          );
-          mensagensPorVeiculo.push({ veiculo, mensagens: Array.isArray(r) ? r : (r.Data || r.data || []) });
-        } catch(e) {
-          // Se erro 422, veículo não está autorizado - pular silenciosamente
-          if (!e.message.includes('422')) {
-            console.error(`Erro ao buscar mensagens Autotrac para veículo ${veiculo.numero_frota}: ${e.message}`);
-          }
-          mensagensPorVeiculo.push({ veiculo, mensagens: [] });
-        }
-        // Pausa para respeitar rate limit
-        await new Promise(r => setTimeout(r, 1000));
-      }
-
-      // 5. Processar e inserir novos eventos
-      let savedCount = 0;
-      const novosEventos = [];
-
-      for (const { veiculo, mensagens } of mensagensPorVeiculo) {
-        const macrosDb = macrosPorVeiculo[veiculo.id] || [];
-
-        const manualKeys = new Set(
-          macrosDb.filter(m => m.editado_manualmente).map(m => `${m.numero_macro}-${m.jornada_id}`)
-        );
-
-        for (const msg of mensagens) {
-          const rawMacro = msg.MacroNumber ?? msg.Macro ?? msg.macro;
-          if (rawMacro === null || rawMacro === undefined) continue;
-          if (typeof rawMacro === 'string' && !MACROS_REGEX.test(rawMacro.trim())) continue;
-          const numeroMacro = Number(rawMacro);
-          if (!Number.isInteger(numeroMacro) || !MACROS_VALIDAS.has(numeroMacro)) continue;
-
-          const dataCriacao = msg.MessageTime || msg.DateTime || msg.Date || msg.dateTime || msg.date;
-          if (!dataCriacao) continue;
-          const dataEvento = new Date(dataCriacao);
-          if (isNaN(dataEvento.getTime())) continue;
-
-          const dataStr   = dataEvento.toISOString().split('T')[0];
-          const jornadaId = `${veiculo.id}-${dataStr}`;
-
-          if (manualKeys.has(`${numeroMacro}-${jornadaId}`)) continue;
-
-          const TOL_MS = 2 * 60 * 1000;
-          const duplicata = macrosDb.some(m =>
-            m.numero_macro === numeroMacro &&
-            m.jornada_id   === jornadaId &&
-            Math.abs(new Date(m.data_criacao) - dataEvento) < TOL_MS
-          );
-          if (duplicata) continue;
-
-          const lat     = msg.Latitude  ?? msg.latitude  ?? msg.Lat ?? msg.lat ?? null;
-          const lon     = msg.Longitude ?? msg.longitude ?? msg.Long ?? msg.lon ?? msg.Lng ?? msg.lng ?? null;
-          const endereco = msg.Address  ?? msg.address   ?? msg.City ?? msg.city ?? msg.Location ?? msg.location ?? null;
-
-          novosEventos.push({
-            veiculo_id: veiculo.id,
-            numero_macro: numeroMacro,
-            data_criacao: dataEvento.toISOString(),
-            jornada_id: jornadaId,
-            data_jornada: dataStr,
-            excluido: false,
-            editado_manualmente: false,
-            company_id: empresa.id,
-            ...(lat !== null && { latitude: Number(lat) }),
-            ...(lon !== null && { longitude: Number(lon) }),
-            ...(endereco ? { endereco: String(endereco) } : {}),
-          });
-          savedCount++;
-        }
-      }
-
-      // Inserir em lotes de 100 (via Supabase)
-      for (let i = 0; i < novosEventos.length; i += 100) {
-        const { error: insertError } = await supabase
-          .from('macro_eventos')
-          .insert(novosEventos.slice(i, i + 100));
-        
-        if (insertError) {
-          console.error(`Erro ao inserir macros no Supabase: ${insertError.message}`);
-          // Dependendo da sua necessidade, você pode querer lançar um erro ou adicionar a results aqui.
-        }
-      }
-
-      results.push({
-        empresa: empresa.nome,
-        saved: savedCount,
-        processados: lote.length,
-        total_veiculos: veiculosSistema.length,
-
-        proximo_offset: proximo,
-        janela: `${fmt(from)} -> ${fmt(end)}`,
-      });
-
-    } catch (e) {
-      results.push({ empresa: empresa.nome, error: e.message });
+    // Buscar account code
+    const accountsRes = await fetchComRetry(`${BASE_URL}/accounts?_limit=500`, { headers });
+    const accountsRaw = await accountsRes.json();
+    const accountList = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.Data || []);
+    const conta = accountNum ? accountList.find(a => String(a.Number) === accountNum) : accountList[0];
+    
+    if (!conta) {
+      return Response.json({ error: 'Conta Autotrac não encontrada' }, { status: 404 });
     }
-  }
 
-  return new Response(JSON.stringify({ success: true, timestamp: new Date().toISOString(), results }), {
-    headers: { 'Content-Type': 'application/json' }
-  });
+    const accountCode = conta.Code;
+
+    // Buscar veículos via Supabase
+    const { data: veiculos } = await supabase
+      .from('Veiculo')
+      .select('*')
+      .eq('company_id', company_id)
+      .eq('ativo', true)
+      .limit(500);
+
+    if (!veiculos?.length) {
+      return Response.json({ error: 'Nenhum veículo encontrado' }, { status: 404 });
+    }
+
+    const vehicleCodes = veiculos.map(v => v.numero_frota).filter(Boolean);
+
+    // Buscar macros existentes para evitar duplicatas
+    const { data: macrosExistentes } = await supabase
+      .from('MacroEvento')
+      .select('veiculo_id, numero_macro, data_criacao')
+      .eq('company_id', company_id)
+      .gte('data_criacao', `${date_inicio}T00:00:00`)
+      .lte('data_criacao', `${date_fim}T23:59:59`);
+
+    const existentesSet = new Set(
+      (macrosExistentes || []).map(m => 
+        `${m.veiculo_id}-${m.numero_macro}-${new Date(m.data_criacao).toISOString()}`
+      )
+    );
+
+    const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+    const startDate = new Date(`${date_inicio}T00:00:00-03:00`);
+    const endDate = new Date(`${date_fim}T23:59:59-03:00`);
+
+    const novosMacros = [];
+    let processados = 0;
+
+    // Processar em lotes de 3 veículos
+    for (let i = 0; i < vehicleCodes.length; i += 3) {
+      const batch = vehicleCodes.slice(i, i + 3);
+      
+      await Promise.all(batch.map(async (vehicleCode) => {
+        try {
+          const veiculo = veiculos.find(v => v.numero_frota === vehicleCode);
+          if (!veiculo) return;
+
+          // Buscar macros da API com paginação
+          let offset = 0;
+          const limit = 200;
+          let hasMore = true;
+
+          while (hasMore) {
+            const url = `${BASE_URL}/accounts/${accountCode}/vehicles/${vehicleCode}/macros?startDate=${encodeURIComponent(fmt(startDate))}&endDate=${encodeURIComponent(fmt(endDate))}&_limit=${limit}&_offset=${offset}`;
+            
+            const res = await fetchComRetry(url, { headers });
+            
+            if (!res.ok) {
+              if (res.status === 422) break; // Veículo não autorizado
+              console.error(`Erro ${res.status} para veículo ${vehicleCode}`);
+              break;
+            }
+
+            const data = await res.json();
+            const items = Array.isArray(data) ? data : (data.Data || data.data || []);
+
+            if (!items.length) {
+              hasMore = false;
+              break;
+            }
+
+            // Processar macros
+            for (const macro of items) {
+              const numeroMacro = normalizarMacro(macro.Macro || macro.macro);
+              if (!numeroMacro) continue;
+
+              const dataEvento = new Date(macro.MacroTime || macro.ReceivedTime);
+              const chave = `${veiculo.id}-${numeroMacro}-${dataEvento.toISOString()}`;
+
+              if (existentesSet.has(chave)) continue;
+
+              novosMacros.push({
+                veiculo_id: veiculo.id,
+                numero_macro: numeroMacro,
+                data_criacao: dataEvento.toISOString(),
+                latitude: macro.Latitude || null,
+                longitude: macro.Longitude || null,
+                endereco: macro.Landmark || null,
+                company_id: company_id,
+                excluido: false,
+                editado_manualmente: false,
+              });
+            }
+
+            offset += limit;
+            if (items.length < limit) hasMore = false;
+            
+            await new Promise(r => setTimeout(r, 300));
+          }
+
+          processados++;
+        } catch (e) {
+          console.error(`Erro ao processar ${vehicleCode}: ${e.message}`);
+        }
+      }));
+
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    // Salvar novos macros no Supabase em lotes
+    let salvos = 0;
+    if (novosMacros.length > 0) {
+      for (let i = 0; i < novosMacros.length; i += 50) {
+        const batch = novosMacros.slice(i, i + 50);
+        const { error } = await supabase
+          .from('MacroEvento')
+          .insert(batch);
+        
+        if (!error) {
+          salvos += batch.length;
+        } else {
+          console.error(`Erro ao salvar lote: ${error.message}`);
+        }
+        
+        if (i + 50 < novosMacros.length) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+    }
+
+    return Response.json({
+      success: true,
+      veiculos_processados: processados,
+      novos_macros: salvos,
+      periodo: `${date_inicio} a ${date_fim}`,
+    });
+
+  } catch (e) {
+    console.error('Erro sincronizarMacros:', e);
+    return Response.json({ error: e.message }, { status: 500 });
+  }
 });

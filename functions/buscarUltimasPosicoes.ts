@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
 
 const BASE_URL = 'https://aapi3.autotrac-online.com.br/aticapi/v1';
 
@@ -7,22 +8,28 @@ function autotracHeaders(usuario, senha, apiKey) {
     'Authorization': `Basic ${usuario}:${senha}`,
     'Ocp-Apim-Subscription-Key': apiKey,
     'Content-Type': 'application/json',
-    'User-Agent': 'PostmanRuntime/7.37.0',
-    'Cache-Control': 'no-cache',
   };
 }
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  const db = base44.asServiceRole;
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL'),
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  );
 
   const body = await req.json().catch(() => ({}));
   const { vehicleCodes, company_id } = body;
 
-  // Modo manual (frontend): retornar posições para lista específica de veículos
+  // Modo manual frontend: buscar posições específicas
   if (vehicleCodes?.length && company_id) {
     try {
-      const empresa = await db.entities.Empresa.get(company_id);
+      const { data: empresa } = await supabase
+        .from('Empresa')
+        .select('*')
+        .eq('id', company_id)
+        .single();
+
       if (!empresa) {
         return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
       }
@@ -107,11 +114,13 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Modo automação: processar todas as empresas ativas com Autotrac
-  const empresas = await db.entities.Empresa.filter({ 
-    provedora_rastreamento: 'autotrac', 
-    ativa: true 
-  }, '-created_date', 100);
+  // Modo automação: processar todas empresas ativas
+  const { data: empresas } = await supabase
+    .from('Empresa')
+    .select('*')
+    .eq('provedora_rastreamento', 'autotrac')
+    .eq('ativa', true)
+    .limit(100);
 
   if (!empresas?.length) {
     return Response.json({ message: 'Nenhuma empresa Autotrac ativa encontrada.' });
@@ -161,11 +170,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Buscar veículos da empresa
-      const veiculos = await db.entities.Veiculo.filter({
-        company_id: empresa.id,
-        ativo: true
-      }, '-created_date', 500);
+      // Buscar veículos via Supabase
+      const { data: veiculos } = await supabase
+        .from('Veiculo')
+        .select('*')
+        .eq('company_id', empresa.id)
+        .eq('ativo', true)
+        .limit(500);
 
       if (!veiculos?.length) {
         resultsPorEmpresa.push({ 
@@ -186,7 +197,6 @@ Deno.serve(async (req) => {
 
       const results = {};
       const chunks = [];
-      // Reduzir para 5 por vez para evitar timeout
       for (let i = 0; i < vehicleCodes.length; i += 5) {
         chunks.push(vehicleCodes.slice(i, i + 5));
       }
@@ -200,7 +210,6 @@ Deno.serve(async (req) => {
             const res = await fetch(url, { headers, signal: ctrl.signal });
             clearTimeout(t);
             if (!res.ok) { 
-              // Se 422, veículo não autorizado - pular silenciosamente
               if (res.status === 422) return;
               results[vehicleCode] = null; 
               return; 
@@ -224,11 +233,10 @@ Deno.serve(async (req) => {
             results[vehicleCode] = null;
           }
         }));
-        // Delay entre chunks
         await new Promise(r => setTimeout(r, 500));
       }
 
-      // Persistir posições em lote (bulk create para evitar rate limit)
+      // Salvar no Supabase em lote
       const posicoesParaSalvar = [];
       for (const [vehicleCode, posicao] of Object.entries(results)) {
         if (!posicao || !posicao.lat || !posicao.lng) continue;
@@ -247,18 +255,21 @@ Deno.serve(async (req) => {
 
       let persistidas = 0;
       if (posicoesParaSalvar.length > 0) {
-        try {
-          // Criar em lotes de 20 para evitar rate limit
-          for (let i = 0; i < posicoesParaSalvar.length; i += 20) {
-            const batch = posicoesParaSalvar.slice(i, i + 20);
-            await db.entities.PosicaoVeiculo.bulkCreate(batch);
+        for (let i = 0; i < posicoesParaSalvar.length; i += 20) {
+          const batch = posicoesParaSalvar.slice(i, i + 20);
+          const { error } = await supabase
+            .from('PosicaoVeiculo')
+            .insert(batch);
+          
+          if (!error) {
             persistidas += batch.length;
-            if (i + 20 < posicoesParaSalvar.length) {
-              await new Promise(r => setTimeout(r, 1000)); // 1s entre lotes
-            }
+          } else {
+            console.error(`Erro ao persistir lote: ${error.message}`);
           }
-        } catch (e) {
-          console.error(`Erro ao persistir posições em lote: ${e.message}`);
+          
+          if (i + 20 < posicoesParaSalvar.length) {
+            await new Promise(r => setTimeout(r, 1000));
+          }
         }
       }
 
@@ -277,6 +288,6 @@ Deno.serve(async (req) => {
     success: true, 
     timestamp: now.toISOString(), 
     results: resultsPorEmpresa,
-    positions: {} // Modo automação não retorna positions individuais
+    positions: {}
   });
 });
