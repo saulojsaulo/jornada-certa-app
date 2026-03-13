@@ -23,6 +23,10 @@ function extrairNomeMotorista(log) {
   ).trim();
 }
 
+function fmtAutotracDate(date) {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 async function fetchAutotrac(url, usuario, senha, apiKey) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
@@ -113,12 +117,14 @@ Deno.serve(async (req) => {
         let motoristasInseridos = 0;
         let motoristasAtualizados = 0;
         const erros = [];
+        const now = new Date();
+        const from = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
         for (const veiculo of veiculos) {
           if (!veiculo.numero_frota) continue;
 
           try {
-            const driverLogsUrl = `${BASE_URL}/accounts/${accountCode}/vehicles/${veiculo.numero_frota}/driverlogs`;
+            const driverLogsUrl = `${BASE_URL}/accounts/${accountCode}/vehicles/${veiculo.numero_frota}/driverlogs?startDate=${encodeURIComponent(fmtAutotracDate(from))}&endDate=${encodeURIComponent(fmtAutotracDate(now))}&_limit=10`;
             const driverLogsData = await fetchAutotrac(driverLogsUrl, usuario, senha, apiKey);
             const logs = Array.isArray(driverLogsData?.Data) ? driverLogsData.Data : [];
 
