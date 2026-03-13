@@ -13,6 +13,7 @@ function autotracHeaders(usuario, senha, apiKey) {
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
+  const db = base44.asServiceRole;
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL'),
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -24,11 +25,8 @@ Deno.serve(async (req) => {
   // Modo manual frontend: buscar posições específicas
   if (vehicleCodes?.length && company_id) {
     try {
-      const { data: empresa } = await supabase
-        .from('Empresa')
-        .select('*')
-        .eq('id', company_id)
-        .single();
+      const empresas = await db.entities.Empresa.filter({ id: company_id }, '-created_date', 1);
+      const empresa = empresas?.[0];
 
       if (!empresa) {
         return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
@@ -115,12 +113,7 @@ Deno.serve(async (req) => {
   }
 
   // Modo automação: processar todas empresas ativas
-  const { data: empresas } = await supabase
-    .from('Empresa')
-    .select('*')
-    .eq('provedora_rastreamento', 'autotrac')
-    .eq('ativa', true)
-    .limit(100);
+  const empresas = await db.entities.Empresa.filter({ provedora_rastreamento: 'autotrac', ativa: true }, '-created_date', 100);
 
   if (!empresas?.length) {
     return Response.json({ message: 'Nenhuma empresa Autotrac ativa encontrada.' });
@@ -171,12 +164,7 @@ Deno.serve(async (req) => {
       }
 
       // Buscar veículos via Supabase
-      const { data: veiculos } = await supabase
-        .from('Veiculo')
-        .select('*')
-        .eq('company_id', empresa.id)
-        .eq('ativo', true)
-        .limit(500);
+      const veiculos = await db.entities.Veiculo.filter({ company_id: empresa.id, ativo: true }, '-created_date', 500);
 
       if (!veiculos?.length) {
         resultsPorEmpresa.push({ 
@@ -243,8 +231,10 @@ Deno.serve(async (req) => {
         const posDate = posicao.time ? new Date(posicao.time).toISOString().split('T')[0] : hoje;
         if (posDate !== hoje) continue;
         
+        const veiculo = veiculos.find(v => v.numero_frota === vehicleCode);
         posicoesParaSalvar.push({
           vehicle_code: vehicleCode,
+          veiculo_id: veiculo?.id || null,
           data_posicao: posicao.time || now.toISOString(),
           latitude: posicao.lat,
           longitude: posicao.lng,
@@ -258,7 +248,7 @@ Deno.serve(async (req) => {
         for (let i = 0; i < posicoesParaSalvar.length; i += 20) {
           const batch = posicoesParaSalvar.slice(i, i + 20);
           const { error } = await supabase
-            .from('PosicaoVeiculo')
+            .from('posicoes_veiculos')
             .insert(batch);
           
           if (!error) {

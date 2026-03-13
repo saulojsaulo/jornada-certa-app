@@ -121,7 +121,7 @@ async function buscarTelemetriaVeiculo(supabase, empresa, vehicleCode, date) {
   };
 
   const { data: existente } = await supabase
-    .from('TelemetriaVeiculo')
+    .from('telemetria_veiculos')
     .select('id')
     .eq('vehicle_code', vehicleCode)
     .eq('data_jornada', date)

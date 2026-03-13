@@ -75,7 +75,7 @@ async function sincronizarMacrosEmpresa(db, supabase, empresa, date_inicio, date
   }
 
   const { data: macrosExistentes } = await supabase
-    .from('MacroEvento')
+    .from('macro_eventos')
     .select('veiculo_id, numero_macro, data_criacao')
     .eq('company_id', empresa.id)
     .gte('data_criacao', `${date_inicio}T00:00:00`)
