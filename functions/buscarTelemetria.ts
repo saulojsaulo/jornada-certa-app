@@ -229,13 +229,27 @@ Deno.serve(async (req) => {
     for (const empresa of empresas) {
       const { headers, accountCode } = await getAutotracContext(empresa);
       const veiculos = await db.entities.Veiculo.filter({ company_id: empresa.id, ativo: true }, '-created_date', 500);
-
       const codigos = (veiculos || []).map(v => v.numero_frota).filter(Boolean);
+
+      let state = (await db.entities.TelemetriaSyncState.filter({ company_id: empresa.id }, '-created_date', 1))?.[0] || null;
+      if (!state) {
+        state = await db.entities.TelemetriaSyncState.create({
+          company_id: empresa.id,
+          last_offset: 0,
+          chunk_size: 60,
+          last_run_at: new Date().toISOString(),
+        });
+      }
+
+      const chunkSize = state.chunk_size || 60;
+      const startOffset = state.last_offset || 0;
+      const fila = [...codigos.slice(startOffset), ...codigos.slice(0, startOffset)];
+      const alvo = fila.slice(0, chunkSize);
       let processados = 0;
       let salvos = 0;
 
-      for (let i = 0; i < codigos.length; i += 3) {
-        const lote = codigos.slice(i, i + 3);
+      for (let i = 0; i < alvo.length; i += 2) {
+        const lote = alvo.slice(i, i + 2);
         const loteResultados = await Promise.all(lote.map(async (codigo) => {
           try {
             const result = await buscarTelemetriaVeiculo(db, supabase, empresa, headers, accountCode, codigo, hoje);
@@ -247,10 +261,24 @@ Deno.serve(async (req) => {
         }));
         processados += lote.length;
         salvos += loteResultados.reduce((a, b) => a + b, 0);
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1200));
       }
 
-      results.push({ empresa: empresa.nome, veiculos_processados: processados, telemetrias_salvas: salvos, data: hoje });
+      const nextOffset = codigos.length ? (startOffset + processados) % codigos.length : 0;
+      await db.entities.TelemetriaSyncState.update(state.id, {
+        last_offset: nextOffset,
+        chunk_size: chunkSize,
+        last_run_at: new Date().toISOString(),
+      });
+
+      results.push({
+        empresa: empresa.nome,
+        veiculos_processados: processados,
+        telemetrias_salvas: salvos,
+        data: hoje,
+        offset_inicial: startOffset,
+        proximo_offset: nextOffset,
+      });
     }
 
     return Response.json({ success: true, scheduled: true, date: hoje, results });
