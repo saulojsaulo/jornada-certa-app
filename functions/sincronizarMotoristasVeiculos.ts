@@ -1,7 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
 
-const BASE_URL = Deno.env.get("AUTOTRAC_BASE_URL") || 'https://aapi3.autotrac-online.com.br/aticapi/v1';
+const RAW_BASE_URL = Deno.env.get("AUTOTRAC_BASE_URL") || 'https://aapi3.autotrac-online.com.br/aticapi/v1';
+const BASE_URL = RAW_BASE_URL.endsWith('/v1') ? RAW_BASE_URL : `${RAW_BASE_URL.replace(/\/$/, '')}/v1`;
 const BASE_URL_WAPI = 'https://wapi.autotrac-online.com.br/aticapi/v1';
 const ACCOUNT = Deno.env.get("AUTOTRAC_ACCOUNT");
 const USER = Deno.env.get("AUTOTRAC_USER");
