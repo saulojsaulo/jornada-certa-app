@@ -34,12 +34,11 @@ Deno.serve(async (req) => {
     const conta = accountNum ? accountList.find(a => String(a.Number) === accountNum) : accountList[0];
     if (!conta) return Response.json({ error: 'Conta não encontrada' }, { status: 404 });
 
-    const veiculos = await db.entities.Veiculo.filter({ company_id: empresa.id, ativo: true }, '-created_date', 20);
-    const veiculo = veiculos.find(v => v.numero_frota);
+    const veiculo = { id: 'debug', numero_frota: '710899', nome_veiculo: 'debug' };
     if (!veiculo) return Response.json({ error: 'Veículo não encontrado' }, { status: 404 });
 
     const now = new Date();
-    const from = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+    const from = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
     const url = `${BASE_URL}/accounts/${conta.Code}/vehicles/${veiculo.numero_frota}/returnmessages?startDate=${encodeURIComponent(fmt(from))}&endDate=${encodeURIComponent(fmt(now))}&_limit=20`;
 
