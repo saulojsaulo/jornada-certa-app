@@ -319,6 +319,7 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
                 ultimaPosicao={ultimasPosicoes[v.numero_frota] || null}
                 colWidths={colWidths}
                 selectedDate={selectedDate}
+                companyId={companyId}
                 onMacrosChanged={refetchSafe(onMacrosChanged)}
               />
             </motion.div>

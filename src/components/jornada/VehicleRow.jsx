@@ -48,7 +48,7 @@ const DEFAULT_WIDTHS = {
   ultimaPosicao: 170, dataHoraPosicao: 120, jornada: 65, disponivel: 70, hextra: 65, alertas: 70
 };
 
-export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colWidths, selectedDate, onMacrosChanged }) {
+export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacros, ultimaPosicao, colWidths, selectedDate, companyId, onMacrosChanged }) {
   const widths = colWidths || DEFAULT_WIDTHS;
   const [expanded, setExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -171,7 +171,7 @@ export default function VehicleRow({ veiculo, macrosHoje, macrosOntem, todasMacr
             todasMacrosVeiculo={todasMacros}
             dataReferencia={selectedDate || macrosHoje[0]?.data_jornada}
             vehicleCode={veiculo.numero_frota}
-            companyId={veiculo.company_id}
+            companyId={veiculo.company_id || companyId || macrosHoje?.[0]?.company_id || macrosOntem?.[0]?.company_id}
             onMacrosChanged={onMacrosChanged}
           />
           )}
