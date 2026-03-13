@@ -45,6 +45,8 @@ function normalizarMacro(numero) {
   return mapa[String(numero)] || null;
 }
 
+const MACROS_VALIDAS = new Set([1, 2, 3, 4, 5, 6, 9, 10]);
+
 async function sincronizarMacrosEmpresa(db, supabase, empresa, date_inicio, date_fim) {
   const cfg = empresa.api_config || {};
   const usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
@@ -102,7 +104,7 @@ async function sincronizarMacrosEmpresa(db, supabase, empresa, date_inicio, date
         let hasMore = true;
 
         while (hasMore) {
-          const url = `${BASE_URL}/accounts/${conta.Code}/vehicles/${vehicleCode}/macros?startDate=${encodeURIComponent(fmt(startDate))}&endDate=${encodeURIComponent(fmt(endDate))}&_limit=${limit}&_offset=${offset}`;
+          const url = `${BASE_URL}/accounts/${conta.Code}/vehicles/${vehicleCode}/returnmessages?startDate=${encodeURIComponent(fmt(startDate))}&endDate=${encodeURIComponent(fmt(endDate))}&_limit=${limit}&_offset=${offset}`;
           const res = await fetchComRetry(url, { headers });
 
           if (!res.ok) {
@@ -112,17 +114,22 @@ async function sincronizarMacrosEmpresa(db, supabase, empresa, date_inicio, date
           }
 
           const data = await res.json();
-          const items = Array.isArray(data) ? data : (data.Data || data.data || []);
+          const items = Array.isArray(data) ? data : (data.Data || data.data || data.items || []);
           if (!items.length) {
             hasMore = false;
             break;
           }
 
           for (const macro of items) {
-            const numeroMacro = normalizarMacro(macro.Macro || macro.macro);
-            if (!numeroMacro) continue;
+            const numeroMacro = normalizarMacro(macro.Macro || macro.MacroNumber || macro.macro || macro.macroNumber);
+            if (!numeroMacro || !MACROS_VALIDAS.has(numeroMacro)) continue;
 
-            const dataEvento = new Date(macro.MacroTime || macro.ReceivedTime);
+            const dataOriginal = macro.DateTime || macro.Date || macro.dateTime || macro.date || macro.MacroTime || macro.ReceivedTime;
+            const dataEvento = new Date(dataOriginal);
+            if (Number.isNaN(dataEvento.getTime())) continue;
+
+            const dataJornada = dataEvento.toISOString().split('T')[0];
+            const jornadaId = `${veiculo.id}-${dataJornada}`;
             const chave = `${veiculo.id}-${numeroMacro}-${dataEvento.toISOString()}`;
             if (existentesSet.has(chave)) continue;
 
@@ -130,9 +137,11 @@ async function sincronizarMacrosEmpresa(db, supabase, empresa, date_inicio, date
               veiculo_id: veiculo.id,
               numero_macro: numeroMacro,
               data_criacao: dataEvento.toISOString(),
-              latitude: macro.Latitude || null,
-              longitude: macro.Longitude || null,
-              endereco: macro.Landmark || null,
+              jornada_id: jornadaId,
+              data_jornada: dataJornada,
+              latitude: macro.Latitude ?? macro.latitude ?? macro.Lat ?? macro.lat ?? null,
+              longitude: macro.Longitude ?? macro.longitude ?? macro.Long ?? macro.lon ?? macro.Lng ?? macro.lng ?? null,
+              endereco: macro.Address ?? macro.address ?? macro.City ?? macro.city ?? macro.Landmark ?? null,
               company_id: empresa.id,
               excluido: false,
               editado_manualmente: false,
@@ -203,7 +212,9 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, ...result });
     }
 
-    const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+    const agora = new Date();
+    const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(agora);
+    const inicioPadrao = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(agora.getTime() - 2 * 24 * 60 * 60 * 1000));
     const empresas = await db.entities.Empresa.filter({ provedora_rastreamento: 'autotrac', ativa: true }, '-created_date', 100);
 
     if (!empresas?.length) {
@@ -213,7 +224,7 @@ Deno.serve(async (req) => {
     const results = [];
     for (const empresa of empresas) {
       try {
-        const result = await sincronizarMacrosEmpresa(db, supabase, empresa, hoje, hoje);
+        const result = await sincronizarMacrosEmpresa(db, supabase, empresa, inicioPadrao, hoje);
         results.push({ empresa: empresa.nome, ...result });
       } catch (error) {
         console.error(`Erro macros ${empresa.nome}:`, error.message);
@@ -221,7 +232,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return Response.json({ success: true, scheduled: true, periodo: `${hoje} a ${hoje}`, results });
+    return Response.json({ success: true, scheduled: true, periodo: `${inicioPadrao} a ${hoje}`, results });
   } catch (e) {
     console.error('Erro sincronizarMacros:', e);
     return Response.json({ error: e.message }, { status: 500 });

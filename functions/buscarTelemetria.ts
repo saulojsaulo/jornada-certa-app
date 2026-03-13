@@ -129,9 +129,15 @@ async function buscarTelemetriaVeiculo(supabase, empresa, vehicleCode, date) {
     .maybeSingle();
 
   if (existente) {
-    await supabase.from('TelemetriaVeiculo').update(telemetriaData).eq('id', existente.id);
+    const { error } = await supabase.from('TelemetriaVeiculo').update(telemetriaData).eq('id', existente.id);
+    if (error) {
+      throw new Error(`Erro ao atualizar telemetria: ${error.message}`);
+    }
   } else {
-    await supabase.from('TelemetriaVeiculo').insert([telemetriaData]);
+    const { error } = await supabase.from('TelemetriaVeiculo').insert([telemetriaData]);
+    if (error) {
+      throw new Error(`Erro ao inserir telemetria: ${error.message}`);
+    }
   }
 
   return {
