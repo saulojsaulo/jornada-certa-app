@@ -124,7 +124,7 @@ async function sincronizarMacrosEmpresa(db, supabase, empresa, date_inicio, date
             const numeroMacro = normalizarMacro(macro.Macro || macro.MacroNumber || macro.macro || macro.macroNumber);
             if (!numeroMacro || !MACROS_VALIDAS.has(numeroMacro)) continue;
 
-            const dataOriginal = macro.DateTime || macro.Date || macro.dateTime || macro.date || macro.MacroTime || macro.ReceivedTime;
+            const dataOriginal = macro.MessageTime || macro.PositionTime || macro.DateTime || macro.Date || macro.dateTime || macro.date || macro.MacroTime || macro.ReceivedTime;
             const dataEvento = new Date(dataOriginal);
             if (Number.isNaN(dataEvento.getTime())) continue;
 
