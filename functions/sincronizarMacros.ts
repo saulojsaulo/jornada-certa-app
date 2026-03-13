@@ -45,7 +45,7 @@ function normalizarMacro(numero) {
   return mapa[String(numero)] || null;
 }
 
-async function sincronizarMacrosEmpresa(supabase, empresa, date_inicio, date_fim) {
+async function sincronizarMacrosEmpresa(db, supabase, empresa, date_inicio, date_fim) {
   const cfg = empresa.api_config || {};
   const usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
   const senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
@@ -66,12 +66,7 @@ async function sincronizarMacrosEmpresa(supabase, empresa, date_inicio, date_fim
     throw new Error('Conta Autotrac não encontrada');
   }
 
-  const { data: veiculos } = await supabase
-    .from('Veiculo')
-    .select('*')
-    .eq('company_id', empresa.id)
-    .eq('ativo', true)
-    .limit(500);
+  const veiculos = await db.entities.Veiculo.filter({ company_id: empresa.id, ativo: true }, '-created_date', 500);
 
   if (!veiculos?.length) {
     return { veiculos_processados: 0, novos_macros: 0, periodo: `${date_inicio} a ${date_fim}` };
@@ -179,7 +174,8 @@ async function sincronizarMacrosEmpresa(supabase, empresa, date_inicio, date_fim
 }
 
 Deno.serve(async (req) => {
-  createClientFromRequest(req);
+  const base44 = createClientFromRequest(req);
+  const db = base44.asServiceRole;
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL'),
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -196,27 +192,19 @@ Deno.serve(async (req) => {
 
   try {
     if (date_inicio && date_fim && company_id) {
-      const { data: empresa } = await supabase
-        .from('Empresa')
-        .select('*')
-        .eq('id', company_id)
-        .single();
+      const empresas = await db.entities.Empresa.filter({ id: company_id }, '-created_date', 1);
+      const empresa = empresas?.[0];
 
       if (!empresa) {
         return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
       }
 
-      const result = await sincronizarMacrosEmpresa(supabase, empresa, date_inicio, date_fim);
+      const result = await sincronizarMacrosEmpresa(db, supabase, empresa, date_inicio, date_fim);
       return Response.json({ success: true, ...result });
     }
 
     const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
-    const { data: empresas } = await supabase
-      .from('Empresa')
-      .select('*')
-      .eq('provedora_rastreamento', 'autotrac')
-      .eq('ativa', true)
-      .limit(100);
+    const empresas = await db.entities.Empresa.filter({ provedora_rastreamento: 'autotrac', ativa: true }, '-created_date', 100);
 
     if (!empresas?.length) {
       return Response.json({ success: true, message: 'Nenhuma empresa ativa encontrada', results: [] });
@@ -225,7 +213,7 @@ Deno.serve(async (req) => {
     const results = [];
     for (const empresa of empresas) {
       try {
-        const result = await sincronizarMacrosEmpresa(supabase, empresa, hoje, hoje);
+        const result = await sincronizarMacrosEmpresa(db, supabase, empresa, hoje, hoje);
         results.push({ empresa: empresa.nome, ...result });
       } catch (error) {
         console.error(`Erro macros ${empresa.nome}:`, error.message);

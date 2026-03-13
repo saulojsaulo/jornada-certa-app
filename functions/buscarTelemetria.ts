@@ -143,7 +143,8 @@ async function buscarTelemetriaVeiculo(supabase, empresa, vehicleCode, date) {
 }
 
 Deno.serve(async (req) => {
-  createClientFromRequest(req);
+  const base44 = createClientFromRequest(req);
+  const db = base44.asServiceRole;
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL'),
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -160,11 +161,8 @@ Deno.serve(async (req) => {
 
   try {
     if (vehicleCode && company_id && date) {
-      const { data: empresa } = await supabase
-        .from('Empresa')
-        .select('*')
-        .eq('id', company_id)
-        .single();
+      const empresas = await db.entities.Empresa.filter({ id: company_id }, '-created_date', 1);
+      const empresa = empresas?.[0];
 
       if (!empresa) {
         return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
@@ -175,12 +173,7 @@ Deno.serve(async (req) => {
     }
 
     const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
-    const { data: empresas } = await supabase
-      .from('Empresa')
-      .select('*')
-      .eq('provedora_rastreamento', 'autotrac')
-      .eq('ativa', true)
-      .limit(100);
+    const empresas = await db.entities.Empresa.filter({ provedora_rastreamento: 'autotrac', ativa: true }, '-created_date', 100);
 
     if (!empresas?.length) {
       return Response.json({ success: true, message: 'Nenhuma empresa ativa encontrada', results: [] });
@@ -189,12 +182,7 @@ Deno.serve(async (req) => {
     const results = [];
 
     for (const empresa of empresas) {
-      const { data: veiculos } = await supabase
-        .from('Veiculo')
-        .select('numero_frota')
-        .eq('company_id', empresa.id)
-        .eq('ativo', true)
-        .limit(500);
+      const veiculos = await db.entities.Veiculo.filter({ company_id: empresa.id, ativo: true }, '-created_date', 500);
 
       const codigos = (veiculos || []).map(v => v.numero_frota).filter(Boolean);
       let processados = 0;
