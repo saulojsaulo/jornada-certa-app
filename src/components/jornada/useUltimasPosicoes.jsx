@@ -11,7 +11,7 @@ import { base44 } from '@/api/base44Client';
  * @param {number|null} intervalMs - null desativa polling
  * @param {string} selectedDate - "YYYY-MM-DD", undefined = hoje
  */
-export function useUltimasPosicoes(vehicleCodes, companyId, intervalMs = 60000, selectedDate) {
+export function useUltimasPosicoes(vehicleCodes, companyId, intervalMs = 300000, selectedDate) {
   const [positions, setPositions] = useState({});
   const [loading, setLoading] = useState(false);
   const timerRef = useRef(null);

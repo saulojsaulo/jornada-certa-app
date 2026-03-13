@@ -24,6 +24,7 @@ export default function ControleTab({ onImportLogUpdate }) {
   const { data: veiculos = [], isLoading: loadingVeiculos, refetch: refetchVeiculos } = useQuery({
     queryKey: ['veiculos'],
     queryFn: () => base44.entities.Veiculo.list(),
+    refetchInterval: 300000,
   });
 
   const companyId = veiculos[0]?.company_id || null;
@@ -32,12 +33,14 @@ export default function ControleTab({ onImportLogUpdate }) {
   const { data: motoristas = [] } = useQuery({
     queryKey: ['motoristas'],
     queryFn: () => base44.entities.Motorista.list(),
+    refetchInterval: 300000,
   });
 
   // Buscar gestores
   const { data: gestores = [] } = useQuery({
     queryKey: ['gestores'],
     queryFn: () => base44.entities.Gestor.list(),
+    refetchInterval: 300000,
   });
 
   // Buscar macros dos dois dias relevantes direto do Supabase
@@ -48,6 +51,7 @@ export default function ControleTab({ onImportLogUpdate }) {
   } = useQuery({
     queryKey: ['macros-banco', companyId, yesterdayString, dateString],
     enabled: !!companyId,
+    refetchInterval: 300000,
     queryFn: async () => {
       const res = await base44.functions.invoke('listarMacrosBanco', {
         company_id: companyId,

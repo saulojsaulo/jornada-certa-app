@@ -55,7 +55,7 @@ export default function TelemetriaTimeline({ vehicleCode, companyId, data, macro
 
     const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
     if (data === hoje) {
-      timerId = setInterval(fetchTelemetria, 60000);
+      timerId = setInterval(fetchTelemetria, 300000);
     }
 
     return () => {
