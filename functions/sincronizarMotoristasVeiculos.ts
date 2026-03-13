@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
           if (cpf) motoristaSupabasePorCPF[cpf] = m;
         });
 
-        const driverStatusRaw = await fetchAutotrac(`${BASE_URL}/driverstatus`, headers);
+        const driverStatusRaw = await fetchAutotrac(`${BASE_URL}/driverstatus?_limit=500`, headers);
         const driverStatuses = Array.isArray(driverStatusRaw) ? driverStatusRaw : (driverStatusRaw.Data || []);
         const now = new Date();
         const from = new Date(now.getTime() - 12 * 60 * 60 * 1000);
