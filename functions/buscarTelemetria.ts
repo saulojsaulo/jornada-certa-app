@@ -56,7 +56,7 @@ function amostrarPontos(pontos, maxPontos = 100) {
   return amostrados;
 }
 
-async function buscarTelemetriaVeiculo(supabase, empresa, vehicleCode, date) {
+async function buscarTelemetriaVeiculo(db, supabase, empresa, vehicleCode, date) {
   const cfg = empresa.api_config || {};
   const usuario = cfg.autotrac_usuario || Deno.env.get('AUTOTRAC_USER');
   const senha = cfg.autotrac_senha || Deno.env.get('AUTOTRAC_PASS');
@@ -111,8 +111,11 @@ async function buscarTelemetriaVeiculo(supabase, empresa, vehicleCode, date) {
 
   const distancia = calcularDistancia(pontosBrutos);
   const pontosAmostrados = amostrarPontos(pontosBrutos, 100);
+  const veiculos = await db.entities.Veiculo.filter({ company_id: empresa.id, numero_frota: vehicleCode }, '-created_date', 1);
+  const veiculo = veiculos?.[0];
   const telemetriaData = {
     vehicle_code: vehicleCode,
+    veiculo_id: veiculo?.id || null,
     data_jornada: date,
     company_id: empresa.id,
     pontos: pontosAmostrados,
@@ -129,12 +132,12 @@ async function buscarTelemetriaVeiculo(supabase, empresa, vehicleCode, date) {
     .maybeSingle();
 
   if (existente) {
-    const { error } = await supabase.from('TelemetriaVeiculo').update(telemetriaData).eq('id', existente.id);
+    const { error } = await supabase.from('telemetria_veiculos').update({ ...telemetriaData, updated_at: new Date().toISOString() }).eq('id', existente.id);
     if (error) {
       throw new Error(`Erro ao atualizar telemetria: ${error.message}`);
     }
   } else {
-    const { error } = await supabase.from('TelemetriaVeiculo').insert([telemetriaData]);
+    const { error } = await supabase.from('telemetria_veiculos').insert([{ ...telemetriaData, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), created_by: 'autotrac_sync_function' }]);
     if (error) {
       throw new Error(`Erro ao inserir telemetria: ${error.message}`);
     }
@@ -174,7 +177,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
       }
 
-      const result = await buscarTelemetriaVeiculo(supabase, empresa, vehicleCode, date);
+      const result = await buscarTelemetriaVeiculo(db, supabase, empresa, vehicleCode, date);
       return Response.json(result);
     }
 
@@ -198,7 +201,7 @@ Deno.serve(async (req) => {
         const lote = codigos.slice(i, i + 5);
         const loteResultados = await Promise.all(lote.map(async (codigo) => {
           try {
-            const result = await buscarTelemetriaVeiculo(supabase, empresa, codigo, hoje);
+            const result = await buscarTelemetriaVeiculo(db, supabase, empresa, codigo, hoje);
             return result.saved ? 1 : 0;
           } catch (error) {
             console.error(`Erro telemetria ${empresa.nome} ${codigo}:`, error.message);
