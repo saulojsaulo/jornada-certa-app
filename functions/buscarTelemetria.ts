@@ -63,7 +63,15 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   );
 
-  const body = await req.json().catch(() => ({}));
+  let body = {};
+  try {
+    body = await req.json();
+  } catch {
+    return Response.json({ 
+      error: 'Parâmetros obrigatórios: vehicleCode, company_id, date' 
+    }, { status: 400 });
+  }
+  
   const { vehicleCode, company_id, date } = body;
 
   if (!vehicleCode || !company_id || !date) {
