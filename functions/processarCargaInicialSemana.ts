@@ -301,12 +301,38 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     );
 
+    let body = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
     let jobs = await db.entities.CargaInicialJob.filter({ status: 'running' }, '-created_date', 1);
     let job = jobs?.[0];
 
     if (!job) {
       jobs = await db.entities.CargaInicialJob.filter({ status: 'pending' }, '-created_date', 1);
       job = jobs?.[0];
+    }
+
+    if (!job && body.company_id) {
+      const dias = Math.max(1, Math.min(6, Number(body.days || 6)));
+      const ontem = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const endDate = localDateString(ontem);
+      const startDate = localDateString(new Date(ontem.getTime() - (dias - 1) * 24 * 60 * 60 * 1000));
+
+      job = await db.entities.CargaInicialJob.create({
+        company_id: body.company_id,
+        start_date: startDate,
+        end_date: endDate,
+        current_date: startDate,
+        vehicle_offset: 0,
+        vehicle_chunk_size: body.vehicle_chunk_size || 50,
+        status: 'pending',
+        last_message: `Job criado para ${startDate} até ${endDate}`,
+        runs_count: 0,
+      });
     }
 
     if (!job) {
