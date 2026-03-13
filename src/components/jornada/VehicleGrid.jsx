@@ -23,7 +23,7 @@ const DEFAULT_WIDTHS = {
   ultimaPosicao: 170, dataHoraPosicao: 120, jornada: 65, disponivel: 70, hextra: 65, alertas: 70
 };
 
-export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo, selectedDate, onMacrosChanged }) {
+export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo, selectedDate, setSelectedDate, onMacrosChanged }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [colWidths, setColWidths] = useState(DEFAULT_WIDTHS);
@@ -273,10 +273,7 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
         alertFilter={alertFilter}
         setAlertFilter={setAlertFilter}
         selectedDate={new Date(`${selectedDate}T12:00:00`)}
-        setSelectedDate={(date) => {
-          const next = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(date);
-          window.location.search = `?date=${next}`;
-        }}
+        setSelectedDate={setSelectedDate}
         onImportComplete={onMacrosChanged}
         onImportLogUpdate={onMacrosChanged}
         onSyncComplete={onMacrosChanged}
