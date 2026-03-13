@@ -357,54 +357,63 @@ Deno.serve(async (req) => {
     const veiculosOrdenados = [...veiculos].sort((a, b) => String(a.numero_frota || '').localeCompare(String(b.numero_frota || '')));
 
     const chunkSize = job.vehicle_chunk_size || 50;
-    const offset = job.vehicle_offset || 0;
-    const currentDate = job.current_date || job.start_date;
-    const lote = veiculosOrdenados.slice(offset, offset + chunkSize);
+    const maxChunksPerRun = Number(body.batches_per_run || 2);
+    let workingOffset = job.vehicle_offset || 0;
+    let workingDate = job.current_date || job.start_date;
+    let finalStatus = 'running';
+    let totalVeiculosNoLote = 0;
+    const resumoTotal = { macrosSalvas: 0, telemetriasSalvas: 0, posicoesSalvas: 0 };
 
-    if (!lote.length) {
-      const proximaData = nextDate(currentDate);
-      if (new Date(`${proximaData}T12:00:00-03:00`) > new Date(`${job.end_date}T12:00:00-03:00`)) {
-        await db.entities.CargaInicialJob.update(job.id, {
-          status: 'completed',
-          last_message: 'Carga inicial concluída com sucesso',
-        });
-        return Response.json({ success: true, completed: true, message: 'Carga inicial concluída' });
+    for (let chunkIndex = 0; chunkIndex < maxChunksPerRun; chunkIndex++) {
+      let lote = veiculosOrdenados.slice(workingOffset, workingOffset + chunkSize);
+
+      if (!lote.length) {
+        const proximaData = nextDate(workingDate);
+        if (new Date(`${proximaData}T12:00:00-03:00`) > new Date(`${job.end_date}T12:00:00-03:00`)) {
+          finalStatus = 'completed';
+          workingOffset = 0;
+          break;
+        }
+        workingDate = proximaData;
+        workingOffset = 0;
+        lote = veiculosOrdenados.slice(workingOffset, workingOffset + chunkSize);
+        if (!lote.length) {
+          finalStatus = 'completed';
+          break;
+        }
       }
 
-      await db.entities.CargaInicialJob.update(job.id, {
-        current_date: proximaData,
-        vehicle_offset: 0,
-        last_message: `Avançando para ${proximaData}`,
-      });
-      return Response.json({ success: true, advanced_to: proximaData });
+      const resumo = await processarLoteDia(db, supabase, empresa, lote, workingDate, headers, accountCode);
+      resumoTotal.macrosSalvas += resumo.macrosSalvas;
+      resumoTotal.telemetriasSalvas += resumo.telemetriasSalvas;
+      resumoTotal.posicoesSalvas += resumo.posicoesSalvas;
+      totalVeiculosNoLote += lote.length;
+      workingOffset += lote.length;
+
+      if (workingOffset >= veiculosOrdenados.length) {
+        const proximaData = nextDate(workingDate);
+        if (new Date(`${proximaData}T12:00:00-03:00`) > new Date(`${job.end_date}T12:00:00-03:00`)) {
+          finalStatus = 'completed';
+          workingOffset = 0;
+          break;
+        }
+        workingDate = proximaData;
+        workingOffset = 0;
+      }
     }
 
-    const resumo = await processarLoteDia(db, supabase, empresa, lote, currentDate, headers, accountCode);
-    const novoOffset = offset + lote.length;
-    let nextPayload = {
-      vehicle_offset: novoOffset,
-      last_message: `${currentDate} · veículos ${offset + 1}-${novoOffset} processados`,
-      status: 'running',
-    };
-
-    if (novoOffset >= veiculosOrdenados.length) {
-      const proximaData = nextDate(currentDate);
-      if (new Date(`${proximaData}T12:00:00-03:00`) > new Date(`${job.end_date}T12:00:00-03:00`)) {
-        nextPayload = {
-          ...nextPayload,
+    const nextPayload = finalStatus === 'completed'
+      ? {
           status: 'completed',
           vehicle_offset: 0,
           last_message: 'Carga inicial concluída com sucesso',
+        }
+      : {
+          status: 'running',
+          current_date: workingDate,
+          vehicle_offset: workingOffset,
+          last_message: `${workingDate} · próximo offset ${workingOffset}`,
         };
-      } else {
-        nextPayload = {
-          ...nextPayload,
-          current_date: proximaData,
-          vehicle_offset: 0,
-          last_message: `${currentDate} finalizado · próximo dia ${proximaData}`,
-        };
-      }
-    }
 
     await db.entities.CargaInicialJob.update(job.id, nextPayload);
 
@@ -412,11 +421,11 @@ Deno.serve(async (req) => {
       success: true,
       job_id: job.id,
       empresa: empresa.nome,
-      data_processada: currentDate,
-      veiculos_no_lote: lote.length,
+      data_processada: workingDate,
+      veiculos_no_lote: totalVeiculosNoLote,
       proximo_offset: nextPayload.vehicle_offset,
       status: nextPayload.status,
-      resumo,
+      resumo: resumoTotal,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
