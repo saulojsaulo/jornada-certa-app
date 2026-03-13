@@ -54,6 +54,45 @@ export function diffInMinutes(start, end) {
   return (endDate - startDate) / (1000 * 60);
 }
 
+export function getJourneyMacrosForDate(macrosHoje = [], macrosOntem = [], todasMacros = [], dataReferencia) {
+  const fonte = (todasMacros && todasMacros.length ? todasMacros : [...macrosOntem, ...macrosHoje])
+    .filter(Boolean)
+    .filter(m => !m.excluido)
+    .sort((a, b) => new Date(a.data_criacao) - new Date(b.data_criacao));
+
+  if (!fonte.length || !dataReferencia) return macrosHoje || [];
+
+  const dayStart = new Date(`${dataReferencia}T00:00:00-03:00`);
+  const dayEnd = new Date(`${dataReferencia}T23:59:59-03:00`);
+  const windowStart = new Date(dayStart.getTime() - 36 * 60 * 60 * 1000);
+
+  const janela = fonte.filter(m => {
+    const t = new Date(m.data_criacao);
+    return t >= windowStart && t <= dayEnd;
+  });
+
+  const eventosDoDia = janela.filter(m => {
+    const t = new Date(m.data_criacao);
+    return t >= dayStart && t <= dayEnd;
+  });
+
+  if (!eventosDoDia.length) return macrosHoje || [];
+
+  let startIdx = -1;
+  for (let i = janela.length - 1; i >= 0; i--) {
+    if (janela[i].numero_macro !== 1) continue;
+    const macro2Depois = janela.slice(i + 1).find(m => m.numero_macro === 2);
+    if (!macro2Depois || new Date(macro2Depois.data_criacao) >= dayStart) {
+      startIdx = i;
+      break;
+    }
+  }
+
+  if (startIdx === -1) return eventosDoDia;
+
+  return janela.slice(startIdx).filter(m => new Date(m.data_criacao) <= dayEnd);
+}
+
 // Obter status atual do veículo baseado nas macros do dia
 export function getVehicleStatus(macros) {
   if (!macros || macros.length === 0) return 'Sem Jornada';

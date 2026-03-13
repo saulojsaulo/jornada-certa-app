@@ -6,6 +6,7 @@ import GridHeader from './GridHeader';
 import { getManagerName } from './DriverData';
 import { useUltimasPosicoes } from './useUltimasPosicoes';
 import {
+  getJourneyMacrosForDate,
   getVehicleStatus,
   calcularJornadaLiquida,
   calcularTempoDisponivel,
@@ -49,8 +50,10 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
 
   const processedVehicles = useMemo(() => {
     return veiculos.map(v => {
-      const macrosHoje = macrosPorVeiculo[v.id] || [];
+      const macrosHojeRaw = macrosPorVeiculo[v.id] || [];
       const macrosOntem = macrosOntemPorVeiculo[v.id] || [];
+      const todasMacros = todasMacrosPorVeiculo?.[v.id] || [];
+      const macrosHoje = getJourneyMacrosForDate(macrosHojeRaw, macrosOntem, todasMacros, selectedDate);
       
       const status = getVehicleStatus(macrosHoje);
       const jornadaLiquida = calcularJornadaLiquida(macrosHoje);
@@ -58,7 +61,7 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
       const horasExtras = calcularHorasExtras(macrosHoje);
       const interjornada = calcularInterjornada(macrosHoje, macrosOntem);
       const alertaRefeicao = verificarAlertaRefeicao(macrosHoje);
-      const alertasInterjornada = verificarAlertasInterjornada(interjornada);
+      const alertasInterjornada = verificarAlertasInterjornada(interjornada, macrosHoje);
 
       // Buscar motorista e gestor relacionados
       const motorista = motoristas.find(m => m.id === v.motorista_id);
@@ -79,7 +82,7 @@ export default function VehicleGrid({ veiculos, motoristas = [], gestores = [], 
         alertasInterjornada
       };
     });
-  }, [veiculos, motoristas, gestores, macrosPorVeiculo, macrosOntemPorVeiculo]);
+  }, [veiculos, motoristas, gestores, macrosPorVeiculo, macrosOntemPorVeiculo, todasMacrosPorVeiculo, selectedDate]);
 
   const filteredAndSorted = useMemo(() => {
     let result = [...processedVehicles];
