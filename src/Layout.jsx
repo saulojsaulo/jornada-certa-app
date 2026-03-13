@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Truck, LayoutDashboard, ClipboardList, Building2, Users,
-  ChevronDown, LogOut, Menu, X, Shield
+  ChevronDown, LogOut, Menu, X, Shield, RefreshCw, Clock
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
@@ -35,8 +36,10 @@ const PLANO_COLORS = {
 };
 
 function LayoutInner({ children, currentPageName }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedCompanyId, setSelectedCompanyId] = useState(() =>
     localStorage.getItem('admin_selected_company') || null
   );
@@ -44,6 +47,12 @@ function LayoutInner({ children, currentPageName }) {
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (currentPageName !== 'Jornada') return;
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, [currentPageName]);
 
   const isAdmin = user?.role === 'admin';
   const isCompanyAdmin = user?.role === 'company_admin';
@@ -64,6 +73,14 @@ function LayoutInner({ children, currentPageName }) {
 
   // Páginas de admin puro não mostram nav de empresa
   const isAdminPage = ['AdminEmpresas', 'AdminUsuarios'].includes(currentPageName);
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['veiculos'] });
+    queryClient.invalidateQueries({ queryKey: ['motoristas'] });
+    queryClient.invalidateQueries({ queryKey: ['gestores'] });
+    queryClient.invalidateQueries({ queryKey: ['macros-banco'] });
+    queryClient.invalidateQueries({ queryKey: ['importLogs'] });
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -112,6 +129,21 @@ function LayoutInner({ children, currentPageName }) {
                 </Button>
               </Link>
             ))}
+            {currentPageName === 'Jornada' && (
+              <>
+                <div className="w-px h-5 bg-slate-200 mx-1" />
+                <div className="flex items-center gap-2">
+                  <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-lg border border-slate-200">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-sm font-mono font-bold text-slate-700">{format(currentTime, 'HH:mm:ss')}</span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2 bg-slate-50">
+                    <RefreshCw className="w-4 h-4" />
+                    Atualizar
+                  </Button>
+                </div>
+              </>
+            )}
           </nav>
 
           {/* Right side */}

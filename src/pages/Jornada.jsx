@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Clock, TrendingUp, UserSearch, Truck, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
@@ -31,14 +31,7 @@ class ErrorBoundary extends React.Component {
 
 export default function Jornada() {
   const queryClient = useQueryClient();
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState('controle');
-
-  // Atualizar relógio a cada segundo
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Buscar último log de importação
   const { data: importLogs = [], refetch: refetchImportLogs } = useQuery({
@@ -48,10 +41,6 @@ export default function Jornada() {
 
   const lastImport = importLogs[0] || null;
 
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['veiculos'] });
-    queryClient.invalidateQueries({ queryKey: ['macros'] });
-  };
 
   return (
     <ErrorBoundary>
@@ -62,18 +51,10 @@ export default function Jornada() {
           <div className="flex items-center gap-3">
             {lastImport && (
               <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600 bg-slate-50 rounded-lg border border-slate-200">
-                <Clock className="w-3 h-3 text-slate-400" />
                 <span>Última Importação: {format(new Date(lastImport.imported_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
               </div>
             )}
-            <div className="hidden md:flex items-center gap-1 bg-slate-100 rounded-lg px-3 py-1.5">
-              <span className="text-sm font-mono font-bold text-slate-700">{format(currentTime, 'HH:mm:ss')}</span>
-            </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Atualizar
-          </Button>
         </div>
       </div>
 
